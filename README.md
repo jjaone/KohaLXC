@@ -1,7 +1,7 @@
-# KohaLXC
+## KohaLXC
  
-** Bash shell tooling and Ansible playbook for Koha/ILS-related server and <br/> 
-LXC development, deployment and migration tasks/setups for Koha-Lappi. <br/>  
+** Bash shell tooling and Ansible playbook for Koha/ILS-related server and ** <br/> 
+** LXC development, deployment and migration tasks/setups for Koha-Lappi. ** <br/>  
        *[Jukka Aaltonen, Lapland, Finland (C) 2016 and 2017]*  
 
 This code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
