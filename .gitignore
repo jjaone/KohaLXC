@@ -1,5 +1,11 @@
-# General: backup files etc.
+# General: 
+# - (auto) backups, logs, archives and other tmp and misc files/dirs 
 *~
+*.log
+*.zip
+*.tar.gz
+*.metadata/
+*backup*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
