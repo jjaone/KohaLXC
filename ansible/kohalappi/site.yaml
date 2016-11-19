@@ -1,16 +1,17 @@
 #!/usr/bin/env ansible-playbook
 ---
-# File: $KOHALXC_ANSIBLE_ROOTDIR/site.yaml
+# ############################################################################
+# File: $KOHALXC_ANSIBLE_ROOTDIR/kohalappi/site.yaml
 #
 # This code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
 #
-# Author: Jukka Aaltonen, jjaone@gmail.com, Koha-Lappi, Rovaniemi, Finland.  
+# Author: Jukka Aaltonen, Linux/opensource developer, Koha-Lappi, Finland.  
 # Organization: Rovaniemi City Library, Lapland (Koha-Lappi project).
 # 
 # License: This Work is licensed under GNU General Public License version 3.
 #
-# ###########################################################################
+# ############################################################################
 #
 # Ansible version: 2.2.0 should be in /usr/local/bin/ansible using
 # config file = $KOHALXC_ANSIBLE_ROOTDIR/kohalappi/ansible.cfg
@@ -18,21 +19,21 @@
 # Inventories: e.g -i localdev (as default in 'ansible.cfg')
 #
 # Usage: [TODO: this guide is outdated and should be updated later]
-# 1a) Basic use (cd here, $KOHALXC_ANSIBLE_ROOTDIR):
-# - "cd /KohaData/Works/KohaLXC/ansible/kohalappi; ansible-playbook site.yaml"
-# 1b) Basic use (sub-shell in $KOHALXC_ANSIBLE_ROOTDIR):
-# - "(cd /KohaData/Works/KohaLXC/ansible/kohalappi; ansible-playbook site.yaml)"
+# 1a) Basic use:
+# - "cd $KOHALXC_ANSIBLE_ROOTDIR/kohalappi; ansible-playbook site.yaml"
+# 1b) Basic use (sub-shell in $KOHALXC_ANSIBLE_ROOTDIR/<ansible play>/):
+# - "(cd $KOHALXC_ANSIBLE_ROOTDIR/kohalappi; ansible-playbook site.yaml)"
 # 2a) Run for 'kohahosts' only (needs sudo-pass dev/host, e.g 'kohadev@kohahost'):
-# - "(cd $KOHALXC_ANSIBLE_ROOTDIR; ansible-playbook -K -l kohahosts site.yaml)"
+# - "(cd $KOHALXC_ANSIBLE_ROOTDIR/kohalappi; ansible-playbook -K -l kohahosts site.yaml)"
 # 2b) Run for 'kohalxs' only (needs sudo-pass for dev/lxc: 'kohalxc_operuser@kohalxc_name'):
-# - "(cd $KOHALXC_ANSIBLE_ROOTDIR; ansible-playbook -K -l kohalxcs site.yaml)"
+# - "(cd $KOHALXC_ANSIBLE_ROOTDIR/kohalappi; ansible-playbook -K -l kohalxcs site.yaml)"
 # Also ad-hoc ansible commands work (cd here):
 # 3a) ansible -i localdev --vault-password-file .vault.pass.txt -m ping all
 # 3b) ansible -i testing --vault-password-file .vault.pass.txt -m ping kohahosts
 
 
-## Include Koha-server hosts plays
+## Include Koha-server plays (LXC-host: dev/srv/web/mdb/data-envs)
 - include: site-kohahosts.yaml
 
-## Include Koha-LXCs related plays
+## Include Koha-LXCs related plays (LXC-guest: web/mdb/data-envs)
 - include: site-lxcs.yaml

@@ -1,12 +1,12 @@
 ## KohaLXC
  
-**Bash shell tooling and Ansible playbook for Koha/ILS-related server and** <br/> 
+**Linux shell tooling and Ansible playbook for Koha/ILS-related server and** <br/> 
 **LXC development, deployment and migration tasks/setups for Koha-Lappi.** <br/>  
 
 This code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
 for Koha/ILS-development, deployment & database conversion/migration tasks.  
 
-**Author**: Jukka Aaltonen, jjaone@gmail.com, Koha-Lappi, Rovaniemi, Finland.  
+**Author**: Jukka Aaltonen, Linux/opensource developer, Koha-Lappi, Finland.  
 **Organization**: Rovaniemi City Library, Lapland (Koha-Lappi project).
  
 **License**: This Work is licensed under GNU General Public License version 3.

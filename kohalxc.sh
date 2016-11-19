@@ -1,15 +1,15 @@
 #!/bin/bash
 
 ###############################################################################
-# This is part of KohaLXC/kohasetup tools for KohaLappi-deployments projects  #
+# Code is part of KohaLXC/kohasetup tools for KohaLappi-deployments projects  #
 ###############################################################################
 # KohaLXC-script (kohalxc.sh) to manage Koha-lxc, configs and setup- tools
 # - utilities to configure, create, start/stop, destroy and use Koha-LXC/hosts
 #
-# Author: Jukka Aaltonen, KohaLappi, Lapland
+# Author: Jukka Aaltonen, Linux/opensource developer, KohaLappi, Lapland
 # Created: 2016-07-20 by jjaone/roikohadev
 #
-# License: Gnu General Public License 3
+# License: Gnu General Public License version 3
 ###############################################################################
 
 ## Script/application/logging
