@@ -1,11 +1,16 @@
-# General: 
-# - (auto) backups, logs, archives and other tmp and misc files/dirs 
+# General (ignore): 
+# - (auto) backups, logs, caches, archives, 
+# - docs and other tmp, misc and secret files/dirs 
 *~
 *.log
 *.zip
 *.tar.gz
+*vault*
 *.metadata/
 *backup*/
+*cache/
+local-*/
+docs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
