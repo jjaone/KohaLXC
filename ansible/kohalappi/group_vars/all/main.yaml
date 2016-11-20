@@ -1,0 +1,92 @@
+---
+###############################################################################
+# File: group_vars/all/main.yaml
+#
+# This code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+#
+# Author: Jukka Aaltonen, Linux/opensource developer, Koha-Lappi, Finland.
+# Organization: Rovaniemi City Library, Lapland (Koha-Lappi project)
+# 
+# Description:
+# - list here all playbook-level 'group_vars' used in inventories/roles setups
+# - see also: (inventory/)<kohahosts_environment>/group_vars/all
+#
+# !! Note: Setting var here will override the values in the 'inventory' !!
+#
+# License: GNU General Public License version 3 (or later).
+###############################################################################
+
+## Name of the inventory environment for 'kohahosts/kohalappi' playbooks:
+#kohahosts_environment: default
+
+#############
+## General ##
+#############
+
+# Facts gathering:
+#gather_facts: False
+# Force all handlers always (also in case play fails etc):
+#force_handlers: false
+
+#########
+## LVM ##
+#########
+
+# LVM enablement:  (usually only in testing/production)
+#kohahosts_lvm_enabled: false
+
+################################################################
+## Vault/secure setttings: 
+# - encrypted variable names needed by the play-book  
+# - use '*vault*.yaml' etc. (won't be included in this repo)
+################################################################
+
+## Common settings users/pass/configs (koha etc)
+# Maria/Mysql-database root user: 'mdbenv_dbroot'
+mdbenv_rootuser: root
+# Maria/Mysql-database root user pass: 'mdbenv_dbpass'
+mdbenv_rootpass:
+# Koha-database user: 'koha'
+mdbenv_kohauser: koha
+# Koha-database pass
+mdbenv_kohapass:
+
+## Settings for accessing Koha/LXC-containers
+# Koha-user account (LXC): 'ubuntu'
+# - could be overriden in lxc-create
+kohalxc_operuser: ubuntu
+# Koha-user account  pass (LXC) 
+kohalxc_operpass:
+
+# Koha-(local)developer user: system '$USER' or 'ansible_user'
+localdev_user: "{{ ansible_user }}" 
+# Koha-(local)developer user pass
+localdev_pass:
+  
+## Settings for accessing/configuring 'testing'/'production' servers
+# Server name of "koha" web/applications and services:
+kohahosts_websrv:
+# Server name of "koha" databases and services:
+kohahosts_mdbsrv:
+# Server name of "koha" data/mmt storage/utilities:
+kohahosts_datasrv:
+
+# Koha-system user id:
+kohahosts_sysid: 1000
+# Koha-system user name:
+kohahosts_sysuser: kohasys
+# Koha-system user pass:
+kohahosts_syspass:
+
+# Koha-group name:
+kohahosts_groupname: koha
+# Koha-group gid:
+kohahosts_groupgid: 1001
+
+# Koha-devops user id:
+kohahosts_operid: 1002
+# Koha-devops user name:
+kohahosts_operuser: kohadev
+# Koha-devops pass:
+kohahosts_operpass:
