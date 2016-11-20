@@ -5,12 +5,12 @@
 ###############################################################################
 # KohaLXC-kohatools/setups (kohasetup.sh) shell tools for KohaLappi LXCs.
 #
-# Author: Jukka Aaltonen, Linux/opensource deveöoper, KohaLappi, Lapland.
+# Author: Jukka Aaltonen, Linux/opensource developer, KohaLappi, Finland.
 # Organization: Rovaniemi City Library, Lapland (Koha-Lappi project)
-# Created: 2016-07 by roikohadev (@jjaone)
+# Created: 2016-07 by "roikohadev" (@jjaone)
 #
 # Description:
-# - shoudl work in Ubuntu Server LTS (14.04/16.04) guest/host environments
+# - should work in Ubuntu Server LTS (14.04/16.04) guest/host environments
 # - configure/setup "srvenv", "devenv", "mdbenv" and "kohaenv" in/for KohaLXCs
 #
 # License: Gnu General Public License version 3 (or later)

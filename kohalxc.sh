@@ -5,12 +5,13 @@
 ###############################################################################
 # KohaLXC-script (kohalxc.sh) to manage Koha-lxc, configs and setup- tools
 #
-# Author: Jukka Aaltonen, Linux/opensource developer, KohaLappi, Lapland
+# Author: Jukka Aaltonen, Linux/opensource developer, KohaLappi, Finland.
 # Organization: Rovaniemi City Library, Lapland (Koha-Lappi project)
-# Created: 2016-07-20 by roikohadev (@jjaone)
 #
 # Description:
 # - utilities to configure, create, start/stop, destroy and use Koha-LXC/hosts
+#
+# Created: 2016-07-20 by "roikohadev" (@jjaone)
 #
 # License: Gnu General Public License version 3 (or later)
 ###############################################################################
@@ -176,6 +177,8 @@ function kohalxc_ansible {
 	ech "KOHALXC_ANSIBLE_CMDOPTS" "$KOHALXC_ANSIBLE_CMDOPTS"
 	ech "KOHALXC_ANSIBLE_LXCS" "$KOHALXC_ANSIBLE_LXCS"
     )
+
+    exit 123
 
     # Set the env for ansible logging
     ANSIBLE_LOG_PATH="log/kohalappi_${KOHALXC_ANSIBLE_INVENTORY}.log"
