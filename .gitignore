@@ -1,27 +1,33 @@
-# General (ignore): 
-# - (auto) backups, logs, caches, archives, 
-# - docs and other tmp, misc and secret files/dirs 
+## General (ignore): 
+# - (auto) backups, logs, archives, etc..
 *~
 *.log
 *.zip
 *.tar.gz
+*backup*/
+
+## ansible/kohalappi
+# - dev/experimental/local only stuff, caches, ..
+# - docs, and other misc and secter files/dirs
+*cache/
+docs/
+site*.yaml
+local-*/
 *vault*
+
+## koha/mmt
 *.komodoproject
 *.metadata/
-*backup*/
-*cache/
-local-*/
-docs/
 
-# Byte-compiled / optimized / DLL files
+## Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
+## C extensions
 *.so
 
-# Distribution / packaging
+## Distribution / packaging
 .Python
 env/
 build/
