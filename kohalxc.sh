@@ -1,20 +1,19 @@
 #!/bin/bash
 
-###############################################################################
-# Code is part of KohaLXC/kohatools env for KohaLappi-dev/deployment project  #
-###############################################################################
-# KohaLXC-script (kohalxc.sh) to manage Koha-lxc, configs and setup- tools
+# File: $KOHALXC_ROOTDIR/kohalxc.sh
+# #############################################################################
+# Code is part of KohaLXC/kohatools env for KohaLappi-dev/deployment project  
 #
-# Author: Jukka Aaltonen, Linux/opensource developer, KohaLappi, Finland.
-# Organization: Rovaniemi City Library, Lapland (Koha-Lappi project)
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: Gnu General Public License version 3.
 #
 # Description:
+# KohaLXC-script (kohalxc.sh) to manage Koha-lxc, configs and setup- tools:
 # - utilities to configure, create, start/stop, destroy and use Koha-LXC/hosts
 #
 # Created: 2016-07-20 by "roikohadev" (@jjaone)
-#
-# License: Gnu General Public License version 3 (or later)
-###############################################################################
+# History:
+# #############################################################################
 
 ## Script/application/logging
 app="kohalxc"

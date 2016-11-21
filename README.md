@@ -9,4 +9,4 @@ for Koha/ILS-development, deployment & database conversion/migration tasks.
 **Author**: Jukka Aaltonen, Linux/opensource developer, Koha-Lappi, Finland.  
 **Organization**: Rovaniemi City Library, Lapland (Koha-Lappi project).
  
-**License**: GNU General Public License version 3 (or later).
+**License**: GNU General Public License version 3.
