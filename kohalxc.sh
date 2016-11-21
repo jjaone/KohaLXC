@@ -172,6 +172,7 @@ function kohalxc_ansible {
     [[ -n "$VERBOSE" ]] && (
 	ech "KOHALXC_ANSIBLE_ROOTDIR" "$KOHALXC_ANSIBLE_ROOTDIR"
 	ech "KOHALXC_ANSIBLE_PLAYBOOKS" "$KOHALXC_ANSIBLE_PLAYBOOKS"
+	ech "KOHALXC_ANSIBLE_PLAYBOOK" "$KOHALXC_ANSIBLE_PLAYBOOK"
 	ech "KOHALXC_ANSIBLE_INVENTORY" "$KOHALXC_ANSIBLE_INVENTORY"
 	ech "KOHALXC_ANSIBLE_CMDOPTS" "$KOHALXC_ANSIBLE_CMDOPTS"
 	ech "KOHALXC_ANSIBLE_LXCS" "$KOHALXC_ANSIBLE_LXCS"
@@ -184,15 +185,13 @@ function kohalxc_ansible {
     ech "ANSIBLE_LOG_PATH:" "$ANSIBLE_LOG_PATH"
 
     # Build the ansible command for playbook runs
-#    ( eval "$KOHALXC_ANSIBLE_CMD" || ece "Warn:$?" "Ansible play returned an error code!" )
-    
-    KOHALXC_ANSIBLE_CMD="ansible-playbook site.yaml -i ${KOHALXC_ANSIBLE_INVENTORY} ${KOHALXC_ANSIBLE_CMDOPTS:-\"-vvv\"}"
+    KOHALXC_ANSIBLE_CMD="ansible-playbook ${KOHALXC_ANSIBLE_PLAYBOOK:-site.yaml}  -i ${KOHALXC_ANSIBLE_INVENTORY} ${KOHALXC_ANSIBLE_CMDOPTS:-\"-vvv\"}"
     ech "Running KOHALXC_ANSIBLE_CMD:" "\n$KOHALXC_ANSIBLE_CMD"
-
+    # Ansible playbook default run with specified options
     ( cd $KOHALXC_ANSIBLE_PLAYBOOKS;
-      [[ -f "site.yaml" ]] && export ANSIBLE_LOG_PATH &&
+      [[ -f "$KOHALX_ANSIBLE_PLAYBOOK" ]] && export ANSIBLE_LOG_PATH &&
 	  /usr/local/bin/ansible-playbook \
-	      site.yaml \
+	      $KOHALXC_ANSIBLE_PLAYBOOK \
 	      -i ${KOHALXC_ANSIBLE_INVENTORY} \
 	      ${KOHALXC_ANSIBLE_CMDOPTS:-"-vvv"} ||
 	      ece "Warn ($?)" \
