@@ -8,12 +8,18 @@
 
 ## ansible/kohalappi
 # - dev/experimental/local only stuff, caches, ..
-# - docs, and other misc and secter files/dirs
+# - docs, and other misc and secret files/dirs
+# - dev-time inventories in the playbook root dir
 *cache/
 docs/
 site*.yaml
 local-*/
+callback_plugins/
 *vault*
+ansible/kohalappi/localdev/
+ansible/kohalappi/development/
+ansible/kohalappi/testing/
+ansible/kohalappi/production/
 
 ## koha/mmt
 *.komodoproject
