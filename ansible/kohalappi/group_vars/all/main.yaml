@@ -10,12 +10,12 @@
 # Description:
 # - list here all playbook-level 'group_vars' used in inventories/roles setups
 #
-# See also: (inventory/)<kohahosts_environment>/group_vars/all
+# See also: (inventory/)<hostnode_environment>/group_vars/all
 # Note: setting var here will override the values in the 'inventory'
 # ##############################################################################
 
-## Name of the inventory environment for 'kohahosts/hostnode' playbooks:
-#kohahosts_environment: default
+## Name of the inventory environment for all 'hostnode/LXCs' playbooks:
+# - localdev, development, testing, monitoring, production
 #hostnode_environment: default
 
 #############
@@ -32,16 +32,22 @@
 #########
 
 # LVM enablement:  (usually only in testing/production)
-#kohahosts_lvm_enabled: false
 #hostnode_lvm_enabled: false
 
 ################################################################
-## Vault/secure setttings: 
-# - encrypted variable names needed by the play-book  
+## Vault/secure settings:
+# - list here all encrypted variable names needed by the play
 # - use '*vault*.yaml' etc. (won't be included in this repo)
 ################################################################
 
-## Common settings users/pass/configs (koha etc)
+## Settings for accessing Koha/LXC-containers
+# Koha-user account (LXC): 'ubuntu'
+# - could be overriden in lxc-create
+kohalxc_operuser: ubuntu
+# Koha-user account (LXC) pass
+kohalxc_operpass:
+
+## Settings for "devenv", "mdbenv", "kohaenv" users/passes/configs
 # Maria/Mysql-database root user: 'mdbenv_dbroot'
 mdbenv_rootuser: root
 # Maria/Mysql-database root user pass: 'mdbenv_dbpass'
@@ -53,13 +59,6 @@ mdbenv_kohapass:
 # Koha-database name
 mdbenv_kohadb: kohadata
 
-## Settings for accessing Koha/LXC-containers
-# Koha-user account (LXC): 'ubuntu'
-# - could be overriden in lxc-create
-kohalxc_operuser: ubuntu
-# Koha-user account  pass (LXC) 
-kohalxc_operpass:
-
 # Koha-(local)developer user: system '$USER' or 'ansible_user'
 localdev_user: "{{ ansible_user }}" 
 # Koha-(local)developer user pass
@@ -67,38 +66,27 @@ localdev_pass:
   
 ## Settings for 'testing'/'production' koha-server/hosts
 # Server name of "koha" web/applications and services:
-kohahosts_websrv:
 hostnode_websrv:
 # Server name of "koha" databases and services:
-kohahosts_mdbsrv:
 hostnode_mdbsrv:
 # Server name of "koha" data/mmt storage/utilities:
-kohahosts_datasrv:
 hostnode_datasrv:
 
 # Koha-system user id:
-kohahosts_sysid: 1000
 hostnode_sysid: 1000
 # Koha-system user name:
-kohahosts_sysuser: kohasys
 hostnode_sysuser: kohasys
 # Koha-system user pass:
-kohahosts_syspass:
 hostnode_syspass:
 
 # Koha-group name:
-kohahosts_groupname: koha
 hostnode_groupname: koha
 # Koha-group gid:
-kohahosts_groupgid: 1001
 hostnode_groupgid: 1001
 
 # Koha-devops user id:
-kohahosts_operid: 1002
 hostnode_operid: 1002
 # Koha-devops user name:
-kohahosts_operuser: kohadev
 hostnode_operuser: kohadev
 # Koha-devops pass:
-kohahosts_operpass:
 hostnode_operpass:
