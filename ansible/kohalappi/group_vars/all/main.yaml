@@ -1,24 +1,22 @@
 ---
-###############################################################################
 # File: group_vars/all/main.yaml
-#
-# This code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# ##############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
 #
-# Author: Jukka Aaltonen, Linux/opensource developer, Koha-Lappi, Finland.
-# Organization: Rovaniemi City Library, Lapland (Koha-Lappi project)
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
 # 
 # Description:
 # - list here all playbook-level 'group_vars' used in inventories/roles setups
-# - see also: (inventory/)<kohahosts_environment>/group_vars/all
 #
-# !! Note: Setting var here will override the values in the 'inventory' !!
-#
-# License: GNU General Public License version 3 (or later).
-###############################################################################
+# See also: (inventory/)<kohahosts_environment>/group_vars/all
+# Note: setting var here will override the values in the 'inventory'
+# ##############################################################################
 
-## Name of the inventory environment for 'kohahosts/kohalappi' playbooks:
+## Name of the inventory environment for 'kohahosts/hostnode' playbooks:
 #kohahosts_environment: default
+#hostnode_environment: default
 
 #############
 ## General ##
@@ -35,6 +33,7 @@
 
 # LVM enablement:  (usually only in testing/production)
 #kohahosts_lvm_enabled: false
+#hostnode_lvm_enabled: false
 
 ################################################################
 ## Vault/secure setttings: 
@@ -51,6 +50,8 @@ mdbenv_rootpass:
 mdbenv_kohauser: koha
 # Koha-database pass
 mdbenv_kohapass:
+# Koha-database name
+mdbenv_kohadb: kohadata
 
 ## Settings for accessing Koha/LXC-containers
 # Koha-user account (LXC): 'ubuntu'
@@ -64,29 +65,40 @@ localdev_user: "{{ ansible_user }}"
 # Koha-(local)developer user pass
 localdev_pass:
   
-## Settings for accessing/configuring 'testing'/'production' servers
+## Settings for 'testing'/'production' koha-server/hosts
 # Server name of "koha" web/applications and services:
 kohahosts_websrv:
+hostnode_websrv:
 # Server name of "koha" databases and services:
 kohahosts_mdbsrv:
+hostnode_mdbsrv:
 # Server name of "koha" data/mmt storage/utilities:
 kohahosts_datasrv:
+hostnode_datasrv:
 
 # Koha-system user id:
 kohahosts_sysid: 1000
+hostnode_sysid: 1000
 # Koha-system user name:
 kohahosts_sysuser: kohasys
+hostnode_sysuser: kohasys
 # Koha-system user pass:
 kohahosts_syspass:
+hostnode_syspass:
 
 # Koha-group name:
 kohahosts_groupname: koha
+hostnode_groupname: koha
 # Koha-group gid:
 kohahosts_groupgid: 1001
+hostnode_groupgid: 1001
 
 # Koha-devops user id:
 kohahosts_operid: 1002
+hostnode_operid: 1002
 # Koha-devops user name:
 kohahosts_operuser: kohadev
+hostnode_operuser: kohadev
 # Koha-devops pass:
 kohahosts_operpass:
+hostnode_operpass:
