@@ -12,7 +12,7 @@
 # - dev-time inventories in the playbook root dir
 *cache/
 docs/
-site*.yaml
+site-*.yaml
 local-*/
 callback_plugins/
 *vault*
