@@ -33,7 +33,7 @@
   ## Pre-tasks
   pre_tasks:
     - raw: echo "hostnode(pre_tasks/raw-module) 'play-hostnode.yaml'"
-    - debug: var=inventory_hostname
+    - debug: var=inventory_hostname,hostnode_environment,hostnode_operid
 
     # List contents of read vars_files (if any)
     - name: List contents of preset vars (if any)
@@ -55,12 +55,12 @@
 
     # [debug]: List provisionable LXCs (if any)
     - name: List provisionable LXCs (if any)
-      debug: var=hostnode_lxcs
+      debug: var=hostnode_lxcs,hostnode_environment
       tags: hostnode:postrole
 
     # [debug]: Show some ssh/connection vars
     - name: Show some ssh/connection vars
-      debug: var=ansible_ssh_common_args,inventory_hostname,ansible_host
+      debug: var=ansible_host,ansible_port,ansible_ssh_common_args,inventory_hostname
       tags: hostnode:postrole
       
     # Add provisionable LXCs as new hosts (grouping them by their domain name) 
