@@ -155,7 +155,7 @@ function kohalxc_info {
 	sudo lxc-info -n ${KOHALXC_NAME} -c lxc.group | tr "\n" " " | colortab
 
     ## List of active/stopped/freezed/cloned containers in the host
-    echo && ech "List pf all containers:" "sudo lxc-ls -f" 
+    echo && ech "List all containers:" "sudo lxc-ls -f" 
     sudo lxc-ls -f | colortab
     
     ## List of iptables rules in the host
@@ -178,20 +178,18 @@ function kohalxc_ansible {
 	ech "KOHALXC_ANSIBLE_LXCS" "$KOHALXC_ANSIBLE_LXCS"
     )
 
-    exit 123
-
     # Set the env for ansible logging
     ANSIBLE_LOG_PATH="log/kohalappi_${KOHALXC_ANSIBLE_INVENTORY}.log"
     ech "ANSIBLE_LOG_PATH:" "$ANSIBLE_LOG_PATH"
 
     # Build the ansible command for playbook runs
-    KOHALXC_ANSIBLE_CMD="ansible-playbook ${KOHALXC_ANSIBLE_PLAYBOOK:-site.yaml}  -i ${KOHALXC_ANSIBLE_INVENTORY} ${KOHALXC_ANSIBLE_CMDOPTS:-\"-vvv\"}"
+    KOHALXC_ANSIBLE_CMD="ansible-playbook ${KOHALXC_ANSIBLE_PLAYBOOK:-play-all.yaml}  -i ${KOHALXC_ANSIBLE_INVENTORY} ${KOHALXC_ANSIBLE_CMDOPTS:-\"-vvv\"}"
     ech "Running KOHALXC_ANSIBLE_CMD:" "\n$KOHALXC_ANSIBLE_CMD"
     # Ansible playbook default run with specified options
     ( cd $KOHALXC_ANSIBLE_PLAYBOOKS;
       [[ -f "$KOHALX_ANSIBLE_PLAYBOOK" ]] && export ANSIBLE_LOG_PATH &&
 	  /usr/local/bin/ansible-playbook \
-	      $KOHALXC_ANSIBLE_PLAYBOOK \
+	      ${KOHALXC_ANSIBLE_PLAYBOOK:-"play-all.yaml"} \
 	      -i ${KOHALXC_ANSIBLE_INVENTORY} \
 	      ${KOHALXC_ANSIBLE_CMDOPTS:-"-vvv"} ||
 	      ece "Warn ($?)" \
