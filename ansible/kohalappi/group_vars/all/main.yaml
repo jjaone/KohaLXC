@@ -9,36 +9,43 @@
 # 
 # Description:
 # - list here all playbook-level 'group_vars' used in inventories/roles setups
+# - setting them here will override the values in the inventories and roles
+# - vars defined in encrypted group_vars/all/vault.yaml override all here
 #
-# See also: (inventory/)<hostnode_environment>/group_vars/all
-# Note: setting var here will override the values in the 'inventory'
+# See also:
+# - inventory/<hostnode_environment>/hosts
+# - inventory/<hostnode_environment>/group_vars/{main,vault}.yaml
 # ##############################################################################
 
-## Name of the inventory environment for all 'hostnode/LXCs' playbooks:
-# - localdev, development, testing, monitoring, production
-#hostnode_environment: default
-
-#############
-## General ##
-#############
-
+## Facts & Hanldlers:
 # Facts gathering:
 #gather_facts: False
-# Force all handlers always (also in case play fails etc):
+# Force all handlers always
+# - also in case play fails etc):
 #force_handlers: false
 
-#########
-## LVM ##
-#########
+## Ansible related ##        
+# - users, connections, ports
+# - can be defined in inventories per group/host
+# Python interpreter:
+ansible_python_interpreter: /usr/bin/python2.7
+# Ansible_connection: ssh/local
+#ansible_connection: ssh
+# Ansible_port:
+#ansible_port: "{{ hostnode_sshport | d('22') }}"
+# Ansible become method:
+ansible_become_method: sudo
+# Ansible_user:
+#ansible_user: "{{ hostnode_operuser | d(kohaoper) }}"
+# Ansible become pass':
+#ansible_become_pass
 
-# LVM enablement:  (usually only in testing/production)
-#hostnode_lvm_enabled: false
 
-################################################################
-## Vault/secure settings:
+# ############################################################
+# Vault/secure settings:
 # - list here all encrypted variable names needed by the play
 # - use '*vault*.yaml' etc. (won't be included in this repo)
-################################################################
+# ############################################################
 
 ## Settings for accessing Koha/LXC-containers
 # Koha-user account (LXC): 'ubuntu'
@@ -48,23 +55,18 @@ kohalxc_operuser: ubuntu
 kohalxc_operpass:
 
 ## Settings for "devenv", "mdbenv", "kohaenv" users/passes/configs
-# Maria/Mysql-database root user: 'mdbenv_dbroot'
+# MariaDB/Mysql-database root user name:
 mdbenv_rootuser: root
-# Maria/Mysql-database root user pass: 'mdbenv_dbpass'
+# MariaDB/Mysql-database root user pass:
 mdbenv_rootpass:
-# Koha-database user: 'koha'
+# Database koha-user name:
 mdbenv_kohauser: koha
-# Koha-database pass
+# Database koha-user pass
 mdbenv_kohapass:
-# Koha-database name
+# Database name for koha-data:
 mdbenv_kohadb: kohadata
 
-# Koha-(local)developer user: system '$USER' or 'ansible_user'
-localdev_user: "{{ ansible_user }}" 
-# Koha-(local)developer user pass
-localdev_pass:
-  
-## Settings for 'testing'/'production' koha-server/hosts
+## Settings in 'testing'/'production' for 'hostnode'/severs
 # Server name of "koha" web/applications and services:
 hostnode_websrv:
 # Server name of "koha" databases and services:
@@ -72,21 +74,26 @@ hostnode_mdbsrv:
 # Server name of "koha" data/mmt storage/utilities:
 hostnode_datasrv:
 
-# Koha-system user id:
-hostnode_sysid: 1000
 # Koha-system user name:
-hostnode_sysuser: kohasys
+hostnode_kohasys_user: kohasys
+# Koha-system user id:
+hostnode_kohasys_id: 1000
 # Koha-system user pass:
-hostnode_syspass:
+hostnode_kohasys_pass:
 
 # Koha-group name:
-hostnode_groupname: koha
+hostnode_kohagrp_name: kohagrp
 # Koha-group gid:
-hostnode_groupgid: 1001
+hostnode_kohagrp_gid: 1001
 
+# Koha-devops user name:
+hostnode_operuser: kohaoper
 # Koha-devops user id:
 hostnode_operid: 1002
-# Koha-devops user name:
-hostnode_operuser: kohadev
 # Koha-devops pass:
-hostnode_operpass:
+#hostnode_operpass:
+
+## Inventory: "localdev" only..
+# - set these in ./vault.yaml
+#localdev_operuser: "{{ ansible_user }}"
+#localdev_operpass:
