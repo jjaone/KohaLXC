@@ -28,7 +28,7 @@
 # ############################################################################
 
 ## Include Koha-hosts server plays: LXC-hostnodes with dev/srv/web/mdb/dataenv(s)
-- include: play-hostnode.yaml
+- include: play-hostnodes.yaml
 
 ## Include Koha-LXC plays: LXC-guests with dev/web(koha)/mdb/dataenv(s)
-- include: play-lxcs.yaml
+#- include: play-lxcs.yaml

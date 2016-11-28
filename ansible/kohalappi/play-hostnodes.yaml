@@ -1,5 +1,5 @@
 ---
-# File: $KOHALXC_ANSIBLE_PLAYBOOKS/play-hostnode.yaml
+# File: $KOHALXC_ANSIBLE_PLAYBOOKS/play-hostnodes.yaml
 # #############################################################################
 # Code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -28,11 +28,11 @@
   #vars_prompt:
   #  - name: userinput_vars
   #    prompt: "Input something?"
-  #    tags: hostnode:prerole
+  #    tags: hostnodes:prerole
 
   ## Pre-tasks
   pre_tasks:
-    - raw: echo "hostnode(pre_tasks/raw-module) 'play-hostnode.yaml'"
+    - raw: echo "hostnodes(pre_tasks/raw) 'play-hostnodes.yaml'"
     - debug: var=inventory_hostname,hostnode_environment,hostnode_operid
 
     # List contents of read vars_files (if any)
@@ -42,7 +42,7 @@
         - hostnode_var is defined
         - userinput_vars is defined
         - userinput_vars == "y"
-      tags: hostnode:prerole
+      tags: hostnodes:prerole
 
   ## Roles
   roles:
@@ -51,17 +51,17 @@
 
   # Post-tasks
   post_tasks:
-    - raw: echo "In hostnode(post_tasks/raw-module) 'play-hostnode.yaml'"
+    - raw: echo "In hostnodes(post_tasks/raw) 'play-hostnodes.yaml'"
 
     # [debug]: List provisionable LXCs (if any)
     - name: List provisionable LXCs (if any)
       debug: var=hostnode_lxcs,hostnode_environment
-      tags: hostnode:postrole
+      tags: hostnodes:postrole
 
     # [debug]: Show some ssh/connection vars
     - name: Show some ssh/connection vars
       debug: var=ansible_host,ansible_port,ansible_ssh_common_args,inventory_hostname
-      tags: hostnode:postrole
+      tags: hostnodes:postrole
       
     # Add provisionable LXCs as new hosts (grouping them by their domain name) 
     - name: Set provisionable LXCs as hosts for detailed setup/config
@@ -71,4 +71,4 @@
       with_items: hostnode_lxcs | d()
       when:
       - item is defined and item != ""
-      tags: hostnode:postrole
+      tags: hostnodes:postrole
