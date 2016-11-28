@@ -179,7 +179,8 @@ function kohalxc_ansible {
     )
 
     # Set the env for ansible logging
-    ANSIBLE_LOG_PATH="log/kohalappi_${KOHALXC_ANSIBLE_INVENTORY}.log"
+    ANSIBLE_LOG_PATH="log/${KOHALXC_ANSIBLE_INVENTORY}.log"
+    mkdir -p $(dirname $ANSIBLE_LOG_PATH) && touch $ANSIBLE_LOG_PATH
     ech "ANSIBLE_LOG_PATH:" "$ANSIBLE_LOG_PATH"
 
     # Build the ansible command for playbook runs
@@ -187,13 +188,13 @@ function kohalxc_ansible {
     ech "Running KOHALXC_ANSIBLE_CMD:" "\n$KOHALXC_ANSIBLE_CMD"
     # Ansible playbook default run with specified options
     ( cd $KOHALXC_ANSIBLE_PLAYBOOKS;
-      [[ -f "$KOHALX_ANSIBLE_PLAYBOOK" ]] && export ANSIBLE_LOG_PATH &&
+      [[ -f $KOHALXC_ANSIBLE_PLAYBOOK ]] && export ANSIBLE_LOG_PATH &&
 	  /usr/local/bin/ansible-playbook \
-	      ${KOHALXC_ANSIBLE_PLAYBOOK:-"play-all.yaml"} \
+	      ${KOHALXC_ANSIBLE_PLAYBOOK} \
 	      -i ${KOHALXC_ANSIBLE_INVENTORY} \
 	      ${KOHALXC_ANSIBLE_CMDOPTS:-"-vvv"} ||
 	      ece "Warn ($?)" \
-		  "Ansible play for ${KOHALXC_ANSIBLE_INVENTORY} returned an error code."
+		  "Ansible play '$KOHALXC_ANSIBLE_PLAYBOOK' in [${KOHALXC_ANSIBLE_INVENTORY}] returned an error code."
     )
 }
 
@@ -778,13 +779,15 @@ while getopts "h?fvdi:n:" opt; do
 	    _usage
 	    exit 0
 	    ;;
-	d)  debug=1; DEBUG="-d";
+	d)  debug=1; DEBUG="-d"; # Do not skip ansible :debug tags
+	    KOHALXC_ANSIBLE_SKIPTAGS=
 	    ;;
 	f)  force=1; FORCE="-f";
 	    ;;
 	i)  KOHALXC_ANSIBLE_INVENTORY=$OPTARG;
 	    [[ -n "$VERBOSE" ]] && ech "Ansible inventory set to:" \
 				       "$KOHALXC_ANSIBLE_INVENTORY"
+	    KOHALXC_ANSIBLE_CMDOPTS="$KOHALXC_ANSIBLE_CMDOPTS $KOHALXC_ANSIBLE_SKIPTAGS"
 	    ;;
 	v)  verbose=1; VERBOSE="-v";
 	    ;;
