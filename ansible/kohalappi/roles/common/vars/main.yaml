@@ -1,0 +1,33 @@
+---
+# File: roles/common/vars/main.yaml
+# #############################################################################
+# Code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# Description:
+# - define *constants* that should/could be made available to other roles
+# - override 'defaults' for General & KohaLXC: devenv, srvenv, mdbenv, webenv
+# - provide also defaults for LCX-environment
+# Note: to set these just include this 'common'-role in the plays
+# #############################################################################
+
+## General
+#gather_facts:
+#local_home:
+
+## KohaLXC
+kohalxc_install: "/home/{{ ansible_user }}/Works"
+#kohalxc_works:
+#kohalxc_root:
+#kohalxc_tools:
+#kohalxc_org:
+#kohalxc_setups:
+#kohalxc_datas:
+#kohalxc_dataset:
+  
+#kohalxc_devenv:
+#kohalxc_srvenv:
+#kohalxc_mdbenv:
+#kohalxc_webenv:

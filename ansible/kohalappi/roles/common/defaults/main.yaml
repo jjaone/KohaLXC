@@ -1,0 +1,56 @@
+---
+# File: roles/common/defaults/main.yaml
+# #############################################################################
+# Code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# Description:
+# - defaults of vars that should/could be made available to other roles
+# - General and KohaLXC: (devenv, srvenv, mdbenv, webenv)
+# Note: to use these just include this 'common'-role in the plays
+# #############################################################################
+
+###########
+# General #
+###########
+# Facts gathering: False/True
+gather_facts: True
+# Local/management user home directory
+local_home: "{{ lookup('env', 'HOME') }}"
+
+###################
+# KohaLXC-tooling #
+###################
+# Note: these were previously set in roles defaults, e.g 'kohahosts_kohalxc_works'
+# KohaLXC-installation (target host) directory:
+kohalxc_install: "/home/{{ ansible_user }}/Works"
+# KohaLXC-works source directories (from the host env w/ defaults):
+kohalxc_works: "{{ lookup('env', 'KOHALXC_WORKS') }}"
+# KohaLXC-root directory (kohalxc_root): 
+kohalxc_rootdir: "{{ lookup('env', 'KOHALXC_ROOTDIR') | d(kohalxc_works~'/KohaLXC', true) }}"
+# KohaLXC-kohatools directory (kohalxc_tools):
+kohalxc_tooldir: "{{ lookup('env', 'KOHALXC_TOOLDIR') | d(kohalxc_rootdir~'/kohatools' ,true) }}"
+# KohaLXC-organization (kohalxc_org): KohaSuomi, KohaLappi, ect.
+kohalxc_organization: "{{ lookup('env', 'KOHALXC_ORGANIZATION') | d('KohaSuomi', true) }}"
+# KohaLXC-setup directory (kohalxc_setups):
+kohalxc_setupdir: "{{ lookup('env', 'KOHALXC_SETUPDIR') | d(kohalxc_works~'/'~kohalxc_organization~'/kohalxc', true) }}"
+# Database/data directory (kohalxc_datas):
+kohalxc_datadir: "{{ lookup('env', 'KOHALXC_DATADIR') | d(kohalxc_works~'/'~kohalxc_organization~'/kohadata', true) }}"
+# Database dataset (kohalxc_dataset: name, date, content of the dump)
+kohalxc_dataset: "{{ lookup('env', 'KOHALXC_DATASET') | d({},true) }}"
+#kohalxc_dataset:
+# - "{{ lookup('env', 'KOHALXC_DATASET') | d([], true) }}"
+
+## KohaLXC-devenv: developer env config files and setup scripts
+kohalxc_devenv: "{{ kohalxc_tooldir }}/conf.d/env.dev"
+
+## KohaLXC-srvenv: common server env config files and setup scripts
+kohalxc_srvenv: "{{ kohalxc_tooldir }}/conf.d/env.srv"
+
+## KohaLXC-mdbenv: maria/mysql db env config files and setup scripts
+kohalxc_mdbenv: "{{ kohalxc_tooldir }}/conf.d/env.mdb"
+
+## KohaLXC-webenv: (koha)webapp env config files and setup scripts
+kohalxc_webenv: "{{ kohalxc_tooldir }}/conf.d/env.web"

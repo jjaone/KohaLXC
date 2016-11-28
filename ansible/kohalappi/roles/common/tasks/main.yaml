@@ -1,0 +1,64 @@
+---
+# File: roles/commmon/tasks/main.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description:
+# - common tasks for all hosts/groups 
+# ##############################################################################
+
+## Bootstrap python 2 (for Ubuntu 16.04/Xenial and 14.04/Trusty hosts)
+# - seems 'gather_facts' must be 'False' in main playbooks for this to work!
+- name: Test/ensure Python 2 is installed to support Ansible plays
+  become: yes
+  raw: test ! -e {{ ansible_python_interpreter | default('/usr/bin/python') }} && echo "Target system needs to be bootstrapped for Python 2" || echo "Python 2 ok, target system has '{{ ansible_python_interpreter }}'"
+#  raw: test ! -e {{ ansible_python_interpreter | default('/usr/bin/python') }} && apt-get autoremove && apt install -y python2.7-minimal || echo -n "Bootstrapped for Python '{{ ansible_python_interpreter }}'"
+  args:
+    executable: /bin/bash
+  when:
+    - inventory_hostname != "localhost"
+  tags: common:bootstrap
+
+## Logger - write a timestamp to target hosts system-log
+- name: Let target system syslog know about us
+  command: logger -t Ansible-play "kohalappi/{{ role_path | basename}}" in [{{ inventory_dir | basename }}]; inventory_hostname={{ inventory_hostname }}, ansible_host={{ ansible_host }}, ansible_port={{ ansible_port | d('22') }}, ansible_connection={{ ansible_connection }}, ansible_user={{ ansible_user }}, ansible_distribution={{ ansible_distribution }}, ansible_distribution_release={{ ansible_distribution_release }}, ansible_default_ipv4.interface={{ ansible_default_ipv4.interface }}
+  tags: common:status
+
+## Configure and setup timezone
+# - [requires]: Ansible 2.2.0+
+- name: Setup timezone - use by default 'Europe/Helsinki'
+  timezone: name=Europe/Helsinki
+  tags: common:setup
+
+## Show common KohaLXC-related settings (for all roles)
+# - [debug]:
+- name: Show common (KohaLXC-related) environment settings
+  debug: var=local_home,kohalxc_works_target,kohalxc_installdir,kohalxc_works,kohalxc_rootdir,kohalxc_tooldir,kohalxc_organization,kohalxc_setupdir,kohalxc_datadir,kohalxc_dataset,kohalxc_devenv,kohalxc_srvenv,kohalxc_mdbenv,kohalxc_webenv
+  tags: common:debug
+
+## Show Ansible-related vars
+# - [debug]:
+- name: Show management-host and Ansibe-related vars..
+  debug: var=gather_facts,hostnode_operuser,ansible_python_interpreter,ansible_connecion,ansible_port,ansible_become_method,ansible_user
+  tags: common:debug
+
+## Show KohaLXC-environment in the host, if any 
+- name: Show KohaLXC_ environment for '{{ hostnode_operuser }}'
+  become: yes
+  become_user: "{{ ansible_user | d(hostnode_operuser) }}"
+  shell: whoami && [[ -f /etc/profile.d/kohalxc-devenv.sh ]] && source /etc/profile.d/kohalxc-devenv.sh || source ~/.kohalxc.rc  && env | grep -s "^KOHALXC_"
+  args:
+    executable: /bin/bash
+  register: cmd
+  changed_when: cmd.rc == 0
+  failed_when: cmd.stderr != ""
+  tags: common:debug
+
+## Show the status of existing LXCs..
+- name: List status of running/stopped LXCs..
+  become: yes
+  shell: lxc-ls -f
+  tags: common:status
