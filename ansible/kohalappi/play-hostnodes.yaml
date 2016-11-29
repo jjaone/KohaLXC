@@ -33,7 +33,7 @@
   ## Pre-tasks
   pre_tasks:
     - raw: echo "hostnodes(pre_tasks/raw) 'play-hostnodes.yaml'"
-    - debug: var=inventory_hostname,hostnode_environment,hostnode_operid
+    - debug: var=inventory_hostname,hostnode_environment,hostnode_operid,kohalxc_operuser
 
     # List contents of read vars_files (if any)
     - name: List contents of preset vars (if any)
