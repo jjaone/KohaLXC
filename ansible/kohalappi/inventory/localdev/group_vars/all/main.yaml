@@ -8,8 +8,9 @@
 # 
 # Description:
 # - defaults for 'localdev' inventory vars: hostnodes and LXCs
-# - overrides role-settings, will be overwritten by play main 'group_vars'
-# - settings in 'hosts', 'vault.yaml' and 'host_vars' here override all these
+# - overrides role-settings,
+# - will be overwritten by playnook-level 'group_vars/all/{main,vault}.yaml'
+# - settings in 'hosts', 'vault.yaml' and 'host_vars' here override these
 # #############################################################################
 
 ## Name of this inventory: 'localdev'
@@ -18,8 +19,14 @@ hostnode_environment: "{{ inventory_dir | basename }}"
 # Just to test/debug the inheritance in ansible playbooks..
 hostnode_testvar: inventory_localdev_group_vars_all_main
 
-## Ansible-related hosts/connections:
-# - can be defined in hosts file per host
+# ## Facts & Handlers
+# - facts gathering:
+#gather_facts: False
+# - force all handlers always (also in case play fails..)
+#force_handlers: False
+
+## Ansible-related: user, hosts/connections, ports:
+# - set here unless overriden in playbook-level 'group_vars/all'
 #ansible_python_interpreter
 #ansible_connection
 #ansible_port
