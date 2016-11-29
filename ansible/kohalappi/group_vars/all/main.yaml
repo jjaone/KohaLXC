@@ -10,7 +10,6 @@
 # - list here all playbook-level 'group_vars' used in inventories/roles setups
 # - setting them here will override values in inventories and roles!!!
 # - vars defined in encrypted group_vars/all/vault.yaml override all here
-#
 # See also:
 # - inventory/<hostnode_environment>/hosts
 # - inventory/<hostnode_environment>/group_vars/{main,vault}.yaml
@@ -23,9 +22,8 @@
 # - also in case play fails etc):
 #force_handlers: false
 
-## Ansible related ##        
-# - users, connections, ports
-# - can be defined in inventories per group/host
+## Ansible related: users, connections, ports
+# - unless overriden here these can be defined in inventories per group/host
 # Python interpreter:
 ansible_python_interpreter: /usr/bin/python2.7
 # Ansible_connection: ssh/local
@@ -46,14 +44,13 @@ ansible_become_method: sudo
 # - use '*vault*.yaml' etc. (won't be included in this repo)
 # ############################################################
 
-## Settings for accessing Koha/LXC-containers
-# Koha-user account (LXC): 'ubuntu'
-# - could be overriden in lxc-create
-kohalxc_operuser:
-# Koha-user account (LXC) pass
-kohalxc_operpass:
+## Accessing Koha/LXC-containers
+# - operations user name (could be overriden in lxc-create):
+#kohalxc_operuser: ubuntu
+# - operations user pass:
+#kohalxc_operpass:
 
-## Settings for "devenv", "mdbenv", "kohaenv" users/passes/configs
+## KohaLXC: "devenv", "mdbenv", "kohaenv" users/passes/configs
 # MariaDB/Mysql-database root user name:
 kohalxc_mdbenv_rootuser: root
 # MariaDB/Mysql-database root user pass:
