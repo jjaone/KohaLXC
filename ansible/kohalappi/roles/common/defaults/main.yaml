@@ -23,7 +23,12 @@ local_home: "{{ lookup('env', 'HOME') }}"
 ###################
 # KohaLXC-tooling #
 ###################
-# Note: these were previously set in roles defaults, e.g 'kohahosts_kohalxc_works'
+## Koha-LXC operations user
+# - name
+kohalxc_operuser: ubuntu
+# - pass
+#kohalxc_operpass:
+
 # KohaLXC-installation (target host) directory:
 kohalxc_install: "/home/{{ ansible_user }}/Works"
 # KohaLXC-works source directories (from the host env w/ defaults):
