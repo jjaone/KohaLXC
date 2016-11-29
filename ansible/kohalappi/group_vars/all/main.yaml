@@ -1,9 +1,8 @@
 ---
 # File: group_vars/all/main.yaml
-# ##############################################################################
+# #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
-#
 # Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
 # License: GNU General Public License version 3.
 # 
@@ -15,7 +14,7 @@
 # See also:
 # - inventory/<hostnode_environment>/hosts
 # - inventory/<hostnode_environment>/group_vars/{main,vault}.yaml
-# ##############################################################################
+# #############################################################################
 
 ## Facts & Hanldlers:
 # Facts gathering:
@@ -56,15 +55,15 @@ kohalxc_operpass:
 
 ## Settings for "devenv", "mdbenv", "kohaenv" users/passes/configs
 # MariaDB/Mysql-database root user name:
-mdbenv_rootuser: root
+kohalxc_mdbenv_rootuser: root
 # MariaDB/Mysql-database root user pass:
-mdbenv_rootpass:
+kohalxc_mdbenv_rootpass:
 # Database koha-user name:
-mdbenv_kohauser: koha
+kohalxc_mdbenv_kohauser: koha
 # Database koha-user pass
-mdbenv_kohapass:
+kohalxc_mdbenv_kohapass:
 # Database name for koha-data:
-mdbenv_kohadb: kohadata
+kohalxc_mdbenv_kohadb: kohadata
 
 ## Settings in 'testing'/'production' for 'hostnode'/severs
 # Server name of "koha" web/applications and services:
