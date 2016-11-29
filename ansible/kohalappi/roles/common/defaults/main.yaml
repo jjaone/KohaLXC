@@ -45,12 +45,20 @@ kohalxc_dataset: "{{ lookup('env', 'KOHALXC_DATASET') | d({},true) }}"
 
 ## KohaLXC-devenv: developer env config files and setup scripts
 kohalxc_devenv: "{{ kohalxc_tooldir }}/conf.d/env.dev"
+kohalxc_devenv_enabled: false
 
 ## KohaLXC-srvenv: common server env config files and setup scripts
 kohalxc_srvenv: "{{ kohalxc_tooldir }}/conf.d/env.srv"
+kohalxc_srvenv_enabled: false
 
 ## KohaLXC-mdbenv: maria/mysql db env config files and setup scripts
 kohalxc_mdbenv: "{{ kohalxc_tooldir }}/conf.d/env.mdb"
+kohalxc_mdbenv_enabled: false
 
 ## KohaLXC-webenv: (koha)webapp env config files and setup scripts
 kohalxc_webenv: "{{ kohalxc_tooldir }}/conf.d/env.web"
+kohalxc_webenv_enabled: false
+
+## KohaLXC-dataenv: (koha/conversion)data source, configs and tools scripts
+kohalxc_dataenv: "{{ kohalxc_tooldir }}/conf.d/env.data"
+kohalxc_dataenv_enabled: false

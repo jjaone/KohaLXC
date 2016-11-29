@@ -7,9 +7,9 @@
 # License: GNU General Public License version 3.
 #
 # Description:
-# - define *constants* that should/could be made available to other roles
+# - define *constants* that are to be made available to other roles as fixed
 # - override 'defaults' for General & KohaLXC: devenv, srvenv, mdbenv, webenv
-# - provide also defaults for LCX-environment
+# - provide also some immutable defaults for LCX-environment
 # Note: to set these just include this 'common'-role in the plays
 # #############################################################################
 

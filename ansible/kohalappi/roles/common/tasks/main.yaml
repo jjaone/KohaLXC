@@ -7,7 +7,12 @@
 # License: GNU General Public License version 3.
 # 
 # Description:
-# - common tasks for all hosts/groups 
+# - common tasks for all hosts/groups
+#
+# Ensironment (variables) defined in:
+# - <roledir>/defaults, *<roledir>/vars*,
+# - <playdir>/group_vars/all/{main,vault}.yaml
+# - <playdir>/inventory/<invname>/group_vars/all/main
 # ##############################################################################
 
 ## Bootstrap python 2 (for Ubuntu 16.04/Xenial and 14.04/Trusty hosts)
