@@ -16,7 +16,6 @@ site-*.yaml
 local-*/
 callback_plugins/
 *vault*
-ansible/kohalappi/inventory/
 ansible/kohalappi/localdev/
 ansible/kohalappi/development/
 ansible/kohalappi/testing/

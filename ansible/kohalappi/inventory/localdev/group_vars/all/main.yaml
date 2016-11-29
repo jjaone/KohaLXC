@@ -1,0 +1,38 @@
+---
+# File: inventory/localdev/group_vars/all/main.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description:
+# - defaults for 'localdev' inventory vars: hostnodes and LXCs
+# - overrides role-settings, will be overwritten by play main 'group_vars'
+# - settings in 'hosts', 'vault.yaml' and 'host_vars' here override all these
+# #############################################################################
+
+## Name of this inventory: 'localdev'
+# - localdev, development, testing, monitoring, production, ..
+hostnode_environment: "{{ inventory_dir | basename }}"
+# Just to test/debug the inheritance in ansible playbooks..
+hostnode_testvar: inventory_localdev_group_vars_all_main
+
+## Ansible-related hosts/connections:
+# - can be defined in hosts file per host
+#ansible_python_interpreter
+#ansible_connection
+#ansible_port
+#ansible_user
+#ansible_become_method
+#ansible_become_pass
+
+## Provide below 'hostnode' group_vars in ./'vault.yaml':
+# - ssh_port:
+#hostnode_sshport: 22
+# - oper user id
+#hostnode_operid:
+# - oper user name
+#hostnode_operuser:
+# - oper user pass
+#hostnode_operpass:

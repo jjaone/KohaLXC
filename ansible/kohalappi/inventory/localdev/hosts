@@ -1,0 +1,46 @@
+# -*- mode: conf-*-
+# File: inventory/localdev/hosts
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3
+#
+# Description:
+# Local development inventory of koha-servers/apps for host/lxc provision
+# - 'hostnodes' for LXC hosts servers
+# - 'weblxc' and 'mdblxc" for application containers (per host domains)
+# - file: "inventory/localdev/group_vars/all" defines common vars like:
+#   'ansible_become_pass', 'ansible_user', 'ansible_port', ..  
+# - see also (for networking setup in target hosts): /etc/lxc/dnsmasq.conf
+# #############################################################################
+
+# Local-dev inventory of (koha) server hostnodes:
+[localdev-hostnodes]
+localhost ansible_connection=local ansible_become=yes ansible_become_method=sudo ansible_become_pass="{{ localdev_operpass }}" hostnode_operuser="{{ localdev_operuser }}" hostnode_operid="{{ localdev_operid }}"
+
+# Local-dev of (static/manual networking)) LXC'd web-application(s):
+[localdev-weblxc]
+
+# Local-dev of (static/manual networking) LXD'd Mariadb/Mysql databases:
+[localdev-mdblxc]
+
+# #############################################################################
+# All local-dev koha host servers: "hostnodes" (HOST)
+[hostnodes:children]
+localdev-hostnodes
+
+# All local-dev koha-related web/application guests: "weblxc" (LXC)
+[weblxc:children]
+localdev-weblxc
+
+# All local-dev koha-related) database (mysql/mariadb) guests: "mdblxc" (LXC)
+[mdblxc:children]
+localdev-mdblxc
+
+# All local-dev koha-related guests: "kohalxcs (or lxcs)" (LXCs)
+# [TODO]: Do we need this group at all?
+[kohalxcs:children]
+localdev-weblxc 
+localdev-mdblxc
+# #############################################################################
