@@ -13,8 +13,11 @@
 # Note: to set these just include this 'common'-role in the plays
 # #############################################################################
 
-## General
+#############################
+## General: facts & handlers
+#############################
 #gather_facts:
+#force_handlers:
 #local_home:
 
 ## KohaLXC

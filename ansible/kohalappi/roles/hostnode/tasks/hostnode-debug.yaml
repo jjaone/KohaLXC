@@ -32,6 +32,16 @@
 - debug: var=hostnode_kohagrp_name,hostnode_kohagrp_id verbosity=0
 - debug: var=hostnode_operuser,hostnode_operid,hostnode_sshport verbosity=0
 
-# hostnode/lxcenv
+# hostnode/lxcenv+dev/srvenv
 - debug: var=hostnode_lxcenv_enabled verbosity=0
-- debug: var=hostnode_lxcs_names,hostnode_lxcs verbosity=0
+- debug: var=hostnode_lxcs_names,hostnode_lxc_defaults,hostnode_lxcs verbosity=0
+- debug: var=hostnode_kohalxc_devenv,hostnode_kohalxc_srvenv verbosity=0
+
+# hostnode/upgrades and rebootability
+- debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled verbosity=0
+
+# hostnode/secure+storage
+- debug: var=hostnode_secure_enabled,hostnode_lvm_enabled,hostnode_zfs_enabled verbosity=0
+
+# hostnode/lxcenv
+- debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_logfile,hostnode_lxcenv_domain verbosity=0

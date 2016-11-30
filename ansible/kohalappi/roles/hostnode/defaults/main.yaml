@@ -7,7 +7,7 @@
 # License: GNU General Public License version 3.
 #
 # Description: define defaults for all variables used in this role
-# - settings: General, KohalXC-tooling, server-security. LVM, ZFS, LXCs
+# - General, KohalXC-tooling, Server-updates, Security, LVM, ZFS, LXCs
 # - vars should be named like 'hostnode_var1' etc..
 # - vars used in templates for config files should be at target OS defaults
 #
@@ -17,12 +17,12 @@
 # - <playbooks>/group_vars/{all,hostnode}/{main,vault}.yaml (top-level)
 # #############################################################################
 
-# Just to test/debug the inheritance in ansible playbooks..
+## Just to test/debug the inheritance in ansible playbooks..
 hostnode_testvar: roles_hostnode_defaults_main.yaml
 
-############################
+## #########################
 ## General: facts & handlers
-############################
+## #########################
 # Facts gathering: False/True
 gather_facts: False
 # Force all handlers always (also in case play fails etc):
@@ -30,25 +30,30 @@ gather_facts: False
 # Local/management user home directory
 #local_home: "{{ lookup('env', 'HOME') }}"
 
-#########################
-## Server/KohaLXC tooling
-#########################
+## #######################
+## Server: KohaLXC tooling
+## #######################
 # (defaults in 'roles/common/defaults/main.yaml')
 ## KohaLXC/devenv: enable for this role
 hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
 ## KohaLXC/srvenv: enable for this role
 hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
 
+## ###########################
+## Server: updates/reboots/nic
+## ###########################
+# Rebootable server
+hostnode_reboot_enabled: false
 # Upgradable server
 hostnode_upgrade_enabled: false
 # Pattern to ignore pckgs from upgrades
-hostnode_upgrade_pckgsignore: 
-# Rebootable server
-hostnode_reboot_enabled: false
+hostnode_upgrade_pckgsignore:
+# Network-card interface
+hostnode_network_interface: eth0
 
-###########################
-# Server security/hardening 
-###########################
+## #########################
+## Server security/hardening 
+## #########################
 ## Secure/hardening of the server
 hostnode_secure_enabled: false
 
@@ -79,13 +84,13 @@ hostnode_secure_logwatch_reportemail: webmaster@localhost
 ###############
 ## Storage: LVM
 ###############
-## LVM support: true/false
+## LVM support: false/true
 hostnode_lvm_enabled: false
 # LVM-related packages
 hostnode_lvm_pckgs:
   - lvm2
 
-# Volume group: /dev/roi1_vg 
+# Volume group (VG) name: e.g /dev/roi1_vg 
 hostnode_lvmvg: host_vg 
 # Logical volume for host OS (root): /dev/roi1_vg/root
 hostnode_lvmlv_os: root 
@@ -122,13 +127,13 @@ hostnode_zfs_zpool: "{{ hostnode_lvmlv_tank_fs | d('zfstank') }}"
 # ZFS LXC-root filesystem in LV-'tank'/zpool for LXC-containers'
 hostnode_zfs_rootdir: lxc
 
-##################
+## ###############
 ## LXC-environment
-##################
-## Koha/hosts LXC-environment: true/false
+## ###############
+## Koha/hosts LXC-environment: false/true
 hostnode_lxcenv_enabled: true
 
-# LXC networking:  manual (configured) / dynamic (dhcp)
+## LXC networking:  manual (configured) / dynamic (dhcp)
 hostnode_lxcenv_networking: dhcp
 #hostnode_lxcenv_networking: manual
 # LXC-network domain name: none, lxc, weblxc, mdblxc
@@ -136,26 +141,29 @@ hostnode_lxcenv_domain:
 
 ## Koha-host/lxc-environment filesystem/storage defaults:
 # Container rootfs path (folder where LXCs are placed)
-hostnode_lxc_lxcpath: /var/lib/lxc
+hostnode_lxcenv_lxcpath: /var/lib/lxc
 # Container ZFS-rootfs path (folder where ZFS-enabled LXCs are placed)
-hostnode_lxc_zfspath: /var/lib/zfslxc
+hostnode_lxcenv_zfspath: /var/lib/zfslxc
 # Container rootfs partition minimum size (if partitioned)
-hostnode_lxc_rootfs_size: 100G
+hostnode_lxcenv_rootfs_size: 100G
 # Container backing store (dir/zfs/lvm/btrfs..)
-hostnode_lxc_bdev: dir
+hostnode_lxcenv_bdev: dir
 # Container zfsroot backing store (in case bdev is 'zfs')
-hostnode_lxc_zfsroot: "{{ hostnode_zfs_zpool }}/{{ hostnode_zfs_rootdir }}"
+hostnode_lxcenv_zfsroot: "{{ hostnode_zfs_zpool }}/{{ hostnode_zfs_rootdir }}"
 
-## LXC-defaults:
-# General: logging
+## Container logging
 # - log directory: server <devops>/log -dir
-hostnode_lxc_logdir: "/home/{{ kohalxc_operuser | d('ubuntu') }}/log"
+hostnode_lxcenv_logdir: "/home/{{ kohalxc_operuser | d('ubuntu') }}/log"
 # - log file: kohalxc-ansible.log
-hostnode_lxc_logfile: "{{ hostnode_lxc_logdir }}/kohalxc-ansible.log"
+hostnode_lxcenv_logfile: "{{ hostnode_lxcenv_logdir }}/kohalxc-ansible.log"
 # - log_level: INFO/DEBUG
-hostnode_lxc_loglevel: DEBUG
+hostnode_lxcenv_loglevel: DEBUG
 
-# LXC: mount entries
+## ##########################
+## LXC: defaults/provisioning
+## ##########################
+
+## LXC: mount entries
 # - kohatools
 hostnode_lxc_mount_kohatools: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools home/{{ kohalxc_operuser }}/kohatools none bind,create=dir 0 0
 # - kohadata
@@ -164,11 +172,11 @@ hostnode_lxc_mounts:
   - "{{ hostnode_lxc_mount_kohatools }}" 
   - "{{ hostnode_lxc_mount_kohadata }}"
 
-# LXC: groups
+## LXC: groups
 hostnode_lxc_groups:
   - lxc.group = {{ hostnode_lxcenv_domain | d('lxc') }}
 
-# LXC: start
+## LXC: start
 hostode_lxc_starts:
   - lxc.start.auto = 0
   - lxc.start.delay = 0
@@ -178,29 +186,29 @@ hostode_lxc_starts:
 hostnode_lxc_container_command: |
   addgroup --gid "{{hostnode_kohagrp_gid}}" "{{hostnode_kohagrp_name}}"
   usermod -a -G "{{hostnode_kohagrp_name}}" `getent passwd 1000 | cut -d: -f1`
-  mkdir -p {{ hostnode_lxc_logdir }}
-  touch {{ hostnode_lxc_logfile }}
-  id | tee -a {{ hostnode_lxc_logfile }}
-  chown -R 1000:1000 {{ hostnode_lxc_logdir }}
-  echo "== kohalxc [ansible:lxc_create]: Playbook:'kohalappi' in roles/hostnode/defaults/main.yaml)" | tee -a {{ hostnode_lxc_logfile }}
-  echo "== kohalxc [ansible:lxc_create]: `date`" | tee -a {{ hostnode_lxc_logfile }}
-  env | grep KOHA | {{ hostnode_lxc_logfile }}
-  echo "== kohalxc [ansible:lxc_create]: Use '{{ hostnode_lxcenv_networking }}' scheme for IP-addresses in LXC-net.." | tee -a {{ hostnode_lxc_logfile }}
+  mkdir -p {{ hostnode_lxcenv_logdir }}
+  touch {{ hostnode_lxcenv_logfile }}
+  id | tee -a {{ hostnode_lxcenv_logfile }}
+  chown -R 1000:1000 {{ hostnode_lxcenv_logdir }}
+  echo "== kohalxc [ansible:lxc_create]: Playbook:'kohalappi' in roles/hostnode/defaults/main.yaml)" | tee -a {{ hostnode_lxcenv_logfile }}
+  echo "== kohalxc [ansible:lxc_create]: `date`" | tee -a {{ hostnode_lxcenv_logfile }}
+  env | grep KOHA | {{ hostnode_lxcenv_logfile }}
+  echo "== kohalxc [ansible:lxc_create]: Use '{{ hostnode_lxcenv_networking }}' scheme for IP-addresses in LXC-net.." | tee -a {{ hostnode_lxcenv_logfile }}
   [[ "manual" == "{{ hostnode_lxcenv_networking }}" ]] && sed -i "s/iface eth0 inet dhcp/iface eth0 inet manual/" /etc/network/interfaces
   [[ "dhcp" == "{{ hostnode_lxcenv_networking }}" ]] && sed -i "s/iface eth0 inet manual/iface eth0 inet dhcp/" /etc/network/interfaces
-  echo "== kohalxc [ansible:lxc_create]: Contents of: /etc/network/interfaces:" | tee -a {{ hostnode_lxc_logfile }}
-  cat /etc/network/interfaces | tee -a {{ hostnode_lxc_logfile }}
-  ifconfig -a | tee -a {{ hostnode_lxc_logfile }}
+  echo "== kohalxc [ansible:lxc_create]: Contents of: /etc/network/interfaces:" | tee -a {{ hostnode_lxcenv_logfile }}
+  cat /etc/network/interfaces | tee -a {{ hostnode_lxcenv_logfile }}
+  ifconfig -a | tee -a {{ hostnode_lxcenv_logfile }}
 
 # - container command: kohalxc/mdbenv pckgs installation
 # MariaDB-5.5/Mysql-5.5 non-interactive installation (debconf/apt-get)
 hostnode_mdbenv_pckginstall: |
-  echo "== kohalxc [ansible:mdbenv]: Debconf for non-interactive install of database server (MariaDB-5.5)" | tee -a {{ hostnode_lxc_logfile }}
+  echo "== kohalxc [ansible:mdbenv]: Debconf for non-interactive install of database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
   debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password password"
   debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password_again password"
-  echo "== kohalxc [ansible:mdbenv]: Installing database server (MariaDB-5.5)" | tee -a {{ hostnode_lxc_logfile }}
+  echo "== kohalxc [ansible:mdbenv]: Installing database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
   DEBIAN_FRONTEND=noninteractive apt-get -q -y install mariadb-server-5.5
-  mysqladmin ping status -u root | tee -a {{ hostnode_lxc_logfile }}
+  mysqladmin ping status -u root | tee -a {{ hostnode_lxcenv_logfile }}
 
 ## LXC: template
 # - template (distro): Ubuntu
@@ -214,7 +222,7 @@ hostnode_lxc_tmpl_authkey: ".ssh/id_rsa.pub"
 
 ## LXC: lists of containers
 # Default LXCs (list-of-dicts), leave undefined for now:
-#hostnode_lxcs_default:
+#hostnode_lxc_defaults:
 
 # All LXCs (how to empty the lists/dicts here):
 #hostnode_lxcs: {} # empty dict, flow mapping (with_dict)

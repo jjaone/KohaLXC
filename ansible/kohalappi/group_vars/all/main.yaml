@@ -16,20 +16,20 @@
 # - inventory/<hostnode_environment>/group_vars/{main,vault}.yaml
 # #############################################################################
 
-#############################
-# General: facts & hanldlers
-#############################
+## ###########################
+## General: facts & hanldlers
+## ###########################
 # Facts gathering:
 #gather_facts: False
 # Force all handlers always (also in case play fails etc):
 #force_handlers: false
 
-##################
-# Ansible related
-##################
-# - users, connections, ports
-# - unless overriden here these can be defined in inventories per group/host
+## ###############
+## Ansible related
+## ###############
+## - don't define vars that are to be set in inventories/roles per group/host
 # Python interpreter:
+# - set for distros that don't have Python 2 in path (e.g 'Ubuntu 16.04')
 ansible_python_interpreter: /usr/bin/python2.7
 # Ansible_connection: ssh/local
 #ansible_connection: ssh
