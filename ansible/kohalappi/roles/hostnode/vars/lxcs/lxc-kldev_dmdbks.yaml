@@ -49,4 +49,4 @@ lxc:
   template_options:
     "{{ lxc_default.template_options }}"
   container_command:
-    "{{ lxc_default.container_command + kohahosts_lxc_mdbenv_pckginstall }}"
+    "{{ lxc_default.container_command + hostnode_lxc_mdbenv_pckginstall }}"
