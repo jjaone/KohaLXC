@@ -27,7 +27,7 @@
 ## ###############
 ## Ansible related
 ## ###############
-## - don't define vars that are to be set in inventories/roles per group/host
+## ! don't define vars that are to be set in inventories/roles per group/host !
 # Python interpreter:
 # - set for distros that don't have Python 2 in path (e.g 'Ubuntu 16.04')
 ansible_python_interpreter: /usr/bin/python2.7
