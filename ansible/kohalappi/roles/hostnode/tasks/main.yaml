@@ -1,0 +1,41 @@
+---
+# File: roles/hostnode/tasks/main.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description:
+# - provisioning of koha-related server/hostnodes in playbook inventories 
+# ##############################################################################
+
+## General: debug,status,setup,..
+- include: hostnode-debug.yaml
+  tags: hostnode:debug
+#- include: hostnode-status.yaml
+#  tags: hostnode, hostnode:status
+#- include: hostnode-setup.yaml
+#  tags: hostnode, hostnode:setup
+
+## srvenv-{status,setup}
+#- include: srvenv-status.yaml
+#  tags: hostnode, hostnode:srvenv-status
+#- include: srvenv-setup.yaml
+#  tags: hostnode, hostnode:srvenv-setup
+
+## secure-{status,setup}
+
+## devenv-{status,setup}
+
+## lxcenv-{status,setup}
+#- include: lxcenv-status.yaml
+#  tags: hostnode, hostnode:lxcenv, hostnode:lxcenv-status
+#- include: lxcenv-setup.yaml
+#  tags: hostnode, hostnode:lxcenv, hostnode:lxcenv-setup
+
+## mdbenv-{status,setup}
+
+## webenv-{status,setup}
+
+## dataenv-{status,setup}

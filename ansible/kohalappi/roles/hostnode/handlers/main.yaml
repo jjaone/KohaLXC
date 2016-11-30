@@ -1,0 +1,66 @@
+---
+# File: roles/hostnode/handlers/main.yml
+# #############################################################################
+# Code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# Description:
+# Handlers for common host-environment notifications, called by other plays:
+# - [restart] ssh 
+# - [restart] lxc-net
+# - [restart] resolvconf
+# - [restart] www (Apache2)
+# - [stop]    lxd
+#
+# Docs: http://docs.ansible.com/playbooks_intro.html
+# #############################################################################
+
+## Restart SSH
+- name: Restart ssh
+  service: name=ssh state=restarted
+
+## restart (start/stop) lxc-net (i.e. dnsmasq/dhcp for LXCs)
+- name: Restart lxc-net
+  become: yes
+  service: name=lxc-net state=restarted
+  
+## Update resolver information (dnsmasq/networkng for LXCs)
+- name: Update resolvconf
+  become: yes
+  shell: resolvconf -u
+
+## Restart httpd/ www-server (Apache2)
+- name: Restart www
+  become: yes
+  service: name=apache2 state=restarted
+
+## Ensure LXD is disabled/stopped (if any)
+# [TODO]: Keep this for now, probably not used in plays.
+- name: Stop lxd
+  service: name=lxd state=stopped enabled=no
+
+## Restart Nginx
+# [TODO]: Do we want/need this for Koha-deployments?
+#- name: Restart Nginx
+#  service: name=nginx state=restarted
+
+## Restart NTP
+# [TODO]: Do we need this?
+#- name: Restart ntp
+#  debug: msg="NTP restarting"
+#  service: name=ntp state=restarted
+
+## Wait for server to come back on-line
+# [TODO]: Can this be handled by handlers?
+#- name: Wait server online
+#  become: no
+#  local_action: >
+#    wait_for host="{{ ansible_host }}"
+#    state=started
+#    port={{ hostnode_sshport }}
+#    delay=30
+#    timeout=300
+#    connect_timeout=15
+

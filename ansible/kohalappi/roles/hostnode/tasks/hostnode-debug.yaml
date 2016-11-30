@@ -1,0 +1,35 @@
+---
+# File: roles/hostnode/tasks/hostnode-debug.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description:
+# - debug/verbose info abt koha-related host servers for all inventories 
+# ##############################################################################
+
+## Show local development environment
+- name: Show local development environment key params
+  debug: var=hostnode_environment,local_home,localdev_operuser,localdev_operid,kohalxc_operuser
+  when: inventory_hostname == 'localhost'
+  
+## Show detailed tooling and server hosts environment and related play settings
+- debug: var=ansible_host,ansible_user,gather_facts,force_handlers,hostnode_testvar verbosity=0
+- debug: var=kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_organization verbosity=0
+- debug: var=kohalxc_devenv,kohalxc_devenv_enabled verbosity=1
+- debug: var=kohalxc_srvenv,kohalxc_srvenv_enabled verbosity=1
+- debug: var=kohalxc_mdbenv,kohalxc_mdbenv_enabled,kohalxc_mdbenv_rootuser,kohalxc_mdbenv_kohauser,kohalxc_mdbenv_kohadb verbosity=1
+- debug: var=kohalxc_webenv,kohalxc_webenv_enabled verbosity=1
+- debug: var=kohalxc_dataenv,kohalxc_dataenv_enabled verbosity=1
+- debug: var=hostnode_environment,hostnode_websrv,hostnode_mdbsrv,hostnode_datasrv verbosity=0
+- debug: var=hostnode_kohasys_user,hostnode_kohasys_id verbosity=0
+- debug: var=hostnode_kohagrp_name,hostnode_kohagrp_id verbosity=0
+- debug: var=hostnode_operuser,hostnode_operid,hostnode_sshport verbosity=0
+
+## [TODO]: Convert these later undernew role-name
+#- debug: var=kohahosts_dataenv_enabled,kohahosts_kohalxc_dataset verbosity=0
+#- debug: var=kohahosts_kohalxc_devenv,kohahosts_kohalxc_srvenv verbosity=0
+#- debug: var=kohahosts_lxcenv_enabled verbosity=0
+#- debug: var=kohahosts_lxcs_names,kohahosts_lxcs verbosity=0

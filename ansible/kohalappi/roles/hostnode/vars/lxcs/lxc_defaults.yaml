@@ -1,0 +1,90 @@
+---
+# File: roles/hostnode/vars/lxcs/lxc_defaults.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# Description:
+# Defines lxc_default_{s,d} for both static and dynamic/dhcp networking envs
+# #############################################################################
+
+## Select as 'lxc_default' either:
+# 1) static/manual (lxc_default_s): ipv4-addresses (localdev,development LXCs)
+#lxc_default: "{{ lxc_default_s }}"
+# 2 dynamic/dhcp (lxc_default_d): no ipv4-address (testing/production LXCs)
+lxc_default: "{{ lxc_default_d }}"
+
+## lxc_default_static: (empty) @ Ubuntu/Trusty, dir, lxcbr0:dnsmasq+config/ip+NAT
+# - static/configured ipv4-address, state: absent, has no 'web/mdblxc'-group
+lxc_default_s:
+  name: lxc_default
+  state: absent
+  backing_store: dir
+  container_log: true
+  container_log_level: DEBUG
+  container_config:
+    - lxc.group = default
+    - lxc.start.auto = 0
+    - lxc.start.delay = 0
+    - lxc.network.type = veth
+    - lxc.network.veth.pair = Vlxc_default
+    - lxc.network.link = lxcbr0
+    - lxc.network.flags = up
+    - lxc.network.ipv4 = 10.0.3.99/24
+    - lxc.network.ipv4.gateway = 10.0.3.1
+    - lxc.network.script.up = /var/lib/lxc/lxc_default/lxcnet_updown-iptables.sh
+    - lxc.network.script.down = /var/lib/lxc/lxc_default/lxcnet_updown-iptables.sh
+  template: "{{ hostnode_lxc_tmpl | d('ubuntu') }}"
+  template_options: >
+    --release {{ hostnode_lxc_tmpl_release | d('trusty') }}
+    --packages {{ hostnode_lxc_tmpl_pckgs }}
+    --user {{ kohalxc_operuser }}
+    --password {{ kohalxc_operpass }}
+    --auth-key /home/{{ ansible_user }}/{{ hostnode_lxc_tmpl_authkey }}
+  container_command: |
+    {{ hostnode_lxc_container_command }}	
+    sleep 5			 
+    echo "== kohalxc [ansible]: Update distro.." | tee -a {{ hostnode_lxc_logfile }}
+    apt update -y | tee -a {{ hostnode_lxc_logfile }}
+    apt list --upgradable | tee -a {{ hostnode_lxc_logfile }}
+    echo "== kohalxc [ansible]: Upgrade distro.." | tee -a {{ hostnode_lxc_logfile }}
+    apt upgrade -y | tee -a {{ hostnode_lxc_logfile }}
+
+# lxc_default_dynamic: (empty) @ Ubuntu/Trusty, dir, lxcbr0:dnsmasq+dhcp+NAT
+# - no pre-configured ipv4-address, state: absent, has no 'web/mdblxc'-group
+lxc_default_d:
+  name: lxc_default
+  state: absent
+  backing_store: dir
+  container_log: true
+  container_log_level: DEBUG
+  container_config:
+    - lxc.group = default
+    - lxc.start.auto = 0
+    - lxc.start.delay = 0
+    - lxc.network.type = veth
+    - lxc.network.veth.pair = Vlxc_default
+    - lxc.network.link = lxcbr0
+    - lxc.network.flags = up
+    #- lxc.network.ipv4 = 0.0.0.0
+    #- lxc.network.ipv4.gateway = 10.0.3.1
+    - lxc.network.script.up =
+    - lxc.network.script.down =
+  template: "{{ hostnode_lxc_tmpl | d('ubuntu') }}"
+  template_options: >
+    --release {{ hostnode_lxc_tmpl_release | d('trusty') }}
+    --packages {{ hostnode_lxc_tmpl_pckgs }}
+    --user {{ kohalxc_operuser }}
+    --password {{ kohalxc_operpass }}
+    --auth-key /home/{{ ansible_user }}/{{ hostnode_lxc_tmpl_authkey }}
+  container_command: |
+    {{ hostnode_lxc_container_command }}	
+    sleep 5			 
+    echo "== kohalxc [ansible]: Update distro.." | tee -a {{ hostnode_lxc_logfile }}
+    apt update -y | tee -a {{ hostnode_lxc_logfile }}
+    apt list --upgradable | tee -a {{ hostnode_lxc_logfile }}
+    echo "== kohalxc [ansible]: Upgrade distro.." | tee -a {{ hostnode_lxc_logfile }}
+    apt upgrade -y | tee -a {{ hostnode_lxc_logfile }}
+    
