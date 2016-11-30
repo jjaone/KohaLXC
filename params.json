@@ -1,6 +1,0 @@
-{
-  "name": "KohaLXC-provisioning",
-  "tagline": "Bash shell tooling and Ansible management environment for Koha/ILS development and deployment tasks for Koha-Lappi, Finland.",
-  "body": "## KohaLXC\r\n \r\n**Linux shell tooling and Ansible playbook for Koha/ILS-related server and** <br/> \r\n**LXC development, deployment and migration tasks/setups for Koha-Lappi.** <br/>  \r\n\r\nThis code is part of KohaLXC/kohatools Ansible/Bash tooling environment  \r\nfor Koha/ILS-development, deployment & database conversion/migration tasks.  \r\n\r\n**Author**: Jukka Aaltonen, Linux/opensource developer, Koha-Lappi, Finland.  \r\n**Organization**: Rovaniemi City Library, Lapland (Koha-Lappi project).\r\n \r\n**License**: GNU General Public License version 3.\r\n",
-  "note": "Don't delete this file! It's used internally to help with page regeneration."
-}
