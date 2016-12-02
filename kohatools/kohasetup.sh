@@ -1,20 +1,21 @@
 #!/bin/bash
 
-###############################################################################
-# Code is part of KohaLXC/kohatools env for KohaLappi-dev/deployment project  #
-###############################################################################
-# KohaLXC-kohatools/setups (kohasetup.sh) shell tools for KohaLappi LXCs.
-#
-# Author: Jukka Aaltonen, Linux/opensource developer, KohaLappi, Finland.
-# Organization: Rovaniemi City Library, Lapland (Koha-Lappi project)
-# Created: 2016-07 by "roikohadev" (@jjaone)
+# #############################################################################
+# Code is part of KohaLXC/kohatools env for KohaLappi-dev/deployment project  
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-aLappi, Rovaniemi City Library, Lapland/Finland.
+# License: Gnu General Public License version.
 #
 # Description:
+# - KohaLXC-kohatools/setups (kohasetup.sh) shell tools for Koha/LXCs.
 # - should work in Ubuntu Server LTS (14.04/16.04) guest/host environments
 # - configure/setup "srvenv", "devenv", "mdbenv" and "kohaenv" in/for KohaLXCs
 #
-# License: Gnu General Public License version 3 (or later)
-###############################################################################
+#  Created: 2016-07 by "roikohadev" (@jjaone)
+# Modified:
+# #############################################################################
 
 ## Script/application name
 app="kohasetup"
@@ -30,16 +31,6 @@ KOHASETUP_CONFIGDIR="${KOHALXC_ROOTDIR:-$HOME}/kohatools/conf.d"
 # Source our main configuration
 KOHASETUP_CONFIGFILE="${KOHASETUP_CONFIGDIR}/$app.conf"
 . $KOHASETUP_CONFIGFILE
-
-## Source other sub/script-specific envs
-# [TODO]: Commented out (for now) cause this block will never be executed,
-# -other setup ens are sourced later in opt/args handling part
-#if [[ "kohasetup" != "$app" ]]; then
-#    . $KOHASETUP_CONFIGDIR/$app.env
-#    [[ "$?" -ne 0 ]] &&
-#	ece "Warn:" "Configuration/environment '${app}.env' not found!"
-#fi
-
 
 ## Usage: kohasetup: this script usage
 function _usage {
