@@ -7,6 +7,7 @@
 - libra3-client
 - backup*/
 - /ansible/
+- /kohaplay/
 + /docs/
 + /log/
 + /kohalxc.conf
