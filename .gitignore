@@ -9,6 +9,7 @@
 ## ansible/<playbook>
 # - dev/experimental/local only stuff, caches, ..
 # - docs, and other misc and secret files/dirs
+ansible/
 *cache/
 docs/
 site-*.yaml
