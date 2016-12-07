@@ -179,22 +179,24 @@ function kohalxc_ansible {
     )
 
     # Set the env for ansible logging
-    ANSIBLE_LOG_PATH="log/${KOHALXC_ANSIBLE_INVENTORY}.log"
-    mkdir -p $(dirname $ANSIBLE_LOG_PATH) && touch $ANSIBLE_LOG_PATH
-    ech "ANSIBLE_LOG_PATH:" "$ANSIBLE_LOG_PATH"
+    KOHALXC_ANSIBLE_LOGPATH="$KOHALXC_ANSIBLE_PLAYBOOKS/log/${KOHALXC_ANSIBLE_INVENTORY}.log"
+    mkdir -p $(dirname $KOHALXC_ANSIBLE_LOGPATH) &&
+	touch $KOHALXC_ANSIBLE_LOGPATH
+    ech "KOHALXC_ANSIBLE_LOGPATH:" "$KOHALXC_ANSIBLE_LOGPATH"
 
     # Build the ansible command for playbook runs
     KOHALXC_ANSIBLE_CMD="ansible-playbook ${KOHALXC_ANSIBLE_PLAYBOOK:-play-all.yaml}  -i ${KOHALXC_ANSIBLE_INVENTORY} ${KOHALXC_ANSIBLE_CMDOPTS:-\"-vvv\"}"
     ech "Running KOHALXC_ANSIBLE_CMD:" "\n$KOHALXC_ANSIBLE_CMD"
     # Ansible playbook default run with specified options
     ( cd $KOHALXC_ANSIBLE_PLAYBOOKS;
-      [[ -f $KOHALXC_ANSIBLE_PLAYBOOK ]] && export ANSIBLE_LOG_PATH &&
+      [[ -f $KOHALXC_ANSIBLE_PLAYBOOK ]] &&
+	  export KOHALXC_ANSIBLE_LOGPATH &&
 	  /usr/local/bin/ansible-playbook \
 	      ${KOHALXC_ANSIBLE_PLAYBOOK} \
 	      -i ${KOHALXC_ANSIBLE_INVENTORY} \
 	      ${KOHALXC_ANSIBLE_CMDOPTS:-"-vvv"} ||
 	      ece "Warn ($?)" \
-		  "Ansible play '$KOHALXC_ANSIBLE_PLAYBOOK' in [${KOHALXC_ANSIBLE_INVENTORY}] returned an error code."
+		  "Ansible play '$KOHALXC_ANSIBLE_PLAYBOOK' in [${KOHALXC_ANSIBLE_INVENTORY}] returned error code."
     )
 }
 
@@ -785,9 +787,9 @@ while getopts "h?fvdi:n:" opt; do
 	f)  force=1; FORCE="-f";
 	    ;;
 	i)  KOHALXC_ANSIBLE_INVENTORY=$OPTARG;
-	    [[ -n "$VERBOSE" ]] && ech "Ansible inventory set to:" \
-				       "$KOHALXC_ANSIBLE_INVENTORY"
-	    KOHALXC_ANSIBLE_CMDOPTS="$KOHALXC_ANSIBLE_CMDOPTS $KOHALXC_ANSIBLE_SKIPTAGS"
+	    [[ -n "$VERBOSE" ]] &&
+		ech "Ansible inventory set to:" "$KOHALXC_ANSIBLE_INVENTORY"
+	    KOHALXC_ANSIBLE_CMDOPTS+="$KOHALXC_ANSIBLE_SKIPTAGS"
 	    ;;
 	v)  verbose=1; VERBOSE="-v";
 	    ;;
@@ -795,9 +797,11 @@ while getopts "h?fvdi:n:" opt; do
 	    [[ $OPTARG =~ "." ]] && (
 		 KOHALXC_DOMAINNAME=${OPTARG#*.}
 		 KOHALXC_FULLNAME=${KOHALXC_NAME}.${KOHALXC_DOMAINNAME}
-		 [[ -n "$VERBOSE" ]] && ech "LXC-container full name set to:" "$KOHALXC_FULLNAME"
+		 [[ -n "$VERBOSE" ]] &&
+		     ech "LXC-container full name set to:" "$KOHALXC_FULLNAME"
 	     )
-	    [[ -n "$VERBOSE" ]] && ech "LXC-container name set to:" "$KOHALXC_NAME"
+	    [[ -n "$VERBOSE" ]] &&
+		ech "LXC-container name set to:" "$KOHALXC_NAME"
 	    # Set the path to container setup directory
 	    KOHALXC_SETUP=${KOHALXC_SETUPDIR}/$KOHALXC_NAME
 	    # Set the path to container-specific configs directory
@@ -828,7 +832,8 @@ shift $((OPTIND - 1))
 
 # If no container was given
 # or setupdir does not exist
-# and 'ansible' or 'init' or 'remove' or 'ssh' or 'destroy' or 'stop' or 'start' was not given as command
+# and 'ansible' or 'init' or 'remove' or 'ssh' or 'destroy' or 'stop'
+#      or 'start' was not given as command
 # - show info, usage and exit..
 if [[ ( -z "$KOHALXC_NAME" ||
 	      ! -d "$KOHALXC_SETUPDIR/$KOHALXC_NAME" ) &&
@@ -864,25 +869,29 @@ for i in "$@"; do
 	    ;;
 	create)
 	    [[ ! -d "$KOHALXC_SETUP" ]] &&
-		ece "No container config to create LXC.. exit." && exit
+		ece "No container config to create LXC.. exit." &&
+		exit
 	    shift
 	    sapp="create" && kohalxc_create;
 	    ;;
 	start)
 	    [[ -n "$FORCE" ]] && [[ ! -d "$KOHALXC_SETUP" ]] &&
-		ece "No container config found to start LXC with -F .. exit." && exit;
+		ece "No container config found to start LXC with -F .. exit." &&
+		exit;
 	    shift
 	    sapp="start" && kohalxc_start;
 	    ;;
 	attach)
 	    [[ ! -d "$KOHALXC_SETUP" ]] &&
-		ece "No container config found to attach to.. exit." && exit;
+		ece "No container config found to attach to.. exit." &&
+		exit;
 	    shift;
 	    sapp="attach" && kohalxc_attach "$@";
 	    ;;
 	console)
 	    [[ ! -d "$KOHALXC_SETUP" ]] &&
-		ece "No container config found to login to.. exit." && exit;
+		ece "No container config found to login to.. exit." &&
+		exit;
 	    shift;
 	    sapp="console" && kohalxc_console;
 	    ;;
@@ -901,13 +910,15 @@ for i in "$@"; do
 	    ;;
 	destroy)
 	    sudo test ! -d $KOHALXC_LXCPATH/$KOHALXC_NAME &&
-		ece "Container not in $KOHALXC_LXCPATH to destroy.. exit." && exit;
+		ece "Container not in $KOHALXC_LXCPATH to destroy.. exit." &&
+		exit;
 	    shift
 	    sapp="destroy" && kohalxc_destroy;
 	    ;;
 	remove)
 	    [[ ! -d "$KOHALXC_SETUP" ]] &&
-		ece "No container config found to remove.. exit." && exit;
+		ece "No container config found to remove.. exit." &&
+		exit;
 	    shift
 	    sapp="remove" && kohalxc_remove;
 	    ;;
