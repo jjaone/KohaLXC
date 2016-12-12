@@ -8,8 +8,8 @@
 # 
 # Description: "srvenv-setup"
 # - setup the hostnodes server-environment in playbook inventories
-# - user accounts (and directory structure)
-# - OS, distro, kernel
+# - users and groups for 'dataenv' and 'devenv'
+# - OS, distro, kernel (base installation of Ubuntu 16.04 LTS Server required)
 # - timezone, localizations
 # - filesystems: lvm, btrfs, zfs
 # - network: iptables rules
