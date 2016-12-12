@@ -1,0 +1,17 @@
+---
+# File: roles/hostnode/tasks/srvenv-setup.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description: "srvenv-setup"
+# - setup the hostnodes server-environment in playbook inventories
+# - user accounts (and directory structure)
+# - OS, distro, kernel
+# - timezone, localizations
+# - filesystems: lvm, btrfs, zfs
+# - network: iptables rules
+# - apt packages: upgrade and update settings
+# ##############################################################################
