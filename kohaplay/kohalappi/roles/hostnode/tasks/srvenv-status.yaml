@@ -67,5 +67,5 @@
   failed_when: cmd_apt.stderr != ""
   changed_when: cmd_apt.rc == 0
 
-## Show servers rebootability and upgradability status
-- debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled
+## Show servers rebootability and upgradability status (+ dataenv status)
+- debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_dataenv_enabled

@@ -28,6 +28,12 @@ local_home: "{{ lookup('env', 'HOME') }}"
 kohalxc_operuser: ubuntu
 # -user pass:
 #kohalxc_operpass:
+# -Git user
+kohalxc_gituser_name: kohadev
+# -Git user email
+kohalxc_gituser_email: "{{ kohalxc_gituser_name | d('anon') }}@open.org.fake"
+# -Git user
+kohalxc_author: "Koha Developer"
 
 ## KohaLXC-toolset
 # KohaLXC-installation (target host) directory:

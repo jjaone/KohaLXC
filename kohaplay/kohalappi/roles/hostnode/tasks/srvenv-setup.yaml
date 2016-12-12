@@ -15,3 +15,86 @@
 # - network: iptables rules
 # - apt packages: upgrade and update settings
 # ##############################################################################
+
+## Ensure 'kohasys'-user exists (by default: kohasys/1000)
+- name: Make system user 'kohasys' for Koha/hosts-service management
+  become: yes
+  user: >
+    name="{{ hostnode_kohasys_user }}"
+    uid="{{ hostnode_kohasys_id }}"
+    state="present"
+    generate_ssh_key="yes"
+    comment="Koha/LXC system user"
+  when:
+    - hostnode_kohasys_user is defined
+    - hostnode_kohasys_id is defined
+
+## Ensure 'koha'-user (rssh) exists (by derault: koha/1001
+- name: Ensure user 'koha' (rssh) exists for Koha-data & transfers
+  become: yes
+  user: >
+    name="{{ hostnode_kohagrp_name }}"
+    uid="{{ hostnode_kohagrp_id }}"
+    group="{{ hostnode_kohagrp_name }}"
+    state="present"
+    shell="/usr/bin/rssh"
+    generate_ssh_key="no"
+    comment="Koha/LXC visitor user"
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_kohagrp_name is defined
+    - hostnode_kohagrp_id is defined
+
+## Setup remote data environment rssh.conf (dataenv/rssh settings)
+# - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
+# - kohalxc_dataenv == kohalxc_tooldir/conf.d/env.data
+- name: Setup system-wide rssh config for remote KohaLXC/dataenv
+  become: yes
+  template: >
+    src="files/kohalxc_dataenv-rssh.conf.j2"
+    dest="/etc/rssh.conf"
+    backup="no"
+  when:
+    - hostnode_environment != "localdev"
+    - hostnode_dataenv_enabled
+
+## Ensure 'koha'-group exists (by default: koha/1001)
+- name: Ensure group 'koha' exists for Koha-data & transfers
+  become: yes
+  group: >
+    name="{{ hostnode_kohagrp_name }}"
+    gid="{{ hostnode_kohagrp_id }}"
+    state="present"
+  when:
+    - hostnode_kohagrp_name is defined
+    - hostnode_kohagrp_id is defined
+
+## Ensure devops (kohaoper/1002) belongs to 'koha' group and has ssh-keys
+- name: Ensure devops has ssh-keys and belongs to 'koha' group
+  become: yes
+  user: >
+    name="{{ hostnode_operuser }}"
+    uid="{{ hostnode_operid }}"
+    groups="{{ hostnode_kohagrp_name }}"
+    append="yes"
+    generate_ssh_key="yes"
+    comment="Koha/LXC devops user"
+  when:
+    - hostnode_devenv_enabled
+    - hostnode_operuser is defined
+    - hostnode_operid is defined
+    - hostnode_kohagrp_id is defined
+
+## Setup remote developer environment shell profile (devenv/bash-profile)
+# - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
+# - kohalxc_devenv == kohalxc_tooldir/conf.d/env.dev
+- name: Setup system-wide Bash profile for remote KohaLXC/devenv
+  become: yes
+  template: >
+    src="files/kohalxc_devenv-bash_profile.sh.j2"
+    dest="/etc/profile.d/kohalxc-devenv.sh"
+    backup="no"
+  when:
+    - hostnode_environment != "localdev"
+    - hostnode_devenv_enabled
+    - hostnode_srvenv_enabled

@@ -31,6 +31,12 @@ kohalxc_install: "/home/{{ ansible_user }}/Works"
 #kohalxc_dataset:
   
 #kohalxc_devenv:
+#kohalxc_devenv_enabled:
 #kohalxc_srvenv:
+#kohalxc_srvenv_enabled:
+#kohalxc_dataenv:
+#kohalxc_dataenv_enabled:
 #kohalxc_mdbenv:
+#kohalxc_mdbenv_enabled:
 #kohalxc_webenv:
+#kohalxc_webenv_enabled:

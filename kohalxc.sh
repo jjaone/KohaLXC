@@ -789,7 +789,7 @@ while getopts "h?fvdi:n:" opt; do
 	i)  KOHALXC_ANSIBLE_INVENTORY=$OPTARG;
 	    [[ -n "$VERBOSE" ]] &&
 		ech "Ansible inventory set to:" "$KOHALXC_ANSIBLE_INVENTORY"
-	    KOHALXC_ANSIBLE_CMDOPTS+="$KOHALXC_ANSIBLE_SKIPTAGS"
+	    KOHALXC_ANSIBLE_CMDOPTS+=" $KOHALXC_ANSIBLE_SKIPTAGS"
 	    ;;
 	v)  verbose=1; VERBOSE="-v";
 	    ;;

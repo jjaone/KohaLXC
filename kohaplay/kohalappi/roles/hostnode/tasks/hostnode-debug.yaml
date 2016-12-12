@@ -19,12 +19,12 @@
 - debug: var=ansible_host,ansible_user,gather_facts,force_handlers,hostnode_testvar verbosity=0
 - debug: var=kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_organization verbosity=0
 
-# kohalxc/encironments: devenv, srvenv, mdbenv, webenv, dataenv
+# kohalxc/environments: devenv, srvenv, mdbenv, webenv, dataenv
 - debug: var=kohalxc_devenv,kohalxc_devenv_enabled verbosity=1
 - debug: var=kohalxc_srvenv,kohalxc_srvenv_enabled verbosity=1
 - debug: var=kohalxc_mdbenv,kohalxc_mdbenv_enabled,kohalxc_mdbenv_rootuser,kohalxc_mdbenv_kohauser,kohalxc_mdbenv_kohadb verbosity=1
 - debug: var=kohalxc_webenv,kohalxc_webenv_enabled verbosity=1
-- debug: var=kohalxc_dataenv,kohalxc_dataenv_enabled verbosity=1
+- debug: var=kohalxc_dataenv,kohalxc_dataenv_enabled,kohalxc_datadir verbosity=1
 
 # hostnode/environment: hosts, ports, groups, users
 - debug: var=hostnode_environment,hostnode_websrv,hostnode_mdbsrv,hostnode_datasrv verbosity=0
@@ -35,7 +35,8 @@
 # hostnode/lxcenv+dev/srvenv
 - debug: var=hostnode_lxcenv_enabled verbosity=0
 - debug: var=hostnode_lxcs_names,hostnode_lxc_defaults,hostnode_lxcs verbosity=0
-- debug: var=hostnode_kohalxc_devenv,hostnode_kohalxc_srvenv verbosity=1
+- debug: var=hostnode_devenv_enabled verbosity=1
+- debug: var=hostnode_srvenv_enabled verbosity=1
 
 # hostnode/upgrades and rebootability
 - debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_network_interface
@@ -43,5 +44,6 @@
 # hostnode/secure+storage
 - debug: var=hostnode_secure_enabled,hostnode_lvm_enabled,hostnode_zfs_enabled verbosity=1
 
-# hostnode/lxcenv
-- debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_logfile,hostnode_lxcenv_domain
+# hostnode/lxcenv+dataenv
+- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset
+- debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_logfile,hostnode_lxcenv_domain,hostnode_lxc_mounts

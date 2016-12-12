@@ -1,0 +1,64 @@
+
+##############################################
+# KohaLXC/kohatools: devenv profile settings
+# file: $KOHALXC_TOOLDIR/conf.d/env.dev
+{{ ansible_managed | comment }}
+##############################################
+
+#################################
+## System/host-wide preferences
+#################################
+# More secure umask: user rwx, group rx, other none (default 022)
+umask 0027
+
+#################################################################
+# KohaLXC development/setup client/server environment (defaults) 
+#################################################################
+# Koha-works main directory
+export KOHALXC_WORKS="{{ kohalxc_install }}"
+# KohaSuomi organization
+export KOHALXC_ORGANIZATION="{{ kohalxc_organization }}"
+# Koha-datas/LXC-setups main directory
+export KOHALXC_SETUPDIR="${KOHALXC_WORKS}/${KOHALXC_ORGANIZATION}/kohalxc"
+export KOHALXC_DATADIR="${KOHALXC_WORKS}/${KOHALXC_ORGANIZATION}/kohadata"
+# LXC environment: clients & server setups and configs
+export KOHALXC_ROOTDIR="$KOHALXC_WORKS/KohaLXC"
+# Client kohatools (to be mounted to LXC)
+export KOHALXC_TOOLDIR="$KOHALXC_WORKS/KohaLXC/kohatools"
+
+# Make sure no LXC-name or MMT-datasetname nor LXC-setup dir are specfied
+export -n KOHALXC_NAME
+export -n KOHALXC_DATASET
+export -n KOHALXC_SETUP
+
+# Developer: git-user+email
+export KOHALXC_GITUSER=`git config --get user.name || echo "{{ kohalxc_gituser_name }}"` 
+export KOHALXC_GITEMAIL=`git config --get user.email || echo "{{ kohalxc_gituser_email }}"`
+
+# Developer: author name
+export KOHALXC_AUTHOR="{{ kohalxc_author }}"
+#export KOHALXC_AUTHOR="{{ lookup('env', 'KOHALXC_AUTHOR') | d(kohalxc_author) }}"
+
+
+############################
+## Shell/bash environment ##
+############################
+# Shell history settins
+#export HISTCONTROL=ignoreboth
+export HISTFILESIZE=-1
+export HISTSIZE=-1
+export HISTTIMEFORMAT='%F_%T '
+
+# LESS
+export LESS=-XR
+
+# locale
+export LC_COLLATE=C
+
+# shell aliases
+alias l='ls -laF'
+# prompt
+# PS1=
+
+# source ~/.kohalxc.rc if available
+#[[ -f ~/-kohalxc.rc ]] && source ~/.kohalxc.rc

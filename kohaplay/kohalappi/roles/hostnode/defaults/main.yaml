@@ -34,10 +34,16 @@ gather_facts: False
 ## Server: KohaLXC tooling
 ## #######################
 # (defaults in 'roles/common/defaults/main.yaml')
-## KohaLXC/devenv: enable for this role
-hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
-## KohaLXC/srvenv: enable for this role
-hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
+## KohaLXC/devenv: role default (override in group/host inventory)
+hostnode_devenv_enabled: true
+#hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
+## KohaLXC/srvenv: role default (override in group/host inventory)
+hostnode_srvenv_enabled: true
+#hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
+## KohaLXC/dataenv: role default (override in group/host inventory) 
+hostnode_dataenv_enabled: true
+# Data/sets for MMT: migration dataset name(s)
+hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
 
 ## ###########################
 ## Server: updates/reboots/nic
@@ -167,7 +173,7 @@ hostnode_lxcenv_loglevel: DEBUG
 # - kohatools
 hostnode_lxc_mount_kohatools: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools home/{{ kohalxc_operuser }}/kohatools none bind,create=dir 0 0
 # - kohadata
-hostnode_lxc_mount_kohadata: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ kohalxc_dataset.0 | d('default') }} home/{{ kohalxc_operuser }}/kohadata none bind,create=dir 0 0
+hostnode_lxc_mount_kohadata: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }} home/{{ kohalxc_operuser }}/kohadata none bind,create=dir 0 0
 hostnode_lxc_mounts:
   - "{{ hostnode_lxc_mount_kohatools }}" 
   - "{{ hostnode_lxc_mount_kohadata }}"
