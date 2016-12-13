@@ -208,11 +208,13 @@ function kohaenv {
 ## Welcome msg 
 ecd "Welcome to KOHALXC ($app)" "'${KOHALXC_GITUSER:-$USER}'!"
 ech "KOHASETUP_TOOLSDIR:" "$KOHASETUP_TOOLSDIR"
+ech "KOHASETUP_LOGDIR:" "$KOHASETUP_LOGDIR"
 ech "KOHASETUP_CONFIGDIR:" "$KOHASETUP_CONFIGDIR"
 
 ## Check the role we have (host=0/lxc=1)
 _host-role && islxc=0 || islxc=1; rc=0
 
+## [TODO]: What is this, sets the var in LXC, for what?
 KOHASETUP_KOHALXC="$HOME/kohalxc/config"
 [[ $(_host-role) && -d "$KOHASETUP_KOHALXC" ]] &&
     ech "KOHASETUP_KOHALXC:" "$KOHASETUP_KOHALXC"
@@ -253,6 +255,7 @@ for cmd in "$@"; do
     . $KOHASETUP_CONFIGDIR/env.${cmd}/${app}.conf >/dev/null 2>&1 ||
 	(sapp="Warn" &&
 		ech "Did not find correct setup env:" "$KOHASETUP_CONFIGDIR/env.${cmd}")
+    echo "sapp=$sapp"
     ${cmd}env "$sapp" "$mopt"
 
     ## Error: something went wrong
