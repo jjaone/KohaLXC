@@ -1,19 +1,17 @@
 #!/bin/bash
 
 # #############################################################################
-# Code is part of KohaLXC/kohatools env for KohaLappi-dev/deployment project  
-# #############################################################################
-# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# Code is part of the KohaLXC/kohatools Ansible/Bash setup tooling scripts
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
 # Author: Jukka Aaltonen, Koha-aLappi, Rovaniemi City Library, Lapland/Finland.
 # License: Gnu General Public License version.
 #
 # Description:
-# - KohaLXC-kohatools/setups (kohasetup.sh) shell tools for Koha/LXCs.
+# KohaLXC/kohatools setup (kohasetup.sh) shell scripts for Koha/LXCs:
 # - should work in Ubuntu Server LTS (14.04/16.04) guest/host environments
 # - configure/setup "srvenv", "devenv", "mdbenv" and "kohaenv" in/for KohaLXCs
 #
-#  Created: 2016-07 by "roikohadev" (@jjaone)
+# Created: 2016-07 by "roikohadev" (@jjaone)
 # Modified:
 # #############################################################################
 

@@ -2,8 +2,8 @@
 
 # File: $KOHALXC_ROOTDIR/kohalxc.sh
 # #############################################################################
-# Code is part of KohaLXC/kohatools env for KohaLappi-dev/deployment project  
-#
+# Code is part of KohaLXC/kohatools Ansible/Bash tooling scripts environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
 # Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
 # License: Gnu General Public License version 3.
 #
@@ -29,16 +29,15 @@ islxc=0 # 0 = host, 1 = lxc
 
 ## source our own and 'kohatools' configurations, tools and common functions
 if [[ -f $KOHALXC_ROOTDIR/kohalxc.conf ]]; then
-    source $KOHALXC_ROOTDIR/kohalxc.conf &&
-	[[ -n "$VERBOSE" ]] && ecd "Environment setup:" \
-				   "kohalxc.conf & kohatools/conf.d/kohasetup.conf"
+    source $KOHALXC_ROOTDIR/kohalxc.conf
+    if [[ ! "$?" -eq 0 ]]; then
+	echo "== Failed sourcing: $KOHALXC_ROOTDIR/kohalxc.conf"
+	exit 1
+    fi
 else
-    #err="Could not setup the environment from: $KOHALXC_TOOLDIR/kohasetup.conf" && exit 1 
-    echo "Failed to load settings ${KOHALXC_ROOTDIR}/kohalxc.conf.."
-    echo "Failed to load settings ${KOHALXC_TOOLDIR}/conf.d/kohasetup.conf.."
-    exit 1
+    echo "== File not found: ${KOHALXC_ROOTDIR}/kohalxc.conf"
+    exit 2
 fi
-
 
 ## Exec to redirect all of stdout/stderr to file (and to screen)..
 exec &> >(tee -a $log)
