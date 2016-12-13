@@ -83,7 +83,7 @@
     - hostnode_devenv_enabled
     - hostnode_operuser is defined
     - hostnode_operid is defined
-    - hostnode_kohagrp_id is defined
+    - hostnode_kohagrp_name is defined
 
 ## Setup remote developer environment shell profile (devenv/bash-profile)
 # - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
@@ -98,3 +98,89 @@
     - hostnode_environment != "localdev"
     - hostnode_devenv_enabled
     - hostnode_srvenv_enabled
+
+## Ensure kohahosts_operuser (devops/HOME) has required dirs
+- name: Ensure devops has dirs for scripts, logs and Works
+  file: >
+    path="/home/{{ hostnode_operuser }}/{{ item }}"
+    state="directory"
+  with_items:
+    - bin
+    - log
+    - Works
+- name: Ensure devops/Works subdirs exist for KohaLXC-tools setups (datasets)
+  file: >
+    path="/home/{{ hostnode_operuser }}/Works/{{ item }}"
+    state="directory"
+    mode="g+s,o-rwx"
+    group="{{ hostnode_kohagrp_id }}"
+    recurse="no"
+  with_items:
+    - KohaLXC
+    - "{{ hostnode_kohalxc_organization | d('KohaSuomi') }}"
+
+- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset
+- debug: var=kohalxc_datadir,kohalxc_dataset
+## Pull/extract any uploads of dataset dumps from visitor 'koha'
+# -from: /home/koha/Works/KohaLappi/{{item}}
+# -to: "/KohaData/Works/{{ kohahosts_kohalxc_organization }}/kohadata/"
+# -item: hostnode_dataebv_datasets: e.g. "dump4mmt-Axiell-20161019-Lappi_PallasPro"
+- name: Pull (rsync) listed dataset dumps from server (to mngmt host)
+  synchronize: >
+    mode="pull"
+    src="/home/koha/Works/{{ hostnode_kohalxc_organization }}/dump4mmt-{{ item }}"
+    dest="{{ kohalxc_datadir }}"
+    group="yes"
+    perms="yes"
+    recursive="yes"
+    delete="no"
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+    - hostnode_dataenv_dataset is defined
+    - hostnode_dataenv_dataset != ""
+
+## Ensure dataset extraction has required (sub)dirs (locally)
+- name: Set required dirs and perms for dataset extraction (in mngmt host)
+  file: >
+    path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/source/{{ item.1 }}"
+    state="directory"
+    recurse="yes"
+    group="{{ hostnode_kohagrp_id }}"
+    mode="u=rwx,g=rwx,o-rwx"
+  with_nested:
+    - "{{ hostnode_dataenv_dataset }}"
+    - [ 'preprocessed', 'scripts', 'target' ]
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+  delegate_to: localhost
+
+## Extract/uncompress listed dataset(s) from pulled archives (if any)
+# - must use local action and gunzip cause no "uncompress" ansible module exists
+# - "shopt -s/-u nullglob" would work, but only with /bin/bash
+- name: Extract listed datasets/table data from pulled dumps (in mngmt host)
+  local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.kir.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+
+- debug: var=kohalxc_rootdir
+## Push/copy KohaLXC/kohatools scripts and configs to server(s):
+# - to: /home/'hostnode_operuser'/Works(/KohaLXC)
+- name: Synch KohaLXC tools scripts/configs w/ devops/Works
+  synchronize: >
+    mode="push"
+    src="{{ kohalxc_rootdir }}"
+    dest="/home/{{ hostnode_operuser }}/Works"
+    owner="no"
+    group="yes"
+    perms="yes"
+    rsync_timeout="15"
+    recursive="yes"
+    delete="yes"
+
+## Abort play here (for testing and development):
+- fail:

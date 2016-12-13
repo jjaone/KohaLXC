@@ -34,6 +34,8 @@ gather_facts: False
 ## Server: KohaLXC tooling
 ## #######################
 # (defaults in 'roles/common/defaults/main.yaml')
+## KohaLXC: organization
+hostnode_kohalxc_organization: "{{ kohalxc_organization }}"
 ## KohaLXC/devenv: role default (override in group/host inventory)
 hostnode_devenv_enabled: true
 #hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"

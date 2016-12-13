@@ -3,8 +3,14 @@
 - *.log
 - *.zip
 - *.tar.gz
+- .gitignore
+- .git/
 - .metadata/
 - libra3-client
+- .includepath
+- .project
+- *.komodoproject
+- *backup*
 - backup*/
 - /ansible/
 - /kohaplay/
@@ -17,4 +23,6 @@
 + /kohatools/dump_pallaspro/
 + /kohatools/log/
 + /kohatools/kohasetup.sh
-+ /kohatools/mmtws/
++ /kohatools/ppmmtws/
++ /kohatools/origommtws/
++ /kohatools/scripts/
