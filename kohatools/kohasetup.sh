@@ -255,7 +255,6 @@ for cmd in "$@"; do
     . $KOHASETUP_CONFIGDIR/env.${cmd}/${app}.conf >/dev/null 2>&1 ||
 	(sapp="Warn" &&
 		ech "Did not find correct setup env:" "$KOHASETUP_CONFIGDIR/env.${cmd}")
-    echo "sapp=$sapp"
     ${cmd}env "$sapp" "$mopt"
 
     ## Error: something went wrong
