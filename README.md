@@ -10,3 +10,53 @@ for Koha/ILS-development, deployment & database conversion/migration tasks.
 **Organization**: Rovaniemi City Library, Lapland (Koha-Lappi project).
  
 **License**: GNU General Public License version 3.
+
+### Install
+```
+$ lsb_release -d && whoami
+Description: Ubuntu (Linux) 16.04 LTS
+kohadev
+
+$ export KOHALXC_WORKS=~/Works
+$ cd && mkdir -p $KOHALXC_WORKS
+$ export KOHALXC_ORGANIZATION=KohaLappi
+$ export KOHALXC_ROOTDIR=$KOHALXC_WORKS/KohaLXC
+$ git clone https://github.com/jjaone/KohaLXC.git $KOHALXC_WORKS
+```
+
+### Usage
+```
+$ kohalxc
+
+== ================================================================== ==
+== @kohacmh: 2016-12-20_16:12:20:
+== /home/kohadev/bin/kohalxc ''
+== logging to logfile: /home/kohadev/Works/KohaLXC/log/kohalxc.log
+== ================================================================== ==
+== kohalxc [main]: Welcome to KOHALXC (kohalxc) 'kohadev'!
+== kohalxc [main]: KOHALXC_ROOTDIR: /home/kohadev/Works/KohaLXC
+== kohalxc [main]: Hostname (LXC-guest/host): kohacmh (Host/platform)
+== kohalxc [ lwp]: Setting/starting up the Web Panel for LXC: /home/kohadev/bin/lwp
+
+== kohalxc [main]: Usage: "kohalxc -f -v [-n CN ] [ansible|init|create|remove|start|attach|console|ssh|stop|destroy]"
+
+== kohalxc: Done.
+```
+
+### Ansible plays
+All roles/tasks in 'localdev'
+```
+$ kohalxc -i inventory/localdev ansible
+```
+List tags in 'development', script verbose
+```
+$ kohalxc -v -i inventory/development ansible --list-tags
+```
+Status tasks for hostnodes in 'testing', script debug/verbose
+```
+$ kohalxc -d -v -i inventory/testing ansible -t hostnode:status
+```
+Server host environment setup tasks in 'testing' w/ env variable, play verbosity increased
+```
+$ kohalxc -i inventory/testing ansible - t hostnode:srvenv-setup -e "hostnode_reboot_enabled=false" -v
+```
