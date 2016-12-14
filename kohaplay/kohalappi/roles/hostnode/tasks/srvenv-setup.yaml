@@ -182,5 +182,18 @@
     recursive="yes"
     delete="yes"
 
+## Ensure devops/hostnode has required symlinks in $HOME 
+- name: Symlink for 'kohalxc' main script in devops/HOME
+  file: >
+    src="/home/{{ hostnode_operuser }}/Works/KohaLXC/kohalxc.sh"
+    dest="{{ '/home/'~hostnode_operuser~'/bin/kohalxc' }}"
+    state="link"
+- name: Symlink for 'kohasetup' script in devops/HOME
+  file: >
+    src="/home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools/kohasetup.sh"
+    dest="{{ '/home/'~hostnode_operuser~'/bin/kohasetup' }}"
+    state="link"
+
+- debug: var=kohalxc_setupdir,kohalxc_datadir
 ## Abort play here (for testing and development):
 - fail:
