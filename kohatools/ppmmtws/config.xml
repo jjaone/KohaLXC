@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- KohaLXC/kohatools (dataenv): PP/MMT-configuration
-file: $KOHALXC_TOOLDIR/ppmmtws/config.xml
-{{ ansible_managed | comment }}
--->
 <config>
-    <!-- For PP/MMT-usage in mngmt host: KohaJoensuu-case
-    <sourceDataDirectory>$KOHALXC_WORKS/KohaSuomi/MMT/PallasProDumps/</sourceDataDirectory>
+    <!-- For MMT-usage in mngmt host: KohaJoensuu-case -->
+    <sourceDataDirectory>$KOHALXC_WORKs/KohaSuomi/MMT/PallasProDumps/</sourceDataDirectory>
     <preprocessedFolder>$KOHALXC_WORKS/KohaSuomi/MMT/PallasProDumps/preprocessed/</preprocessedFolder>
     <targetDataDirectory>$KOHALXC_WORKS/KohaSuomi/MMT/PallasProDumps/target/</targetDataDirectory>
- 	-->
-    <!-- For PP/MMT-usage in w/ kohalxc/kohatools & ansible in roi-servers: KohaLappi-case (kohalappi) -->
-    <sourceDataDirectory>{{ hostnode_kohalxc_datadir }}/source</sourceDataDirectory>
-    <preprocessedFolder>{{ hostnode_kohalxc_datadir }}/source/preprocessed/</preprocessedFolder>
-    <targetDataDirectory>{{ hostnode_kohalxc_datadir }}/source/target/</targetDataDirectory>
+
+    <!-- For MMT-usage in roi-servers: KohaLappi-case
+    <sourceDataDirectory>{{ kohalxc_datadir }}/dump4mmt-Axiell-20161019-Lappi_PallasPro/source</sourceDataDirectory>
+    <preprocessedFolder>{{ kohalxc_datadir }}/dump4mmt-Axiell-20161019-Lappi_PallasPro/source/preprocessed/</preprocessedFolder>
+    <targetDataDirectory>{{ kohalxc_datadir }}/dump4mmt-Axiell-20161019-Lappi_PallasPro/source/target/</targetDataDirectory>
+    -->
 
     <openilsDirectory>/openils/</openilsDirectory>
     <!--How many extra processes are launched? 0 disables multithreading -->
     <threadCount>0</threadCount> <!-- PatronImportChain throws segmentation fault, so keep this disabled -->
-    <organization>{{ hostnode_kohalxc_organization | d('lappi') | lower }}</organization> <!-- We are migrating '(koha)lappi' now -->
+    <organization>pielinen</organization> <!-- Are we migrating 'pielinen' or 'jokunen' ? Can't tell which one is more trouble...-->
 
     <!-- Debug related parameters, set to -1 if no debugging required -->
     <DEBUGAuthoritiesCountLimit>-7000</DEBUGAuthoritiesCountLimit>
