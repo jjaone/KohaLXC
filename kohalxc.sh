@@ -742,8 +742,8 @@ function kohalxc_mmtrun {
 # - if configured and if stopped
 function kohalxc_lwp {
     ech "Setting/starting up the Web Panel for LXC:" "$KOHALXC_LWP_SCRIPT"
-    [[ -x "$KOHALXC_LWP_SCRIPT" ]] && \
-	$KOHALXC_LWP_SCRIPT info | grep "Stopped" && \
+    [[ -x "$KOHALXC_LWP_SCRIPT" ]] &&
+	$KOHALXC_LWP_SCRIPT info | grep "Stopped" &&
 	sudo $KOHALXC_LWP_SCRIPT start
 }
 
