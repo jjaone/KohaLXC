@@ -155,7 +155,7 @@
   file: >
     path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/source/{{ item.1 }}"
     state="directory"
-    recurse="yes"
+    recurse="no"
     group="{{ hostnode_kohagrp_id }}"
     mode="u=rwx,g=rwxs,o-rwx"
   with_nested:

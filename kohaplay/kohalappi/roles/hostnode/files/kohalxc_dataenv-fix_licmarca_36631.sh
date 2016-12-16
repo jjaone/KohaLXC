@@ -33,7 +33,7 @@ cd $KOHALXC_DATADIR/$KOHALXC_DATASET_DUMP/$KOHALXC_DATASET_FIXSOURCE && pwd || e
 ## Sync/Copy original sources here
 echo && echo "== Sync/copy source *.kir files here.."
 pwd && echo "rsync -avh --include '*/' --include '*.kir' --exclude  '*' --delete --force --delete-excluded --prune-empty-dirs ../source/ ./"
-rsync -avh --include '*/' --include '*.kir' --exclude  '*' --delete --force --delete-excluded --prune-empty-dirs ../source/ ./
+rsync -avh --include '*/' --exclude 'preprocessed/*' --exclude 'target/*' --include '*.kir' --exclude '*' --delete --force --delete-excluded --prune-empty-dirs ../source/ ./
 ls -lR
 
 ## Ensure directories exist for DATASET fixes/edits (maybe rsynce removed some of these)
