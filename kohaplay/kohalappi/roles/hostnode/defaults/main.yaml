@@ -35,6 +35,12 @@ gather_facts: False
 ## #######################
 # - defaults in 'roles/common/defaults/main.yaml'
 # - override these in inventory/group+host_vars
+## KohaLXC: works
+hostnode_kohalxc_works: "{{ kohalxc_install }}"
+## KohaLXC: rootdir
+hostnode_kohalxc_rootdir: "{{ hostnode_kohalxc_works }}/KohaLXC"
+## KohaLXC: tooldir
+hostnode_kohalxc_tooldir: "{{ hostnode_kohalxc_rootdir }}/kohatools"
 ## KohaLXC: organization
 hostnode_kohalxc_organization: "{{ kohalxc_organization }}"
 ## KohaLXC/devenv: role default
@@ -43,13 +49,22 @@ hostnode_devenv_enabled: true
 ## KohaLXC/srvenv: role default
 hostnode_srvenv_enabled: true
 #hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
+
 ## KohaLXC/dataenv: role default
 hostnode_dataenv_enabled: true
-# Data/sets for MMT: migration dataset name(s)
+# KohaLXC/dataenv: datadir
+hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
+# KohaLXC/dataenv: datasets name(s) for MMT-migration:
 hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
+# KohaLXC/dataenv: dataset source dir for MMT
+hostnode_dataenv_datasrc: source
 # KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
-# - by default enable this if dataenv_dataset(s) have been defined in the host
+# - by default enable here if dataenv_dataset(s) have been defined in the host
 hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
+# KohaLXC/mmtenv: PP/MMT-tool environment
+hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
+# KohaLXC/mmtenv: Origo/MMT-tool environment
+hostnode_origommtenv_enabled: false
 
 ## ###########################
 ## Server: updates/reboots/nic

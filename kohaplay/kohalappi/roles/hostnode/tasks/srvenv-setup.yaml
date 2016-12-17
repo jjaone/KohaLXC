@@ -117,7 +117,7 @@
     - Works
 - name: Ensure devops/Works subdirs exist for KohaLXC-tools setups (datasets)
   file: >
-    path="/home/{{ hostnode_operuser }}/Works/{{ item }}"
+    path="{{ hostnode_kohalxc_works }}/{{ item }}"
     state="directory"
     mode="g+s,o-rwx"
     group="{{ hostnode_kohagrp_id }}"
@@ -133,7 +133,7 @@
 # -from: srv:/home/koha/Works/KohaLappi/{{item}}
 # -to: local:{{ kohalxc_works }}/{{ kohalxc_organization }}/kohadata/"
 # -item: hostnode_dataebv_datasets: e.g. "dump4mmt-Axiell-20161019-Lappi_PallasPro"
-- name: Pull (rsync) listed dataset dumps from server (to mngmt host)
+- name: Pull (rsync) listed dataset dumps from server (to control host)
   synchronize: >
     mode="pull"
     src="/home/{{ hostnode_kohagrp_name | d('koha') }}/Works/{{ hostnode_kohalxc_organization }}/dump4mmt-{{ item }}"
@@ -149,9 +149,9 @@
     - hostnode_dataenv_dataset is defined
     - hostnode_dataenv_dataset != ""
 
-## Ensure dataset extraction has required subdirs (local)
-# - [KohaLXC]:dataenv (local)
-- name: Set required dirs and perms for dataset extraction (in mngmt host)
+## Ensure dataset extraction has required subdirs (local/control host)
+# - [KohaLXC]:(local dataenv)
+- name: Set required dirs and perms for dataset extraction (control host)
   file: >
     path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/source/{{ item.1 }}"
     state="directory"
@@ -162,7 +162,6 @@
     - "{{ hostnode_dataenv_dataset }}"
     - [ 'preprocessed', 'scripts', 'target' ]
   when:
-    - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
   delegate_to: localhost
 
@@ -170,7 +169,7 @@
 # - [KohaLXC]:dataenv (local)
 # - must use local action/gunzip cause no Ansible module for "uncompress" exists
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
-- name: Extract listed datasets/table data from pulled dumps (in mngmt host)
+- name: Extract listed datasets/table data from pulled dumps (contol host)
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
 #  local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.{kir,dat}.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
@@ -178,7 +177,7 @@
     - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
 
-#- debug: var=kohalxc_rootdir
+#- debug: var=kohalxc_rootdir,hostnode_kohalxc_works
 ## Push/copy KohaLXC/kohatools scripts and configs to server(s):
 # - [KohaLXC]:
 # - to: /home/'hostnode_operuser'/Works(/KohaLXC)
@@ -186,7 +185,7 @@
   synchronize: >
     mode="push"
     src="{{ kohalxc_rootdir }}"
-    dest="/home/{{ hostnode_operuser }}/Works"
+    dest="{{ hostnode_kohalxc_works }}"
     owner="no"
     group="yes"
     perms="yes"
@@ -194,28 +193,29 @@
     recursive="yes"
     delete="yes"
 
+- debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
 ## Ensure devops/hostnode has required symlinks in $HOME
 # - [KohaLXC]:
 - name: Symlink for 'kohalxc' main script in devops/HOME
   file: >
-    src="/home/{{ hostnode_operuser }}/Works/KohaLXC/kohalxc.sh"
+    src="{{ hostnode_kohalxc_rootdir }}/kohalxc.sh"
     dest="{{ '/home/'~hostnode_operuser~'/bin/kohalxc' }}"
     state="link"
 - name: Symlink for 'kohasetup' script in devops/HOME
   file: >
-    src="/home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools/kohasetup.sh"
+    src="{{ hostnode_kohalxc_tooldir }}/kohasetup.sh"
     dest="{{ '/home/'~hostnode_operuser~'/bin/kohasetup' }}"
     state="link"
 
-- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
-## Push/copy kohalxc/setups and kohadata/<dumpname>/source datasets:
-# - [KohaLXC]:dataenv
+- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
+## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
+# - [KohaLXC]:dataenv,mmtenv
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
 - name: Push KohaLXC lxc-setups & org datasets to operuser/Works 
   synchronize: >
     mode="push"
     src="{{ item }}"
-    dest="/home/{{ hostnode_operuser }}/Works/{{ hostnode_kohalxc_organization }}"
+    dest="{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}"
     owner="no"
     group="yes"
     perms="yes"
@@ -230,6 +230,20 @@
     - hostnode_dataenv_enabled
     - hostnode_dataenv_dataset is defined
     - hostnode_dataenv_dataset != ""
+    - hostnode_mmtenv_enabled
+
+- debug: var="hostnode_kohalxc_tooldir,hostnode_ppmmtenv_enabled,hostnode_dataenv_datadir"
+## Push/copy KohaLXC/mmtenv tools and templated default config.xml to target
+- name: Push/copy MMT-tool/config.xml to mmt/data-enabled hosts (for MMT/LXCs)
+  template: >-
+    src="files/kohalxc_dataenv/config.xml.j2"
+    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/config.xml"
+    backup="no"
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_dataenv_datadir is defined
+    - hostnode_ppmmtenv_enabled
+    - hostnode_kohalxc_tooldir is defined
   
 ## Abort play here (for testing and development):
 - fail:

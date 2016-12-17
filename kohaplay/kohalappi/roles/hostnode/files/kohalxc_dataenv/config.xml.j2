@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- KohaLXC/kohatools (dataenv): PP/MMT-configuration
+<!-- KohaLXC/kohatools (data+mmtenv): PP/MMT-configuration
 file: $KOHALXC_TOOLDIR/ppmmtws/config.xml
 {{ ansible_managed | comment }}
 -->
@@ -10,9 +10,9 @@ file: $KOHALXC_TOOLDIR/ppmmtws/config.xml
     <targetDataDirectory>$KOHALXC_WORKS/KohaSuomi/MMT/PallasProDumps/target/</targetDataDirectory>
  	-->
     <!-- For PP/MMT-usage in w/ kohalxc/kohatools & ansible in roi-servers: KohaLappi-case (kohalappi) -->
-    <sourceDataDirectory>{{ hostnode_kohalxc_datadir }}/source</sourceDataDirectory>
-    <preprocessedFolder>{{ hostnode_kohalxc_datadir }}/source/preprocessed/</preprocessedFolder>
-    <targetDataDirectory>{{ hostnode_kohalxc_datadir }}/source/target/</targetDataDirectory>
+    <sourceDataDirectory>{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc | d('source') }}/</sourceDataDirectory>
+    <preprocessedFolder>{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_datanv_datasrc | d('source') }}/preprocessed/</preprocessedFolder>
+    <targetDataDirectory>{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc | d('source' )}}/target/</targetDataDirectory>
 
     <openilsDirectory>/openils/</openilsDirectory>
     <!--How many extra processes are launched? 0 disables multithreading -->
