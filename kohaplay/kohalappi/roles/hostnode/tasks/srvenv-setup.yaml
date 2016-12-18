@@ -234,11 +234,17 @@
 
 - debug: var="hostnode_kohalxc_tooldir,hostnode_ppmmtenv_enabled,hostnode_dataenv_datadir"
 ## Push/copy KohaLXC/mmtenv tools and templated default config.xml to target
-- name: Push/copy MMT-tool/config.xml to mmt/data-enabled hosts (for MMT/LXCs)
+- name: Push/copy MMT-tools config(datatype).xml to mmt/data-enabled hosts (for MMT/LXCs)
+  vars:
+    src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
+    org: "{{ hostnode_kohalxc_organization }}"
   template: >-
     src="files/kohalxc_dataenv/config.xml.j2"
-    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/config.xml"
+    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.name }}.xml"
     backup="no"
+  with_items:
+    - { name: config, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
+#    - { name: configBiblios, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -1000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0 }
   when:
     - hostnode_dataenv_enabled
     - hostnode_dataenv_datadir is defined
