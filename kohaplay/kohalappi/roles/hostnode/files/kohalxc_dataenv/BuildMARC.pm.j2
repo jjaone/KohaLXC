@@ -1,0 +1,532 @@
+# KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: BibliosImportChain
+# file: $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/BibliosImportChain/FinMARC_Builder/{{ item.name }}
+{{ ansible_managed | comment }}
+
+## ! IN THIS FILE ! ##
+#-MARC data from PP (PallasPro) is not very clear, so we need to run various filters to sanitize and collect the data.
+#-Also we need to make sure we have the characters we want in the character encoding we use.
+
+package BibliosImportChain::FinMARC_Builder::BuildMARC;
+
+use warnings;
+use strict;
+use DateTime;
+use POSIX;
+use CommonRoutines;
+use utf8;
+
+use LiteLogger;
+use BibliosImportChain::FinMARC_Builder::PP_To_MARC;
+use BibliosImportChain::FinMARC_Builder::SharedDocidRecordsHandler;
+use TranslationTables::isil_translation;
+
+
+my $log;
+my $removedBibliosLog;
+my $activeCallnumberFields;
+
+sub init {
+    $log = LiteLogger->new({package => 'BibliosImportChain::FinMARC_Builder::BuildMARC'});
+    $removedBibliosLog = LiteLogger->new({package => 'BibliosImportChain::FinMARC_Builder::BuildMARC'});
+
+    my @jokunenCallnumberFields = ('098','055','056','057','058','053','060','064');
+                                    #field | count in DB
+    my @pielinenCallnumberFields = ('098', # 279429
+                                    '054', # 128133
+                                    '055', #  77105
+                                    '056', #   9731
+                                    );
+    my @lappiCallnumberFields = ('098','952','953','955','956','957','958','959','960','961', '961','963','964','967','966','954');
+
+    $activeCallnumberFields = \@pielinenCallnumberFields if ('pielinen' eq $CFG::CFG->{organization});
+    $activeCallnumberFields = \@jokunenCallnumberFields if (not($activeCallnumberFields) && 'jokunen' eq $CFG::CFG->{organization});
+    $activeCallnumberFields = \@lappiCallnumberFields if (not($activeCallnumberFields) && 'kohalappi' eq $CFG::CFG->{organization});
+}
+
+sub buildCoreData {
+    my $t = $_[0]; #Get the instance of the controlling object BibliosImportChain::FinMARCXML_Builder::PP_To_MARC for easy access to accessor methods
+    my $row = $_[1]; #get the licmarca-row to process
+    
+    my $r = MARC::Record->new(); #build the MARC structure here
+    my $f; #temporary pointer to freshly created MARC::Fields, so they can be stored to MARC::Record $r
+
+    if(length($row) < 10) {
+        return;
+    }
+    
+    $row =~ s/\n$//; #remove the newline-character from the end of line
+        
+    
+    my @row = split "\t", $row;
+    
+    ##get the docid of marcdata row
+    $r->docId($row[0]);
+    
+    unless ($r->docId()) {
+        $log->warning("Bibliorow $row\nhas no docId!! Skipping this record!");
+        return;
+    }
+    
+    ##Find the record status
+    $r->status($row[5]);
+    resolveStatus($t, $r, $row[5]);  #If the record status is a deleted record, mark it so. It will be deleted later.
+
+    ##Some biblios have a negative childId. Filter them.
+    ##Negative childId's are mainly related to removed serials. Generally they seem to be missing from PP staff_client.
+    #Normally childId == 0, and higher ones are component parts
+    $r->childId($row[1]);
+    if ($r->childId < 0) {
+        #$log->warn("\nERROR: Biblio id $r->docId has a negative childid $r->childId\n");
+        return;
+    }
+    
+    ##get the rowid. rowid == 1, the parent biblio, or a single biblio. rowid > 1, a multirow part for the biblio whose rowid == 1.
+    $r->rowId($row[2]);
+    
+    ##Get the marc format.
+    $r->marcFormat($row[4]);
+
+    ##get the marcdata column and strip non-MARC data from it, like the pallasLabel
+    my $marc = $row[6];
+    if ($r->rowId() > 1) { #Records with rowid > 1 are multirow Record supplements and have no pallasLabel.
+        $r->{marc} = $marc;
+    }
+    elsif ( !($marc =~ m/(.+?)\\_/) ) {
+        $log->warning("Biblio id $r->docId has no pallasLabel, skipping this record:\n$marc\n");
+        return;
+    }
+    else {
+        $marc =~ s|(.+?)\\_|\\_|; #remove the pallasLabel from the row. PallasLabel is not standard MARC!
+        $r->pallasLabel($1);
+        $r->{marc} = $marc;
+    }
+    
+    build005($r, $row[7]);
+
+    build003($r, $t);
+
+    #Check if a record with the same id exists. It is a component part, so link the bigger record as parent to smaller records. Child records lack 008-field
+    my $componentPart = $t->findRecord($r->docId);
+    if ( $componentPart )  {
+        BibliosImportChain::FinMARC_Builder::SharedDocidRecordsHandler::storeSharedRecord($r);
+    }
+    else {
+        #Save the record
+        $t->storeRecord($r)
+    }
+}
+
+sub buildComplexData {
+    my $t = $_[0]; #Get the instance of the controlling object BibliosImportChain::FinMARCXML_Builder::Convert_To_FinMARC for easy access to accessor methods
+    my $r = $_[1]; #The buildCoreData'ed Marc::Record object
+
+if ($r->docId == 246902) { #DEBUG
+    my $break;
+}
+
+    if ($r->isDeleted()) {
+        #It is important to release the record from the underlying Records-hash,
+        #otherwise the MARC::Record $r will be referenced in latter modules causing lots of trooble.
+        $t->releaseRecord($r->docId()); 
+        $r->DESTROY();
+        return 'DELETED RECORD';
+    }
+
+
+    #parse the MARC-string to a MARC::Record object
+    #Component parts get parsed to a MARC::Record in SharedDocidRecordsHandler
+    if (exists $r->{marc}) {
+        extractMARCFields($r);
+        delete $r->{marc};
+        replaceAuthorityCodesWithAuthorityValues($r, $t);
+    }
+
+    parsePallasProLabel($r);
+
+    ##rebuild the call numbers (cn) to MARC21-standard's ISIL codes, remember to grant passthrough to Usemarcon for field 852
+    ##We need to make sure $098 exists for usemarcon, so it can be converted to 084 in MARC21, for Evergreen to pull the YKL-code from, in copy creation.
+    rebuildCallNumber($r);
+    
+    buildRecordLeader($r, $t);
+
+    return "OK";
+}
+
+sub build003 {
+    my $r = shift;
+    my $t = shift;
+
+    my $f003content = $t->{licinfoi}->fetchWithoutAlert( $r->docId() );
+    if ( $f003content ) {
+        $r->addUnrepeatableSubfield('003', 'a', $f003content);
+    }
+}
+
+#Put $modtime (time last modified [licmarca.kir 8th column]) to 005-field
+sub build005 {
+    my ($record, $modtime) = @_;
+
+    $modtime =~ s/[\t| ]//g; #remove tabs and spaces
+    if( !(9 < length $modtime) && !(length $modtime < 13) ) {	$modtime = 1000;	} #if modtime is unavailable, use 1000, like for every other date spoofed
+    #transform unix timestamp to ISO8601 used by MARC21
+    my $dt = DateTime->from_epoch( epoch => $modtime );
+    my $f = MARC::Field->new("005");
+    $f->addSubfield("a", $dt->ymd('-') . " " . $dt->hms(':') . "+02" );
+    $record->addField(  $f  );
+}
+
+sub resolveStatus {
+
+    my $t = shift;
+    my $r = shift;
+    my @byte = CommonRoutines::breakIntegerToBinaryArray(shift); #creates a byte representation of status
+
+    my $remove = sub {
+        #We might have deleted Records, but if they have copies attached, we cannot remove them.
+        if ( ($t->{liccopy}->fetch( $r->docId() ))  ) {
+            $log->warning('Deleted Record '.$r->docId().' has a copy');
+        }
+        else {
+            $r->markAsDeleted(); 
+        }
+    };
+
+
+    if ($byte[-7]) { #if the record is deleted, mark it for removal.
+        &$remove();
+        return 'REMOVE';
+    }
+    if ($byte[-8]) { #Negative statuses are marked for removal.
+        &$remove();
+        return 'REMOVE';
+    }
+    if ($byte[-1]) { #we got a serial mother
+        $r->isASerialMother(1);
+        return 'SERIAL MOTHER';
+    }
+    # if ($byte[-2]);
+    return 'COMPONENT MOTHER' if ($byte[-3]); #we got a component mother!
+    # if ($byte[-4]);
+    # if ($byte[-5]);
+    # if ($byte[-6]);
+    
+    return 1;
+}
+
+=rebuild call number
+#Move library specific call number from pallaspro to Marc21-standard specific field 852a && 852h
+old call number fields are removed.
+#We need to make sure $098 exists for usemarcon, so it can be converted to 084 in MARC21. Evergreen needs 084 to pull the YKL-code during call number creation.
+If no 098 is found, we move the next available field to 098
+$param1 = the MARC::Record-object
+=cut
+sub rebuildCallNumber {
+
+    my $record = $_[0];
+    
+    my $exists098; #Flag is here to spot extra $098-instances so we can remove them.
+    my $first852created; #This flag is used to define different indicators for the first $852, which is the primary location specifier.
+    foreach ( @$activeCallnumberFields ) {
+        my $sourceField = $_;
+        my $fields = $record->fields($sourceField);
+        
+        if (defined $fields) {
+        foreach my $field (@$fields) {
+            my $subfields = $field->subfields('a');
+            
+            if (! $subfields) {
+                $log->warning('Record '.$record->docId().' has no subfield a for field '.$sourceField);
+            }
+            
+            if ($subfields) {
+            foreach my $subfield (@$subfields) {
+                my $sfContent = $subfield->content();
+                
+                my $newSfA = MARC::Subfield->new('a', translateCallNumberOwningLibraryFieldToMarc21ISIL($sourceField, $record));
+                my $newSfH = MARC::Subfield->new('h', $sfContent);
+                my $new852 = MARC::Field->new("852");
+            
+                if ( ! defined $first852created ) { #if we have no 852-fields present, presume the first isil is the main isil.
+                    $new852->setIndicator1('4');
+                    $new852->setIndicator2('1');
+                    $first852created = 1;
+                }
+                else {
+                    $new852->setIndicator1('4');
+                    $new852->setIndicator2('2');
+                }
+            
+                $new852->addSubfield($newSfA);
+                $new852->addSubfield($newSfH);
+                $record->addField($new852);
+            }
+            }
+            
+            
+            if (!(defined $field)) {
+                #do nothing as an error has already been printed!
+            }
+            elsif ( $sourceField eq '098' && !($exists098) ) {
+                $exists098 = 1; #We need to have the first instance of 098 preserved
+            }
+            elsif ( $sourceField eq '098' && defined $exists098 ) {
+                $record->deleteField($field);
+            }
+            elsif (!($exists098)) {
+                $field->setCode('098');
+                $exists098 = 1; #We need to have the first instance of 098 preserved
+                $record->deleteFields($sourceField);
+            }
+            elsif (defined $exists098) {
+                $record->deleteFields($sourceField);
+            }
+            else {
+                #we get a use-case I haven't prepared for.
+                $log->warning('Record id '.$record->docId().' has a undefined case of 098->084 conversion with field '.$field->code());
+            }
+        }
+        }
+    }
+}
+#translate to ISIL
+#param1 = source field eg. 098
+sub translateCallNumberOwningLibraryFieldToMarc21ISIL {
+    my $marcField = $_[0];
+
+    my $isil = TranslationTables::isil_translation::GetField2Isil($marcField);
+
+    if ($isil) {
+        return $isil;
+    }
+    else {
+        $log->warning("ERROR\@translateCallNumberOwningLibraryFieldToMarc21ISIL( sourcefield = $_[0], docId = $_[1]->docId ):\n unknown source marc field");
+        return "undef";
+    }
+}
+
+#iterate fields- and fieldsContent-pairs to extract indicators and subfields
+sub extractMARCFields {
+    
+    my $r = $_[0]; #the MARC record being built
+    my $marc_row = $r->{marc};
+    
+    if ($r->docId() == 148162) {
+        my $break;
+    }
+    
+    my @fieldsContent = split(/\\_\d\d\d/, $marc_row);  #extract field contents,
+    shift @fieldsContent;               # first index is empty so it is removed
+    my @fields = $marc_row =~ /\\_(\d\d\d)/g; #extract field identifiers from $_
+    
+    for(my $i=0 ; $i < @fields ; $i++) {
+        my $field = $fields[$i];
+        my $fieldContent = $fieldsContent[$i];
+
+        #catch empty fields and ignore them
+        if (! (defined $fieldContent) || length $fieldContent <= 1) {
+            $log->warning("Empty field with docid '".$r->docId()."' and field '$field'");
+            next;
+        }
+    
+        #make sure we use the existing field 773 generated in SharedDocidRecordsHandler.pm if available
+        my $f773AlreadyDefined;
+        my $f;
+        my $f773s = ($field eq '773') ? $r->fields("773") : undef;
+        if ($f773s) {
+            $f773AlreadyDefined = 1;
+            $f = $f773s->[0];
+        }
+        else {
+            $f = MARC::Field->new($field);
+        }
+
+        
+        my @splitSubfields = split(/\\(\/[abxyz]|.)/, $fieldContent);
+    
+        my $error = $f->addIndicators( $splitSubfields[0] );
+        if ($error && $error eq 'TOOMANY') {
+            my $indicatorsString = (ref $splitSubfields[0] eq 'ARRAY') ? "@{$splitSubfields[0]}" : $splitSubfields[0];
+            $log->warning("Too many indicators with docid '".$r->docId()."' and field '$field', using indicators '$indicatorsString'");
+        }
+
+        #make sure we skip any modifications to the existing subfield 773w generated in SharedDocidRecordsHandler.pm if available
+        if ( $f773AlreadyDefined ) {
+            next;
+        }
+
+        #Extract subfields
+        my $subfieldsAdded = 0;
+        for(my $j=1 ; $j < @splitSubfields ; $j+=2) {
+        
+            #make sure subfields and -content pair exists
+            if(defined $splitSubfields[$j] && defined $splitSubfields[$j+1]) {
+                $f->addSubfield( $splitSubfields[$j] , $splitSubfields[$j+1] );
+                $subfieldsAdded++;
+            }
+=alternate :use to enable empty subfields
+        #fixing issue with repairing \_773$7 to hold nn, if empty.
+        #TODO: if we get lots of empty subfields, look for a alternate resolution.
+        if(defined $splitSubfields[$j]) {
+        if (defined $splitSubfields[$j+1]) {
+            $f->addSubfield( $splitSubfields[$j] , $splitSubfields[$j+1] );
+        }
+                else {
+            $f->addSubfield( $splitSubfields[$j] , '');
+        }
+            }
+=cut
+            else {
+                next;
+            }
+        }
+        $r->addField($f) if $subfieldsAdded; #Do not add the field if there are not subfields!
+    }
+}
+
+sub parsePallasProLabel {
+    my $r = shift; #get the Record-object
+    if ( ($r->pallasLabel() =~ /(.{3})([a-z|]{2})([a-zåäö]{2})?/) ) { #break the pallaslabel to relevant parts to validate it's integrity
+        $r->signum($1);
+        $r->materialType($2);
+        $r->countryOfOrigin($3);
+    }
+    else {
+        $log->warning("Couldn't parse PP leader for record docId:".$r->docId()." PPlabel:".$r->pallasLabel());
+    }
+    
+}
+
+sub buildRecordLeader {
+
+    my $r = shift;
+    my $t = shift; # The controlling Convert_To_FinMARC-object
+    my $licinfoa = $t->{licinfoa};
+
+    my $pk; # DocId
+    my $childId = $r->childId();
+    #We need to build the component parts leader field based on the mother biblios repositories, since component children have a new DocId
+    #cluck "DEBUG; organization; '$CFG::CFG->{organization}',childId='$childId'";
+    if ($r->isComponentPart()) {
+        $pk = $r->getUnrepeatableSubfield('773','w')->content();
+    }
+    else {
+        $pk = $r->docId;
+    }
+
+    my $materialCode = $licinfoa->fetchWithoutWarning($pk, $childId, '06'); #Type of record
+    unless ($materialCode) {
+        $log->warning("AuthKey '$pk', childId '$childId', index '06', not found for docId '$pk' in field 'Leader', using repository '".$licinfoa->{fileBasename}."'.");
+        $materialCode = ' ';
+    }
+    my $i07 = $licinfoa->fetchWithoutWarning($pk, $childId, '07'); #Bibliographic level
+    unless ($i07) {
+        $log->warning("AuthKey '$pk', childId '$childId', index '07', not found for docId '$pk' in field 'Leader', using repository '".$licinfoa->{fileBasename}."'.");
+        $i07 = ' ';
+    }
+    my $recordLevel = $licinfoa->fetchWithoutWarning($pk, $childId, '17'); #Encoding level
+    unless ($recordLevel) {
+        $log->warning("AuthKey '$pk', childId '$childId', index '17', not found for docId '$pk' in field 'Leader', using repository '".$licinfoa->{fileBasename}."'.");
+        $recordLevel = ' ';
+    }
+
+    #licinfoa 8th = pp mat code
+    #licinfoa 9th = finmarc leader char 17 #level of cataloguing
+    #licinfoa 10th = A=adult|L=children|0=undefined 006, char 05
+    #licinfoa 11th = country of publication, 008,char 15-17 
+    #licinfoa 12th = aineistolaji, leader 06
+    #licinfoa 13th = tietueen kohde, leader 07
+    ##licinfoa 
+    ##build record leader
+    my $rl = "";
+    $rl .= "00000"; #record length
+    $rl .= "c"; #record state
+    $rl .= $materialCode;
+    $rl .= $i07;
+    $rl .= "  ";
+    $rl .= "2"; #indicator length
+    $rl .= "2"; #subfield identifier length
+    $rl .= "00000"; #data starting index
+    $rl .= $recordLevel;
+    $rl .= "1"; #library level
+    $rl .= " ";
+    $rl .= "4";
+    $rl .= "5";
+    $rl .= "   ";
+    $r->leader( $rl );
+}
+
+##Replace authorities codes with authority values.
+sub replaceAuthorityCodesWithAuthorityValues {
+    
+    #The MARC::Record -object
+    my $r = shift;
+    my $t = shift; # The controlling Convert_To_FinMARC-object
+        
+    my $sfs = $r->getAllSubfields;
+    foreach my $sf (@{$sfs}) { #iterate subfield arrays matching each field
+
+        #replace subfields '*' from licauthp
+        if($sf->code eq '*') { #select the subfield to access given repository
+            convertAuthority($t->{onki}, $sf, $t->{licauthp});
+        }
+        #replace subfields '+' from licauthc
+        if($sf->code eq '+') { #select the subfield to access given repository
+            convertAuthority($t->{onki}, $sf, $t->{licauthc});
+        }
+        #replace subfields '/[abxyz]' from licauths
+        if($sf->code =~ /\/([abxyz])/) { #select the subfield to access given repository
+            my $subfieldCode = $1;
+            convertAuthority($t->{onki}, $sf, $t->{licauths}, $subfieldCode);
+        }
+
+    }
+    
+    sub convertAuthority {
+        my $onki = $_[0];
+        my $sf = $_[1];
+        my $repo = $_[2]; #The Repository used to read authorities valus
+        my $presetSubfieldCode = $_[3] if $_[3]; #If defined, will overwrite defined subfield in the repository.
+        my $docId = $sf->parent()->parent()->docId();
+        my $authKey = $sf->content;
+        #if there is a pretext to a authority value. Find to the subfield with authority reference.
+        if(! $sf->content =~ m/^\d+$/) {
+            $log->warning( $! . "\nERROR: Authority-subfield with improper key in " . $docId . ", with subfield \"$sf->code\"  $sf->content" );
+        }
+        
+        my $authorities = $repo->fetch($authKey); #select the repository to take the authorities from
+        unless ($authorities) {
+            $log->warning("Authority key '$authKey', not found from docId '$docId' in field '".$sf->parent()->code())."', using repository '".$repo->{fileBasename}."'.";
+        }
+        #the first authorities value fills the space left over by the replaced subfield
+        my $existingSubfieldReplaced = 0;
+        foreach my $key (sort keys %$authorities) {
+            
+            my $value = $authorities->{$key};
+            next() if $value eq '0';
+            
+            ##EGDATA-118
+            my $fieldCode = $sf->parent()->code();
+            #REMOVE ONKI if ($fieldCode eq '650' || $fieldCode eq '600' || $fieldCode eq '610' || $fieldCode eq '611' || $fieldCode =~ /^1/) {
+                #REMOVE ONKI #$value is as is. ONKI not yet supports these fields.
+            #REMOVE ONKI }
+            #REMOVE ONKI else {
+                #REMOVE ONKI $value = $onki->normalize_keyword($value);
+            #REMOVE ONKI } #EO EGDATA-118
+
+            $key = $presetSubfieldCode if $presetSubfieldCode;
+            
+            if(! $existingSubfieldReplaced) {
+                $sf->code($key);
+                $sf->content($value);
+                $existingSubfieldReplaced = 1;
+            }
+            else {
+                $sf->parent()->addSubfield(  MARC::Subfield->new($key, $value)  );
+            }
+        }
+        $log->warning('ERROR: Couldn\'t find a matching authority value for record ' . $docId . ", with subfield \"".$sf->code()."\"  ".$sf->content().".") if $existingSubfieldReplaced == 0;
+    }
+}
+
+#Make compiler happy
+1;

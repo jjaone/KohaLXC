@@ -1,0 +1,806 @@
+# KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: lib
+# file: $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/lib/{{ item.name }}
+{{ ansible_managed | comment }}
+
+package Item;
+
+use warnings;
+use strict;
+#use diagnostics;
+use utf8;
+
+use Switch;
+use Data::Dumper;
+use Encode;
+
+use CommonRoutines;
+use TranslationTables::material_code_to_itype;
+use TranslationTables::isil_translation;
+use LiteLogger;
+
+
+use constant {
+    STATUS1DELETEDBIT => -3,
+};
+
+
+my $log;
+sub initPackageVariables {
+    $log = LiteLogger->new({package => 'Item'});
+    $Data::Dumper::Indent = 0;
+    $Data::Dumper::Purity = 1;
+}
+
+=head1 SYNOPSIS
+Container for item fields. Accessors use validators to make sure data is valid.
+Fields must correspond to Instructions.pm
+=cut
+sub new {
+    my $class = shift;
+    my $s = {};
+
+    bless($s, $class);
+    return $s;
+}
+sub newFromRow {
+    my $class = shift;
+    no strict 'vars';
+    eval shift;
+    my $s = $VAR1;
+    use strict 'vars';
+    warn $@ if $@;
+    return $s;
+
+}
+
+#setters receive self as $_[0]
+# the ItemsInjectChain::Reader-object as $_[1]
+# and the values requested in Instructions.pm, in subsequent indexes like this:
+# $_[0] = Item -object ($self/this)
+# $_[1] = ItemsImportChain::ItemsBuilder::Reader -object containing repositories and whatnot
+# $_[2]->[] = Parameters extracted according to instructions in Instructions.pm
+
+sub set_biblionumber {
+    if ($_[2]->[0]) {
+        $_[0]->{biblionumber} = $_[2]->[0];
+        $_[0]->{biblioitemnumber} = $_[2]->[0];
+    }
+    else { #we don't negotiate if there is no docid
+        return 'KILL MEE!';
+    }
+}
+sub get_biblionumber {
+    return $_[0]->{biblionumber};
+}
+#id can come as a negative value, so we straighten it out.
+sub set_itemnumber {
+    if (! $_[2]->[0]) {
+        return 'KILL MEE!'; #id must exists
+    }
+
+    if ($_[2]->[0] < 0) {
+            $_[0]->{itemnumber} = -1 * $_[2]->[0];
+    }
+    else {
+            $_[0]->{itemnumber} = $_[2]->[0];
+    }
+if ($_[0]->{itemnumber} == 10205178) {
+    my $break = 1;
+}
+
+}
+sub get_itemnumber {
+    return $_[0]->{itemnumber};
+}
+sub set_holdingbranch {
+    my $libid = $_[2]->[0];
+    my @homelocid = $_[2]->[1] =~ /(\d\d?)(\d\d\d)/;
+    my $homedepid = $_[2]->[2];
+    my @lastlocid = $_[2]->[3] =~ /(\d\d?)(\d\d\d)/;
+    my $lastdepid = $_[2]->[4];
+    my ($locid, $depid);
+
+    #Enforce holdingbranch, but fall back to homebranch if no holdingbranch
+    $libid = ($lastlocid[0])  ? $lastlocid[0] : $homelocid[0];
+    $locid = (@lastlocid > 0) ? $lastlocid[0].$lastlocid[1] : $homelocid[0].$homelocid[1];
+    $depid = (defined($lastdepid)) ? $lastdepid : $homedepid;
+
+    my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $locid, depid => $depid }  );
+    my $branchcode = $licloqde->[1];
+    my $shelvingLocation = $licloqde->[2];
+
+    if ($shelvingLocation && $shelvingLocation eq 'POIS') {
+        return 'KILL MEE!';
+    }
+
+    if ( (! defined $branchcode) && (! defined $depid) ) {
+        #This Item has never been anywhere else, so lets make sure the holdingbranch gets set as the homebranch.
+        #When $_[0]->{holdingbranch} doesn't exist. It is taken from homebranch.
+        return;
+    }
+
+    if (!$branchcode) {
+#        #We don't need to warn about this as this is rather harmless. holdingbranch defaults to homebranch if holdingbranch is missing.
+#        $_[0]->separateItemAsVolatile("set_holdingbranch(): Copyid '".$_[0]->{itemnumber}."': has a undefined circulation library, using KONVERSIO\n".
+#                                      "libid => '".($libid ? $libid : '')."', locid => '".($locid ? $locid : '')."', depid => '".($depid ? $depid : '')."'");
+        $branchcode = 'KONVERSIO';
+    }
+    $_[0]->{holdingbranch} = $branchcode;
+
+    #Storing the shelving location Justin Case if homebranch doesn't define it.
+    if($shelvingLocation) {
+        $_[0]->{location} = $shelvingLocation;
+        $_[0]->{permanent_location} = $_[0]->{location};
+    }
+    else {
+        #It doesn't matter if a shelving location is missing from holdingbranch, since the homebranch location is what matters.
+    }
+}
+sub get_holdingbranch {
+    return $_[0]->{holdingbranch};
+}
+sub set_homebranch {
+    my $libid = $_[2]->[0];
+    my @homelocid = $_[2]->[1] =~ /(\d\d?)(\d\d\d)/;
+    my $homedepid = $_[2]->[2];
+    my @lastlocid = $_[2]->[3] =~ /(\d\d?)(\d\d\d)/;
+    my $lastdepid = $_[2]->[4];
+    my ($locid, $depid);
+
+
+    $libid = $homelocid[0];
+    $locid = $homelocid[0].$homelocid[1] if @homelocid > 0;
+    $depid = $homedepid;
+
+    my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $locid, depid => $depid }  );
+    my $oldLocName = $licloqde->[0];
+    my $branchcode = $licloqde->[1];
+    my $shelvingLocation = $licloqde->[2];
+
+    if (!$branchcode) {
+        $libid = '' unless $libid; $locid = '' unless $locid; $depid = '' unless $depid;
+        $_[0]->separateItemAsVolatile("set_homebranch(): Copyid ".$_[0]->{itemnumber}.": has a undefined homebranch library, using holdingbranch\n".
+                                      "libid => ".$libid.", locid => ".$locid.", depid => ".$depid."");
+            $branchcode = $_[0]->{holdingbranch};
+    }
+    $_[0]->{homebranch} = $branchcode;
+
+    if ($shelvingLocation eq 'POIS') {
+        return 'KILL MEE!';
+    }
+    if($shelvingLocation) {
+        #Current shelving location is better to take from the homebranch, but sometimes homebranch is not defined
+        $_[0]->{location} = $shelvingLocation;
+        $_[0]->{permanent_location} = $_[0]->{location};
+    }
+    elsif(exists $_[0]->{location}) {
+        #It's ok, we can count on the location derived from the set_holdingbranch()
+    }
+    else {
+        $_[0]->{location} = 'Stacks';
+        $_[0]->{permanent_location} = $_[0]->{location};
+        $_[0]->separateItemAsVolatile("set_homebranch(): Copyid ".$_[0]->{itemnumber}.": has a undefined shelving location, using Stacks\n".
+                                      "libid => ".$libid.", locid => ".$locid.", depid => ".$depid."");
+    }
+
+    #Enforce holdingbranch for Items with no holdingbranch. This happens when an Item never leaves home... I guess..
+    if (not(exists $_[0]->{holdingbranch}) || $_[0]->{holdingbranch} eq 'KONVERSIO') {
+        $_[0]->{holdingbranch} = $_[0]->{homebranch};
+    }
+
+    ## Set the quick circulation (pikalaina) collection code
+    if ($oldLocName =~ /PIKA$/) {
+        $_[0]->{ccode} = 'PILA';
+    }
+}
+sub get_homebranch {
+    return $_[0]->{homebranch};
+}
+#First one must resolve in which library this item will be in.
+#Then fetch the correct call number for that library from one of the marc fields.
+sub set_itemcallnumber {
+    my $I = shift; #I, like Item/self/this/...
+    my $reader = shift; #The ItemsImportChain::ItemsBuilder::Reader -object holding all the repositories and whatnot
+    my $parms = shift;
+
+    #Extract the shelving location code, preferring the primary code
+    my $biblionumber = $I->get_biblionumber();
+    my $libid = $parms->[0];
+    my $homelocid = $parms->[1];
+    my $homedepid = $parms->[2];
+    my $sourceIsil; #marc location for primary shelf location.
+    my $fieldIndex; #stores the index of the shelving location code in the marc database
+    my $noPrimaryLocationDefined = 0;
+    my $callnumber;
+
+    if ($biblionumber == 10036644) {
+        my $break = 1;
+    }
+    #select the correct call number location according to the library id
+    $sourceIsil = TranslationTables::isil_translation::GetIsil($libid);
+
+    #if primary shelving location exists, add it to the item.
+    $callnumber = $reader->{'licauthmarc'}->fetch($biblionumber, $sourceIsil);
+
+    #if we cannot find the proper call number for the library, let's try the default one.
+    if(   ! $callnumber  &&    ! ($callnumber = $reader->{'licauthmarc'}->fetch($biblionumber, TranslationTables::isil_translation::GetDefaultIsil()))   ) {
+
+        #If item is on order or it has just been received, it has no call number.
+        my $barcode = $I->get_barcode();
+        if ($barcode =~ m/(HANK)/  ||  $barcode =~ m/(SAAP)/) {
+            $callnumber = $1;
+        }
+
+        if (  !($callnumber)  ) {
+            my $allAvailableISIL = $reader->{'licauthmarc'}->fetchAllIsil($biblionumber);
+            if (scalar(@$allAvailableISIL)) {
+                my $firstAvailableSourceIsil = $allAvailableISIL->[0]; #Get the first ISIL from the ones available for this biblionumber
+                $callnumber = $reader->{'licauthmarc'}->fetch($biblionumber, $firstAvailableSourceIsil);
+            }
+            #Serials don't necessarily have any call numbers.
+            elsif ($I->{isASerial}) {
+                $callnumber = 'LEHTI';
+            }
+            else {
+                #If no call numbers are found, then throw a warning and use a empty cn.
+                $callnumber = '   ';
+                $I->separateItemAsVolatile("Item itemnumber:".$I->get_itemnumber()."'s has a undefined call number");
+            }
+        }
+    }
+
+    my $signum = $reader->{'licauthmarc'}->fetch($biblionumber,'signum');
+    if( ! $signum ) {
+        $signum = '   ';
+        $I->separateItemAsVolatile("Item itemnumber:".$I->get_itemnumber()." has a undefined signum");
+    }
+    ##PallasPro has some special characters replacing accented characters, we need to replace placeholder ascii characters with proper utf8 variants
+    my @signum = split('',$signum);
+    $signum = '';
+    foreach my $c (@signum) {
+        switch ($c) {
+            case '^' { $c = 'Ü'; }
+            case '~' { $c = 'ü'; }
+            case '[' { $c = 'Å'; }
+            case ']' { $c = 'Ö'; }
+            case '\\' { $c = 'Ä'; }
+            case '#' { $c = '$'}
+        }
+        $signum .= $c;
+    }
+
+    my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $homelocid, depid => $homedepid }  );
+    my $oldLocName = $licloqde->[0];
+
+    unless ($oldLocName) {
+        $oldLocName = "   ";
+                $I->separateItemAsVolatile("Item itemnumber:".$I->get_itemnumber()." has an undefined BARCODE->DEPARTMENT_CODE");
+    }
+
+    $I->{itemcallnumber} = $oldLocName . ' ' . $callnumber . ' ' . $signum;
+
+    $I->{'items.cn_source'} = 'ykl';
+    $I->{'items.cn_sort'}   = sprintf $I->{itemcallnumber};
+}
+sub get_itemcallnumber {
+    return $_[0]->{itemcallnumber};
+}
+sub set_dateaccessioned {
+
+    #Primarily use the acqusition month to determine create date
+    if (defined $_[2]->[1] && length $_[2]->[1] > 3) {
+        $_[0]->{dateaccessioned} = CommonRoutines::iso_standardize_yymm( $_[2]->[1] );
+    }
+    elsif (defined $_[2]->[0] && length $_[2]->[0] > 1) {
+        $_[0]->{dateaccessioned} = CommonRoutines::iso_standardize_date($_[2]->[0]);
+    }
+    else {
+        my $barcode = $_[0]->get_barcode();
+        if ($barcode =~ m/(HANK)/  ||  $barcode =~ m/(SAAP)/) {
+            #Items on order or that have recently arrived have no create date
+            $_[0]->{dateaccessioned} = CommonRoutines::iso_standardize_date( time() );
+        }
+        else {
+            $_[0]->separateItemAsVolatile("Item itemnumber:".$_[0]->get_itemnumber()." has an undefined CREATE_DATE");
+            $_[0]->{dateaccessioned} = CommonRoutines::iso_standardize_date( 1000 );
+        }
+    }
+}
+sub get_dateaccessioned {
+    return $_[0]->{dateaccessioned};
+}
+sub set_price {
+    my $price = $_[1]->{licauthmarc}->fetch( $_[0]->get_biblionumber() , 'price' );
+
+
+    if (! $price) {
+        $_[0]->{price} = '0';
+        return;
+    }
+
+    chomp $price;
+    $_[0]->{price} = $price;
+    #Make sure the price is a digit, if not, remove the currency sign from the end.
+    #otherwise the price is a foobar value and we discard it.
+    if ($_[0]->{price} =~ /^\d+\.?\d+$/ ) {
+        return;
+    }
+    if ($_[0]->{price} =~ /^(\d+\.?\d+)/ ) {
+        $_[0]->{price} = $1;
+        return;
+    }
+    #$log->warning('Copy itemnumber:'.$_[0]->get_itemnumber().' has a foobar price');
+    $_[0]->{price} = 0;
+}
+sub get_price {
+    return $_[0]->{price};
+}
+##Replacementprice defaults to 50% of the original value. EGDATA-150
+sub set_replacementprice {
+    if ($_[0]->{price}) {
+        #$_[0]->{replacementprice} = sprintf('%.2f',  ($_[0]->{price} / 2)  );
+        $_[0]->{replacementprice} = $_[0]->{price};
+    }
+}
+sub get_replacementprice {
+    return $_[0]->{replacementprice};
+}
+#barcode #http://tarkistusmerkit.teppovuori.fi/tarkmerk.htm#pallas
+sub set_barcode {
+    my $I = shift; #I like Item/self/this/...
+    my $reader = shift; #The ItemsImportChain::ItemsBuilder::Reader -object holding all the repositories and whatnot
+    my $parms = shift;
+    my $libid = $parms->[0];
+    my $copyid = $parms->[1];
+
+    if($copyid < 0) { #negative copyid items have their barcode stored in liccopyi.kir
+        my $barcode = $reader->{'liccopyi'}->fetch($copyid);
+        if ($barcode) {
+            $I->{barcode} = $barcode;
+        }
+        else {
+            $I->{barcode} = $I->{itemnumber};
+            $I->separateItemAsVolatile("Item itemnumber:$copyid has no barcode, even if it has a negative itemnumber");
+        }
+        return;
+    }
+
+    #extract the library branch id
+    #if item belongs to eno, or other library whose branchid has two digits, take first two letters, else take just the first letter
+    my $branchid = (length $copyid == 9) ? substr $copyid, 0, 2 : substr $copyid, 0, 1;
+    #validate that $branchid and $libid are the same, because they should be
+    if (! $branchid == $libid) {
+        #print $LOG "WARNING:: Copy id:$copyid has different liccopy.kir->libid {3rd col} [$libid] compared to county_number|libid gained from the copyid [$branchid]";
+
+        #Actually $branchid generated from $copyid is the id where the copy has been created, but copies can migrate and the current location is dictated by $libid.
+        #so we use $branchid to determine the place where the barcode is given eg. creation place
+    }
+
+    my $identifyingNumber = substr $copyid, length($branchid); #get the rest of the character after the branchid
+    my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $branchid }  );
+    my $countyNumber = $licloqde->[0];
+
+    if (!$countyNumber) {
+        print 'no countynumber found';
+    }
+
+    #Check overrides for licloqde-rules. Should we add the checknumber?
+    my $nochecknumber = 0;
+    # TODO: Do we need this for 'kohalappi'?
+    if ($CFG::CFG->{organization} eq 'pielinen') {
+        my $in = $I->{itemnumber};
+
+        if ($countyNumber eq '541') {
+            #Nurmes has multiple checknumber segments
+            #541N0173118 - 541N183117
+            #541N0188734 - 541N0193733
+            #541N0196470 - 541N0206469
+            #541N0210934 - 541N0220933
+            #541N0226982 - 541N0236981
+            #541N0239670 - *
+            if ((10173118 <= $in && $in <= 10183117) ||
+                (10188734 <= $in && $in <= 10193733) ||
+                (10196470 <= $in && $in <= 10206469) ||
+                (10210934 <= $in && $in <= 10220933) ||
+                (10226982 <= $in && $in <= 10236981) ||
+                (10239670 <= $in)
+               ) {
+                #These are the regions when checknumber is used.
+                $nochecknumber = 0;
+            }
+            else {
+                $nochecknumber = 1;
+            }
+        }
+
+        elsif ($countyNumber eq '422') {
+            #422N0000001-422N0255001      ilman tarkistusmerkkiä
+            #422N0255002x-422N0305000x     tarkistusmerkillä
+            #422N0305001-422N0315000            tarkistusmerkkillinen
+            #422N0315001x-                           tarkistusmerkillä
+            if (20000001 <= $in && $in <= 20255001) {
+                $nochecknumber = 1;
+            }
+        }
+        elsif ($countyNumber eq '146') {
+            #146N0008001X -> *  tarkistusmerkillisiä
+            if (($in < 30008001)) {
+                $nochecknumber = 1;
+            }
+        }
+    }
+    elsif ($CFG::CFG->{organization} eq 'jokunen') {
+        if ($countyNumber eq '426') { #Liperi doesn't do no checksums!
+            $nochecknumber = 1;
+        }
+    }
+
+    my $barcode;
+    if ($nochecknumber) {
+        $barcode = $countyNumber . "N" . $identifyingNumber;
+    }
+    else {
+        $barcode = $countyNumber . "N" . $identifyingNumber . CommonRoutines::checksum_modulus_10($identifyingNumber);
+    }
+
+    $I->{barcode} = $barcode;
+}
+sub get_barcode {
+    return $_[0]->{barcode};
+}
+sub set_itype {
+    my $matCode = $_[2]->[0];
+    my $reader = $_[1];
+
+    if ( !(defined $matCode) ) {
+        $log->warning('item '.$_[0]->{itemnumber}.': has no material code! Using owner biblios. If lots of occurrences like these, create a NO_MATERIAL_CODE itype.');
+        $matCode = 0;
+    }
+    else {
+        $matCode =~ s/\x{E4}/|/; #For some strange reason, liccopy.kir has material code in ät, än, and licmarca uses |t, |n :DDDD
+    }
+
+    my $bibliosMaterialCode = $reader->{'licauthmarc'}->fetch(  $_[0]->get_biblionumber(), 'pallasMaterialCode'  );
+
+    if (not(defined $bibliosMaterialCode) && $_[0]->get_barcode() =~ /_HANK/) {
+        $log->warning('Item '.$_[0]->get_barcode().': Parent Biblio '.$_[0]->get_biblionumber().' has no pallas material type!');
+    }
+    elsif ( $matCode ne $bibliosMaterialCode && length($bibliosMaterialCode) > 0 && $bibliosMaterialCode ne 'NO PP MAT.CODE' ) {
+        $log->warning('item with barcode '.$_[0]->get_barcode().' has a different material code "'.$matCode.'" than its parent Biblio biblionumber '.$_[0]->get_biblionumber().'. Using the parents "'.$bibliosMaterialCode.'".')
+                    if(not($bibliosMaterialCode eq 'CA') && not($bibliosMaterialCode eq 'KP')); #Celia audiobooks are meant to override the Item's own itemtype.
+        $matCode = $bibliosMaterialCode;
+    }
+
+    #$cm is an array, where index0 is the circulation modifier in Evergreen and index1 defines if this Item is a serial and should be separated to SerialItems
+    my $itype = TranslationTables::material_code_to_itype::fetch($matCode);
+    if (defined $itype && exists $itype->[0]) {
+        $_[0]->{isASerial} = 1 if exists $itype->[1] && $itype->[1] == 1;
+        $_[0]->{itype} = $itype->[0];
+    }
+    else {
+        $_[0]->{itype} = 'KONVERSIOVIRHE';
+        $_[0]->separateItemAsVolatile("Item barcode:".$_[0]->get_barcode()." has a bad material type:$matCode");
+    }
+}
+sub get_itype {
+    return $_[0]->{itype};
+}
+#status is either in cpstatus1 or cpmodmod, we prefer cpstatus1 as it seems more valid
+sub set_status {
+    my $item = $_[0];
+    my $status1 = $_[2]->[0];
+    my $status2 = $_[2]->[1];
+    my $libid = $_[2]->[2];
+    my $locid = $_[2]->[3];
+    my $depid = $_[2]->[4];
+
+    my @byte1 = CommonRoutines::breakIntegerToBinaryArray($status1);
+    my @byte2 = CommonRoutines::breakIntegerToBinaryArray($status2);
+    my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $locid, depid => $depid }  );
+    my $libraryDerivedStatus = $licloqde->[3];
+    my $libraryDerivedStatusSupplement = $licloqde->[4];
+
+=SELECT * FROM config.copy_status;
+ id |         name         | holdable | opac_visible | copy_active | restrict_copy_delete
+----+----------------------+----------+--------------+-------------+----------------------
+  0 | Available            | t        | t            | t           | f
+  1 | Checked out          | t        | t            | t           | t
+  2 | Bindery              | f        | f            | f           | f
+  3 | Lost                 | f        | f            | f           | t
+  4 | Missing              | f        | f            | f           | f
+  5 | In process           | t        | t            | f           | f
+  6 | In transit           | t        | t            | f           | t
+  7 | Reshelving           | t        | t            | t           | f
+  8 | On holds shelf       | t        | t            | t           | t
+  9 | On order             | t        | t            | f           | f
+ 10 | ILL                  | f        | f            | t           | f
+ 11 | Cataloging           | f        | f            | f           | f
+ 12 | Reserves             | f        | t            | t           | f
+ 13 | Discard/Weed         | f        | f            | f           | f
+ 14 | Damaged              | f        | f            | f           | f
+ 15 | On reservation shelf | f        | f            | t           | f
+101 | Billed               | f        | f            | f           | f
+ 16 | Claims returned      | f        | f            | f           | f
+
+(16 rows)
+
+        #['notforloan', GENERATED IN STATUS],
+        #['damaged', GENERATED IN STATUS],
+        #['itemlost', GENERATED IN STATUS],
+
+=cut
+    $item->{status} = '0';  #using available as default
+    $item->{'notforloan'} = 0;
+    $item->{'damaged'}    = 0;
+    $item->{'itemlost'}   = 0;
+    $item->{'withdrawn'}  = 0;
+
+    #Some status codes are derived from PallasPro libraries. ex. library 'LASKUT' contains items that have been billed.
+    if (defined $libraryDerivedStatus) {
+        switch ($libraryDerivedStatus) {
+            case 'Bindery' { $item->{damaged} = 1; }
+            case 'Lost' { $item->{itemlost} = 1; }
+            case 'Billed' { $item->{notforloan} = 6; }
+            case 'Claims returned' { $item->{itemnotes} .= ($item->{itemnotes}) ? ', Väittää palauttaneensa' : 'Väittää palauttaneensa'; }
+            case 'NoLoan' { $item->{notforloan} = '1'; }
+            case 'EmplOnly' { $item->{notforloan} = '2'; }
+            case 'PubNote' { $item->{itemnotes} = ($item->{itemnotes}) ? ', '.$libraryDerivedStatusSupplement : $libraryDerivedStatusSupplement; }
+        }
+    }
+
+
+    return 'KILL MEE!' if ($byte1[STATUS1DELETEDBIT]);#deleted
+    $item->{itemlost} = "1" if ($byte1[-5]); #lost
+
+
+    ##Setting up acquisitions related details
+    $item->{notforloan} = "-1" if ($byte2[-7]); #on order
+    my $barcode = $item->{barcode};
+    if (defined $barcode && $barcode =~ /^(_HANK)|(_SAAP)/) {
+        $item->{notforloan} = "-1"
+    }
+
+    #Setting up "Billed"-status
+    if ($status2 == -80) {
+        $item->{notforloan} = 6;
+    }
+
+    ##If itemtype is CA (Celia audiobook), then set the notforloan => 1.
+    if ($item->{itype} eq 'CA') {
+        $item->{notforloan} = "1"; #Not for loan
+    }
+}
+sub get_status {
+    return $_[0]->{status};
+}
+sub set_deleted {
+    my $status1 = $_[2]->[0];
+
+    my @byte = CommonRoutines::breakIntegerToBinaryArray($status1);
+
+    if ($byte[STATUS1DELETEDBIT]) {
+        return 'KILL MEE!';
+    }
+    else {
+        $_[0]->{deleted} = 'f';
+    }
+}
+sub get_deleted {
+    return $_[0]->{deleted};
+}
+
+sub set_location {
+    #This value is set in set_homebranch()
+    # TODO: Do we need this for 'kohalappi'?
+    if ($CFG::CFG->{organization} eq 'pielinen') {
+        if ($_[0]->{homebranch} eq 'ILO_LUK') {
+            $_[0]->{location} = 'REF';
+            $_[0]->{permanent_location} = 'REF';
+        }
+    }
+}
+sub get_location {
+    return $_[0]->{location};
+}
+
+sub set_issues {
+    my $totalIssuesCount = $_[2]->[0];
+
+    #validate the total amount of circulations for this item
+    if ($totalIssuesCount < 0) {
+        $log->warning('item '.$_[0]->{itemnumber}.": total issues count $totalIssuesCount is less than 0, bad data!");
+    }
+    elsif (! ($totalIssuesCount =~ /^\d+$/)) {
+        $log->warning('item '.$_[0]->{itemnumber}.": total issues count $totalIssuesCount is not a number!, bad data!");
+    }
+    else {
+        #Succesfully validated!
+        $_[0]->{issues} = $totalIssuesCount;
+    }
+}
+sub get_issues {
+    return $_[0]->{issues};
+}
+
+sub set_itemnotes {
+    my $itemnumber = $_[2]->[0]; #itemnumber must exists, or this Item building would have terminated in set_itemnumber()
+    my $reader = $_[1];
+
+    my $itemnotes = $reader->{'liccnote'}->fetchWithoutAlert($itemnumber);
+
+    #We can have duplicate notes inflicted from multiple sources. It is better to check that the conversion tool generated notifications
+    #will not duplicate existing notifications, like 'YlävarastoYlävarasto'
+    #If existing itemnotes contain the original itemnotes, then we don't need to append it.
+    #If it doesn't, we should check if the original itemnote is contained in the conversion tool generate notes.
+    #Or just add the note if none exists.
+    if ($itemnotes) {
+        my $automaticallyGeneratedNotes = $_[0]->{itemnotes};
+        if ($automaticallyGeneratedNotes && $itemnotes) {
+            if (index($automaticallyGeneratedNotes, $itemnotes) != -1) { #Automatic notes contain more then the $itemnotes
+                #Do nothing for the $automaticallyGeneratedNotes
+            }
+            elsif (index($itemnotes, $automaticallyGeneratedNotes) != -1) { #$itemnotes contains $automaticallyGeneratedNotes and possibly more
+                $_[0]->{itemnotes} = $itemnotes; #Replace the automated notes with the bigger note without losing data
+            }
+            else { #legacy and automatic notes don't collide
+                $_[0]->{itemnotes} .= ', '.$itemnotes;
+            }
+        }
+        else { #We dont have any pre-existing notes.
+            $_[0]->{itemnotes} = $itemnotes;
+        }
+    }
+}
+sub get_itemnotes {
+    return $_[0]->{itemnotes};
+}
+
+sub set_rotatingcollection {
+    my $itemnumber = $_[2]->[0]; #itemnumber must exists, or this Item building would have terminated in set_itemnumber()
+    my $reader = $_[1];
+
+    my $oldLocation;
+    ###Check if this item is part of a rotating collection and make a note of it, yay!
+    if ($itemnumber < 0) { #Old barcodes from liccopyi.kir match the liltrans barcode 1 on 1
+        $oldLocation = $reader->{'liltrans'}->fetchWithoutWarning( $_[0]->{barcode} );
+    }
+    else { #New barcodes need to have their checksums removed
+        my $newBarcode = substr(  $_[0]->{barcode}, 0, -1  );
+        $oldLocation = $reader->{'liltrans'}->fetchWithoutWarning( $newBarcode );
+    }
+    if ($oldLocation) {
+        my $locidold = $oldLocation->{locidold};
+        my $depidold = $oldLocation->{depidold};
+        my $licloqde = TranslationTables::liqlocde_translation::resolve(  { locid => $locidold, depid => $depidold}  );
+        my $newOldRotationHomebranch = $licloqde->[1];
+
+        if (!$newOldRotationHomebranch) {
+            $_[0]->separateItemAsVolatile("set_rotatingcollection(): Copyid '".$_[0]->{itemnumber}."': has a undefined rotatingcollection library, using KONVERSIO\n".
+                                          "locid => '".($locidold ? $locidold : '')."', depid => '".($depidold ? $depidold : '')."'");
+            $_[0]->{branchcode} = 'KONVERSIO';
+        }
+
+        $oldLocation->{date} =~ /(\d{4})(\d\d)(\d\d)/; #Turn ymd to d.m.y
+        my $date = "$3.$2.$1";
+        my $itemnotes = ' -- Nide on siirtolaina kirjastosta '.$newOldRotationHomebranch.' '.$date;
+        $_[0]->{itemnotes} = (exists $_[0]->{itemnotes}) ? $_[0]->{itemnotes}.', '.$itemnotes : $itemnotes;
+
+        $_[0]->{rotatingcollection} = {homebranch => $newOldRotationHomebranch, date => "$1-$2-$3 12:00:00"};
+    }
+}
+sub get_rotatingcollection {
+    return $_[0]->{rotatingcollection};
+}
+sub set_materials {
+    my $f300z = $_[1]->{'licauthmarc'}->fetch(   $_[2]->[0], 'f300z'   );
+    my $f300d = $_[1]->{'licauthmarc'}->fetch(   $_[2]->[0], 'f300d'   );
+
+    if ($f300z && $f300d) {
+        $_[0]->{materials} = $f300z . ' ' . $f300d;
+    }
+    elsif ($f300z) {
+        $_[0]->{materials} = $f300z;
+    }
+    elsif ($f300d) {
+        $_[0]->{materials} = $f300d;
+    }
+    else {
+        #We ain't got no materials here!
+    }
+
+    
+}
+sub get_materials {
+    return $_[0]->{materials};
+}
+sub set_datelastborrowed {
+    my $time1 = $_[2]->[0];
+    my $time2 = $_[2]->[1];
+
+    #Reverse Engineered from PallasPro the linear function to calculate the month + year (eg. 09.14)
+    my $year1  = sprintf(  "%02d",  int( ($time1+125) / 12 )  );
+    my $month1 = sprintf(  "%02d",  ($time1+125) % 12  );
+    my $dlb1 = "20$year1-$month1-01";
+
+    my $year2  = sprintf(  "%02d",  int( ($time2+125) / 12 )  );
+    my $month2 = sprintf(  "%02d",  ($time2+125) % 12  );
+    my $dlb2 = "20$year2-$month2-01";
+    #datelastborroweds generated!
+
+    if (  (! $dlb1) && $dlb2  ) {
+        $dlb1 = $dlb2;
+        undef $dlb2;
+    }
+
+    if ($dlb1) {
+        $_[0]->{datelastborrowed} = $dlb1;
+    }
+}
+sub get_datelastborrowed {
+    return $_[0]->{datelastborrowed};
+}
+
+####################### END OF ACCESSORS #####################
+## starting behavioral methods ##
+
+#Will destroy these MOFOs Justin Case. Should be no circular references etc, but you never know with Perl.
+sub DESTROY {
+    my $self = shift;
+
+    foreach my $k (keys %$self) {
+
+        undef $self->{$k};
+        delete $self->{$k};
+    }
+}
+
+sub toString {
+    my $p = shift;
+
+    my $sb = ['$VAR1 = bless( '];
+
+    _toStringRecursion($p, $sb);
+
+    push (@$sb, " 'Item' );");
+
+    return join('',@$sb);
+}
+sub _toStringRecursion {
+    my ($p, $sb) = @_;
+
+    push(@$sb, '{');
+    for my $key (sort keys %$p) {
+        if (exists $p->{$key}) {
+            my $value = $p->{$key};
+
+            if (ref $value eq 'HASH') {
+                push(@$sb, "'$key' => ");
+                _toStringRecursion($value, $sb);
+            }
+            else {
+                $p->{$key} =~ s/'/\\'/g; #Sanitate quotation marks
+                $p->{$key} = Encode::decode_utf8($p->{$key}); # set the flag
+
+                push( @$sb, "'$key' => '$p->{$key}', " );
+            }
+        }
+        else {
+            warn 'Item with barcode '.$p->{barcode}.': Has a key '.$key.' with no value?!';
+        }
+    }
+    push(@$sb, '}, ');
+}
+
+#Sometimes we cannot be sure about an Item. It has quirky attributes or missing fields etc.
+#Isolate such Items from the working dataset so they can be more easily detected manually and reacted upon.
+#This is done by setting the library designation (holdingbranch) to 'JOKUNEN'.
+sub separateItemAsVolatile {
+    my $errorStr = $_[1];
+
+    $log->warning( $errorStr . $_[0]->toString()."\n" );
+
+    $_[0]->{volatile} = '1';
+    $_[0]->{home_ou} = 'KONVERSIO';
+}
+
+1;
