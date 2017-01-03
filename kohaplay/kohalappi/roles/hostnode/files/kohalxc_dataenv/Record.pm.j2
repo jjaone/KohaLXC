@@ -1,3 +1,7 @@
+# KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: lib
+# file: $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/lib/MARC/{{ item.name }}
+{{ ansible_managed | comment }}
+
 package MARC::Record;
 
 #Class to store bibliodata
@@ -37,6 +41,7 @@ use MARC::Subfield;
 
 use TranslationTables::material_code_to_itype;
 use TranslationTables::isil_translation;
+
 
 
 =head1 SYNOPSIS
@@ -257,6 +262,10 @@ sub materialType {
     my $matType = shift;
 
     if ($matType) {
+
+        # TODO/DEBUG: kohalappi-conversion, 2016-12
+        #print "DEBUG/kohalappi; MARC::Record.materialType()[".$CFG::CFG->{organization}."] Record docId:".$self->docId()." has material type:".$matType."\n";
+	
         my $itype = TranslationTables::material_code_to_itype::fetch($matType);
         if (defined $itype && exists $itype->[0]) {
             $self->isASerial(1) if exists $itype->[1] && $itype->[1] == 1;
@@ -289,7 +298,8 @@ sub materialType {
                     }
                 }
             }
-	    
+
+	    # TODO/DEBUG/FIX: kohalappi-conversion, 2016-12,2016-01
             if ($CFG::CFG->{organization} eq 'kohalappi') {
                 #Check for Celia-Biblios. Create CA (Celia audiobook) -itemtype if 028$a or 260$b or 695$a contains "Celia"  to set materiTypeOverride as 'CE' "
                 unless($materialTypeOverride) {

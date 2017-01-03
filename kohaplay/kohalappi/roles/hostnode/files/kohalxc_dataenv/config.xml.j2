@@ -36,7 +36,7 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
         <!-- Program phase control variables -->
         <!-- Processing datasets for database INSERTion -->
         <doRun>{{ item.biblios_run | d(1) }}</doRun>
-        <PreProcess>1</PreProcess>
+        <PreProcess>{{ item.preprocess }}</PreProcess>
         <BuildMARC>1</BuildMARC>
         <RunUSEMARCON>1</RunUSEMARCON>
 

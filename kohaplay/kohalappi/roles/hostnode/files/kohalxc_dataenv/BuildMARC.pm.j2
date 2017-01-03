@@ -61,7 +61,7 @@ sub buildCoreData {
     
     ##get the docid of marcdata row
     $r->docId($row[0]);
-    
+
     unless ($r->docId()) {
         $log->warning("Bibliorow $row\nhas no docId!! Skipping this record!");
         return;
@@ -83,6 +83,19 @@ sub buildCoreData {
     ##get the rowid. rowid == 1, the parent biblio, or a single biblio. rowid > 1, a multirow part for the biblio whose rowid == 1.
     $r->rowId($row[2]);
     
+    ## TODO/DEBUG: kohalappi-conversion, 2016-12; commentd out for now
+    # - these should/could be fixed outside PP/MMT by removing these from licamrca.kir:
+    # - awk '$2 != "0" { print $0 }' preprocessed/licmarca.kir.chunks/licmarca.kir0* | grep -G -v '\_773'
+    # or
+    # - awk '$2 != "0" { print $0 }' preprocessed/licmarca.kir.chunks/licmarca.kir0* | grep -G -v '\_773.*w'
+    #if ($CFG::CFG->{organization} eq 'kohalappi') {
+    #    # - skip records that fail in "773w" handling in BibliosImportChain
+    #    if ( $r->docId() =~ m/(12742|33578|46889|54175|88305|95639|96841|104806|108110|120120|127865|133223|135402|146060|146801|147408|149729|164346|163361)/) {
+    #        $log->warning("DEBUG/kohalappi:Skipping record, fails in Component Part handling of missing/errourneus 773w fields in the record: r->docId()=".$r->docId().", r->rowId()=".$r->rowId()." !!!");
+    #      return;
+    #   }
+    #}
+
     ##Get the marc format.
     $r->marcFormat($row[4]);
 
@@ -108,6 +121,8 @@ sub buildCoreData {
     #Check if a record with the same id exists. It is a component part, so link the bigger record as parent to smaller records. Child records lack 008-field
     my $componentPart = $t->findRecord($r->docId);
     if ( $componentPart )  {
+        # TODO/DEBUG: kohalappi-conversion, 2016-12
+        $log->warning("DEBUG/kohalppi: Record:".$r->docId." componentPart handling, calling SharedDocidRecordshandler->storeSharedRecord($r)"); # DEBUG
         BibliosImportChain::FinMARC_Builder::SharedDocidRecordsHandler::storeSharedRecord($r);
     }
     else {
@@ -120,9 +135,9 @@ sub buildComplexData {
     my $t = $_[0]; #Get the instance of the controlling object BibliosImportChain::FinMARCXML_Builder::Convert_To_FinMARC for easy access to accessor methods
     my $r = $_[1]; #The buildCoreData'ed Marc::Record object
 
-if ($r->docId == 246902) { #DEBUG
-    my $break;
-}
+#if ($r->docId == 246902) { #DEBUG
+#    my $break;
+#}
 
     if ($r->isDeleted()) {
         #It is important to release the record from the underlying Records-hash,
@@ -404,9 +419,21 @@ sub buildRecordLeader {
 
     my $pk; # DocId
     my $childId = $r->childId();
+
+    my $allFields = $r->getAllFields(); # DEBUG
+    my $pallasLabel = $r->pallasLabel(); # DEBUG
+    my $signum = $r->signum(); # DEBUG
     #We need to build the component parts leader field based on the mother biblios repositories, since component children have a new DocId
-    #cluck "DEBUG; organization; '$CFG::CFG->{organization}',childId='$childId'";
     if ($r->isComponentPart()) {
+	# TODO/DEBUG: kohalappi-conversion, 2016-12
+        $log->warning("DEBUG/kohalappi(buildRecordLeader): org=".$CFG::CFG->{organization}.", r->docId()=".$r->docId().", r->pallasLabel()=".$pallasLabel.", r->signum()=".$r->signum().", r->childId()=".$r->childId());
+	foreach my $df ( @{$r->getAllFields("sorted")} ) {
+	    my $fc = $df->code();
+	    $log->info("DEBUG(buildRecodLeader):docId=".$r->docId().", fieldcode=".$fc.", field->contentToText()=".$df->contentToText());
+	}
+	# TODO: "volatile" -handling here?
+        #my $f773w = $r->getUnrepeatableSubfield('773','w');
+        #$pk = $f773w if $f773w;
         $pk = $r->getUnrepeatableSubfield('773','w')->content();
     }
     else {

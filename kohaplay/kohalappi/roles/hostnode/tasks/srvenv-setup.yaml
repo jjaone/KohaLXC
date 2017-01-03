@@ -240,6 +240,16 @@
 
 - debug: var="hostnode_kohalxc_tooldir,hostnode_ppmmtenv_enabled,hostnode_dataenv_datadir"
 ## Push/copy KohaLXC/mmtenv tools and templated default config.xml to target
+# Parameters passed to {host,lxc}_config.xml
+# - name: name of the config file: {host_config,lxc_config}.xml
+# - source: source directory in dump4mmt-??? folder ('source')
+# - organization: library that we are MMT-converting
+# - threadCount: number of threads MMT should use
+# - debugACL: "DEBUGAuthoritiesCountLimit"
+# - chunkSize,starting/endingChunk: number of records in MMT-biblios chunk (start/end)
+# - loadExternalRepos: whether to load external repositories or not
+# - preprocess: do the 'PreProcess' phase in each import chain
+# - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
 - name: Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets (for MMT/LXCs)
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
@@ -252,8 +262,8 @@
     mode="g+w"
     backup="no"
   with_items:
-    - { name: host_config, source: "{{ host_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
-    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, biblios_run: 1, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, checkouts_run: 0, history_run: 0, serials_run: 0 }
+    - { name: host_config, source: "{{ host_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
+    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 51, endingChunk: -1, loadExternalRepos: 0, preprocess: 0, biblios_run: 1, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, checkouts_run: 0, history_run: 0, serials_run: 0 }
 #    - { name: configBiblios, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -1000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0 }
   when:
     - hostnode_dataenv_enabled

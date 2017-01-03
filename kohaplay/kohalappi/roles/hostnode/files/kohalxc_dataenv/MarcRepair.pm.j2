@@ -18,12 +18,14 @@ use BibliosImportChain::MarcRepair::MaterialTypeRepair;
 my $log;
 my $statistics;
 
-our $organization003Identifier = '';
+## TODO/DEBUG: kohalappi-conversion, 2016/12: fixing 003-issues like in 'OUTI' conversion?
+# - this should be the 'default' used in all conversions (what is the correct value here?)
+our $organization003Identifier = 'KONVERSIO';
+# - is this at all?
 our $municipalArchives003Identifier = '';
 
 sub init {
     $log = LiteLogger->new({package => 'BibliosImportChain::MarcRepair', thread => shift()});
-    # TODO: Do we need this for 'kohalappi'?
     if ($CFG::CFG->{organization} eq 'pielinen') {
         $organization003Identifier = 'PIELINEN';
         $municipalArchives003Identifier = 'KOIVI';
@@ -31,6 +33,13 @@ sub init {
     elsif ($CFG::CFG->{organization} eq 'jokunen') {
         $organization003Identifier = 'JOKUNEN';
         $municipalArchives003Identifier = 'KOIVI';
+    }
+    # TODO/DEBUG: 'kohalappi'-conversion, 2016-12/2017-01 ..
+    # - Do we need this for 'kohalappi'?
+    # - See also: https://tiketti.koha-suomi.fi:83/issues/1647
+    elsif ($CFG::CFG->{organization} eq 'kohalappi') {
+        $organization003Identifier = 'FI-Rm';
+        $municipalArchives003Identifier = 'LAPPIARKISTO';
     }
 }
 
@@ -88,7 +97,7 @@ sub run {
             next();
         }
 
-        # TODO: Do we need this for 'kohalappi'?
+        ## TODO/DEBUG/FIX: Do we need this for 'kohalappi'-conversion?
         if ( $CFG::CFG->{organization} eq 'pielinen' && $CFG::CFG->{DEBUGAuthoritiesCountLimit} < 0 ) { #The Biblio actually might have Items, but if you debug with partial repositories loaded, then the Item might not be found from the partial repository, marking this Biblio deleted unnecessarily
             ##DESTROY the Biblio if it has no Items.
             unless (my $availableItems = $t->{liccopy}->fetch( $r->docId() )) {
@@ -119,7 +128,7 @@ sub run {
 
         #># EGDATA-151 Block obsolete fields
         my @obsoleteFields;
-	# TODO: Do we need this for 'kohalappi'?
+	# TODO/DEBUG/FIX?: Do we need this handled in 'kohalappi'-conversion?
         if ($CFG::CFG->{organization} eq 'pielinen') {
             @obsoleteFields = ('872','889','986','987','988','989','980','990','991','992');
         }
@@ -634,7 +643,9 @@ sub repairPublicationYearFrom260c {
                 }
 
                 my $cpText = ($r->isComponentPart() ? '(Component Part)': '');
-                $log->warning('Docid '.$r->docId().$cpText.' has no publication date in field 008 and no 260c to pull it from! Using 1899.');
+		# TODO/DEBUG: kohalappi-conversion, 2016-12
+		# - commenting out this useless warning, publication dates to be checked in testing 
+                #$log->warning('Docid '.$r->docId().$cpText.' has no publication date in field 008 and no 260c to pull it from! Using 1899.');
                 repair008('1899', $sf008, $r);
             }
         }

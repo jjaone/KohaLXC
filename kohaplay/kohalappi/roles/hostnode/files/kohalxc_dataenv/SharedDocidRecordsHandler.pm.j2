@@ -38,7 +38,9 @@ sub storeSharedRecord {
     my $docId = $record->docId();
     my $childId = $record->childId();
     my $rowId = $record->rowId();
-    
+
+    # TODO/DEBUG: kohalappi-conversion, 2016-12
+    #$log->warning("DEBUG(storeSharedRecord):record=$record, docId=$docId, $childId=$childId, rowId=$rowId"); # DEBUG
     #store the $record to
     #$sharedRecords->{$docId}->[$childId]->[$rowId] = $record;
     
@@ -61,6 +63,8 @@ sub storeSharedRecord {
     my $childIdLevel = $docIdLevel->[$childId];
     
     #find out if the rowId layer has been established for this shared record or establish it
+    # TODO/DEBUG/FIX: Is there bug in the below code that affects the 773w handling?
+    # - the first part should be # do nothing.. (like above), right?
     if ( exists $childIdLevel->[$rowId] && ref $childIdLevel->[$rowId] eq 'ARRAY' ) {
         $childIdLevel->[$rowId] = $record;
     }
