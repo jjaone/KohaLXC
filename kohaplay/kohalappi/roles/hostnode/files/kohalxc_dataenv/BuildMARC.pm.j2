@@ -122,7 +122,7 @@ sub buildCoreData {
     my $componentPart = $t->findRecord($r->docId);
     if ( $componentPart )  {
         # TODO/DEBUG: kohalappi-conversion, 2016-12
-        $log->warning("DEBUG/kohalppi: Record:".$r->docId." componentPart handling, calling SharedDocidRecordshandler->storeSharedRecord($r)"); # DEBUG
+        #$log->warning("DEBUG/kohalppi: Record:".$r->docId." componentPart handling, calling SharedDocidRecordshandler->storeSharedRecord($r)"); # DEBUG
         BibliosImportChain::FinMARC_Builder::SharedDocidRecordsHandler::storeSharedRecord($r);
     }
     else {
@@ -432,10 +432,12 @@ sub buildRecordLeader {
 	    $log->info("DEBUG(buildRecodLeader):docId=".$r->docId().", fieldcode=".$fc.", field->contentToText()=".$df->contentToText());
 	}
 	# TODO: "volatile" -handling here?
-        #my $f773w = $r->getUnrepeatableSubfield('773','w');
-        #$pk = $f773w if $f773w;
-        $pk = $r->getUnrepeatableSubfield('773','w')->content();
-    }
+
+	# TODO/DEBUG/FIX: if 773w missing altogether, do not set $pk at all
+        my $f773w = $r->getUnrepeatableSubfield('773','w');
+	$pk = $f773w->content() if $f773w;
+        #$pk = $r->getUnrepeatableSubfield('773','w')->content();
+   }
     else {
         $pk = $r->docId;
     }
