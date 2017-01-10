@@ -1,4 +1,4 @@
-# KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: lib
+# KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: lib (line numbers of by -6)
 # file: $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/lib/{{ item.name }}
 {{ ansible_managed | comment }}
 
@@ -352,7 +352,7 @@ sub set_branchcode {
     my $branchcode = $licloqde->[1];
     my $shelvingLocation = $licloqde->[2];
 
-    if ($shelvingLocation eq 'POIS') {
+    if ($shelvingLocation eq 'POIS') { # line 361
         return 'KILL MEE!';
     }
     if (! $branchcode) {
