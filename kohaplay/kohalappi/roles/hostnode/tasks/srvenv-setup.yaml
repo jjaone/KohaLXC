@@ -181,7 +181,7 @@
     - kohalxc_datadir is defined
 
 - debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
-## For 'liqlocde_translation.pm' (PP/MMT) extract source CSV from Google-docs/spreadsheet:
+## For 'liqlocde_translation.pm' (PP/MMT) extract/split source CSV from Google-docs/spreadsheet:
 # - 'File id' and 'Sheet id' required (seems to work also w/o the &gid-argument in the URL)
 - name: Extract CSVs for PPMMT/TranslationTables/licloqde_translation from Google-spreadsheet
   vars:
@@ -190,10 +190,9 @@
     gFileId: "{{ kohalxc_dataenv_gfileid }}"
     gSheetId: "{{ kohalxc_dataenv_gsheetid }}"
     gExportFormat: "csv"
-    csvName: "liqlocde_translation.csv"
   uri:
     url: "{{ gDocsUrl }}/{{ gFileId }}/export?exportFormat={{ gExportFormat }}&gid={{ gSheetId }}"
-    dest: "{{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables/{{ csvName }}"
+    dest: "{{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables/liqlocde_translation.csv"
     body_format: raw
     return_content: yes
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
@@ -203,7 +202,14 @@
     - kohalxc_datadir is defined
     - hostnode_ppmmtenv_enabled
   delegate_to: localhost
-  
+- name: Fix delimiters and split source CSV by library id (first field) 
+  local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables && rm -f liqlocde_translation-*.csv && cat liqlocde_translation.csv | tr ',' ';' | awk -F, 'NR>1 {print>"liqlocde_translation-" sprintf("%02d", $1) ".csv"}'
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+    - hostnode_ppmmtenv_enabled
+
 ## [TODO]:
 ## Run locally (in control host) the "{{ kohalxc_datadir }}/{{ hostnode_dataenv_dataset }}/source/scripts/fix_source.sh" to generate a fixed source *.kirs for iterating PP/MMT-runs  
 
