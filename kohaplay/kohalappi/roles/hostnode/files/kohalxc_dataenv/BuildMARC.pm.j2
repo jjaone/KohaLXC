@@ -427,10 +427,11 @@ sub buildRecordLeader {
     if ($r->isComponentPart()) {
 	# TODO/DEBUG: kohalappi-conversion, 2016-12
         $log->warning("DEBUG/kohalappi(buildRecordLeader): org=".$CFG::CFG->{organization}.", r->docId()=".$r->docId().", r->pallasLabel()=".$pallasLabel.", r->signum()=".$r->signum().", r->childId()=".$r->childId());
-	foreach my $df ( @{$r->getAllFields("sorted")} ) {
-	    my $fc = $df->code();
-	    $log->info("DEBUG(buildRecodLeader):docId=".$r->docId().", fieldcode=".$fc.", field->contentToText()=".$df->contentToText());
-	}
+	# TODO/DEBUG: very verbose debug of all the fields/contents of the record below
+	#foreach my $df ( @{$r->getAllFields("sorted")} ) {
+	#    my $fc = $df->code();
+	#    $log->info("DEBUG(buildRecodLeader):docId=".$r->docId().", fieldcode=".$fc.", field->contentToText()=".$df->contentToText());
+	#}
 	# TODO: "volatile" -handling here?
 
 	# TODO/DEBUG/FIX: if 773w missing altogether, do not set $pk at all
