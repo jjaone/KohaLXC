@@ -30,7 +30,7 @@
     - hostnode_kohasys_user is defined
     - hostnode_kohasys_id is defined
 
-## Ensure 'koha'-user (rssh) exists (by derault: koha/1001
+## Ensure 'koha'-user (rssh) exists (by default: koha/1001)
 # - [KohaLXC]:dataenv
 - name: Ensure user 'koha' (rssh) exists for Koha-data & transfers
   become: yes
@@ -174,7 +174,6 @@
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
 - name: Extract listed datasets/table data from pulled dumps (contol host)
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
-#  local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.{kir,dat}.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
   when:
     - hostnode_dataenv_enabled
@@ -183,16 +182,17 @@
 - debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
 ## For 'liqlocde_translation.pm' (PP/MMT) extract/split source CSV from Google-docs/spreadsheet:
 # - 'File id' and 'Sheet id' required (seems to work also w/o the &gid-argument in the URL)
-- name: Extract CSVs for PPMMT/TranslationTables/licloqde_translation from Google-spreadsheet
+- name: Extract CSVs for PP/MMT-TranslationTables/licloqde_translation from Google-spreadsheet
   vars:
     org: "{{ hostnode_kohalxc_organization }}"
     gDocsUrl: "https://docs.google.com/spreadsheets/d"
     gFileId: "{{ kohalxc_dataenv_gfileid }}"
     gSheetId: "{{ kohalxc_dataenv_gsheetid }}"
     gExportFormat: "csv"
+    srcName: liqlocde_translation
   uri:
     url: "{{ gDocsUrl }}/{{ gFileId }}/export?exportFormat={{ gExportFormat }}&gid={{ gSheetId }}"
-    dest: "{{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables/liqlocde_translation.csv"
+    dest: "{{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables/{{ srcName }}.csv"
     body_format: raw
     return_content: yes
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
@@ -202,19 +202,43 @@
     - kohalxc_datadir is defined
     - hostnode_ppmmtenv_enabled
   delegate_to: localhost
-- name: Fix delimiters and split source CSV by library id (first field) 
-  local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables && rm -f liqlocde_translation-*.csv && cat liqlocde_translation.csv | tr ',' ';' | awk -F, 'NR>1 {print>"liqlocde_translation-" sprintf("%02d", $1) ".csv"}'
+- name: Fix delimiters and split source CSV by library id (first field)
+  vars:
+    srcName: liqlocde_translation
+  local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables && rm -f {{ srcName }}-*.csv && cat {{ srcName }}.csv | tr ',' ';' | awk -F, 'NR>1 {print>"{{ srcName }}-" sprintf("%02d", $1) ".csv"}' && rm -f {{ kohalxc_tooldir }}/ppmmtws/PerlMMT/TranslationTables/{{ srcName }}.pm-map
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
   when:
-    - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
+    - kohalxc_tooldir is defined
+    - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
 
+## Run locally (control host) the kohatools/ppmmtws/tools/makeliqlocde.sh
+# - to generate the liqlocde_translation map for $org_unitsLappi (TranslationTable)
+- name: Generate '$org_Units' mapping for PP/MMT (TranslationTables/licloqde_translation.pm-map)
+  vars:
+    srcName: liqlocde_translation
+  environment:
+    KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
+    KOHALXC_DATASET: "{{ item }}"
+  shell: "{{ kohalxc_tooldir }}/ppmmtws/tools/makeliqlocde.sh {{ srcName }}"
+  args:
+    chdir: "{{ kohalxc_tooldir }}/ppmmtws/tools"
+    creates: "../PerlMMT/TranslationTables/{{ srcName }}.pm-map"
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - kohalxc_datadir is defined
+    - kohalxc_tooldir is defined
+    - hostnode_dataenv_enabled
+    - hostnode_ppmmtenv_enabled
+  delegate_to: localhost
+
 ## [TODO]:
-## Run locally (in control host) the "{{ kohalxc_datadir }}/{{ hostnode_dataenv_dataset }}/source/scripts/fix_source.sh" to generate a fixed source *.kirs for iterating PP/MMT-runs  
+## Run locally (in control host) the "{{ kohalxc_datadir }}/{{ hostnode_dataenv_dataset }}/source/scripts/fix_source.sh"
+## - to generate a fixed source *.kirs for iterating PP/MMT-runs  
 
 ## Abort play here (for testing and development):
-- fail:
+#- fail:
   
 #- debug: var=kohalxc_rootdir,hostnode_kohalxc_works
 ## Push/copy KohaLXC/kohatools scripts and configs to server(s):
@@ -296,7 +320,7 @@
     backup="no"
   with_items:
     - { name: host_config, source: "{{ host_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
-    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 0, checkouts_run: 0, history_run: 0, serials_run: 0 }
+    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, patrons_ssnindex: 120000, checkouts_run: 0, history_run: 0, serials_run: 0 }
 #    - { name: configBiblios, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -1000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0 }
   when:
     - hostnode_dataenv_enabled
