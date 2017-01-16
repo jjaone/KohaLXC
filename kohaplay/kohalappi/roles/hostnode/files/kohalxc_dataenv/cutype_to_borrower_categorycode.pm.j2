@@ -35,11 +35,11 @@ our $tableLappi = {	# organization: 'kohalappi'
     '0' => 'HENKILO',
     '1' => 'YHTEISO',
     '2' => 'VIRKAILIJA',
-    '3' => 'KAUKOLAINA', # if Koha-install fails because of this, try "KIRJASTO" instead
+    '3' => 'KIRJASTO', # In PatronsImportChain 'KAUKOLAINA' is not correct here, should be 'KIRJASTO' changed in 2017-01-16
     '5' => 'KOTIPALVEL',
-    '7' => 'PMKIRJAUTO', # to make sure MMT/Lappi does not complain if these are in our dump
+    '7' => 'PMKIRJAUTO', # ..to make sure MMT/Lappi does not complain + for PatronsImportChain this category added to devKoha 2017-01-16 (only 4 records have this).
     '6' => 'LAPSI',
-    '8' => 'ETALAINA',	# to make sure MMT/Lappi does not complain if these are in our dump
+    '8' => 'ETALAINA',	# to make sure MMT/Lappi does not complain + in PatronsImportChain such category is not needed in Koha so the bulkImport phase just does not insert these to Koha, 2017-01-16
     '9' => 'EITILASTO',
 };
 
