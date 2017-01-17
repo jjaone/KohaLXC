@@ -349,7 +349,7 @@
     - hostnode_kohalxc_tooldir is defined
   
 ## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
-- name: Push/copy MMT-tools 'lib' and 'BibliosImportChain' scripts to ppmmt-enabled targets (for MMT/LXCs)
+- name: Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to ppmmt-enabled targets (for MMT/LXCs)
   template: >-
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -363,6 +363,7 @@
     - { name: Patron.pm, dir: lib }
     - { name: Record.pm, dir: lib/MARC }
     - { name: SharedDocidRecordsHandler.pm, dir: BibliosImportChain/FinMARC_Builder }
+    - { name: Instructions.pm, dir: PatronsImportChain }
   when:
     - hostnode_dataenv_enabled
     - hostnode_dataenv_datadir is defined
