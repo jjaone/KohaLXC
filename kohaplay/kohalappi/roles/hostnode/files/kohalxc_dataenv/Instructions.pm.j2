@@ -22,7 +22,7 @@ sub getInstructions {
 ['address' , [8] ],
 #['address2' , [8] ],
 ['city' , [9] ],
-['state' , 'Itä-Suomi' ],
+['state' , 'Lappi' ],
 ['zipcode' , [9] ],
 ['country' , 'Suomi' ],
 ['email' , [11,17] ],
@@ -106,7 +106,7 @@ sub getInstructions {
 #        ['usr' , [0] ], #usr is the same as id, but usr-related tables ask for usr, as the patron id. So having it here just for sanitys sake.
 #        ['street1' , [8] ],
 #        ['city' , [9] ],
-#        ['state' , 'Itä-Suomi' ],
+#        ['state' , 'Lappi' ],
 #        ['country' , 'Suomi' ],
 #        ['post_code' , [9] ],
 #        ['creator' , 1 ],
@@ -160,7 +160,7 @@ standing_penalties      :lilcust.kir->custatus1 29
 usr		:lilcust.kir->cucustid 1
 street1		:lilcust.kir->custreet1 9
 city		:lilcust.kir->cucity1 10  ## "1380140 [Joensuu]"
-state		:Itä-Suomi #
+state		:Lappi #
 country		:Suomi #
 post_code	:lilcust.kir->cucity1 10  ## "13[80140] Joensuu"
 
