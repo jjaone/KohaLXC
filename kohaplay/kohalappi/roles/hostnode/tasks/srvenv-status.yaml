@@ -61,11 +61,13 @@
   changed_when: false
 
 ## Show packages that are upgradable
-- name: Show what can be updated (sans held/ignored packages)
-  shell:  apt list --upgradeable 2>/dev/null | grep -v "{{ hostnode_upgrade_pckgsignore | d()}}" | grep -s "upgradable"
-  register: cmd_apt
-  failed_when: cmd_apt.stderr != ""
-  changed_when: cmd_apt.rc == 0
+- name: List what is updateable/upgradable (sans held/ignored packages)
+  shell:  apt list --upgradable 2>/dev/null | grep -v "{{ hostnode_upgrade_pckgsignore | d()}}" | grep -s "upgradable"
+  register: cmd_aptlist_upgrades
+  failed_when: cmd_aptlist_upgrades.stderr != ""
+  changed_when: cmd_aptlist_upgrades.rc == 0
 
 ## Show servers rebootability and upgradability status (+ dataenv status)
 - debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_dataenv_enabled
+## Show SSH-port info
+- debug: var=ansible_port,hostnode_sshport
