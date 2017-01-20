@@ -217,7 +217,7 @@
     - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
 
-## Run locally (control host) the kohatools/ppmmtws/tools/makeliqlocde.sh
+## Run locally (control host) the kohatools/ppmmtws/ConversionTools/makeliqlocde.sh
 # [KohaLXC]:dataenv(local),ppmtenv
 # - to generate the liqlocde_translation map for $org_unitsLappi (TranslationTable)
 - name: Generate '$org_Units' mapping for PP/MMT (TranslationTables/licloqde_translation.pm-map)
@@ -226,9 +226,9 @@
   environment:
     KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
     KOHALXC_DATASET: "{{ item }}"
-  shell: "{{ kohalxc_tooldir }}/ppmmtws/tools/makeliqlocde.sh {{ srcName }}"
+  shell: "{{ kohalxc_tooldir }}/ppmmtws/ConversionTools/makeliqlocde.sh {{ srcName }}"
   args:
-    chdir: "{{ kohalxc_tooldir }}/ppmmtws/tools"
+    chdir: "{{ kohalxc_tooldir }}/ppmmtws/ConversionTools"
     creates: "../PerlMMT/TranslationTables/{{ srcName }}.pm-map"
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
   when:

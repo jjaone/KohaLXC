@@ -78,6 +78,8 @@ function kohalxc_info {
 	 ecd "KOHALXC_ORGANIZATION:" "$KOHALXC_ORGANIZATION";
 	 ech "KOHALXC_ROOTDIR:" "$KOHALXC_ROOTDIR";
 	 ech "KOHALXC_TOOLDIR:" "$KOHALXC_TOOLDIR";
+	 ech "KOHALXC_DATADIR:" "$KOHALXC_DATADIR";
+	 ech "KOHALXC_DATASET:" "$KOHALXC_DATASET";
 	 ech "KOHALXC_SETUPDIR_BACKUP" "$KOHALXC_SETUPDIR_BACKUP";
 	 ech "KOHALXC_SETUPDIR:" "$KOHALXC_SETUPDIR:" &&
 	     # If no container set or no container setup dir exists..
