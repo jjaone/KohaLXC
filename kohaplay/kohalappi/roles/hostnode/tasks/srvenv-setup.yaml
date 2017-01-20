@@ -91,6 +91,17 @@
     - hostnode_operid is defined
     - hostnode_kohagrp_name is defined
 
+## Ensure locales we need are present
+# [KOHALXC]:srvenv
+- name: Ensure needed locales for internationalization are present
+  become: yes
+  locale_gen:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - en_US.UTF-8
+    - fi_FI.UTF-8
+
 ## Setup remote developer environment shell profile (devenv/bash-profile)
 # [KohaLXC]:devenv
 # - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
