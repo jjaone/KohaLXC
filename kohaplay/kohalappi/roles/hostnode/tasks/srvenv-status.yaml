@@ -48,6 +48,10 @@
   failed_when: cmd_btrfs.rc != 0
   changed_when: false
   
+## Show: networking settings
+- name: Show specified server network interface
+  debug: msg="Using interface '{{ hostnode_network_interface }}' for networking."
+
 ## Show: iptables rules
 - name: Show server/host iptables rules
   become: yes

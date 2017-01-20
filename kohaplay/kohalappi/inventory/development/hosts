@@ -1,0 +1,45 @@
+# -*- mode: conf-*- 
+# File: $KOHALXC_ANSIBLE_PLAYBOOKS/inventory/development/hosts
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3
+#
+# Description:
+# Remote development hosts for koha-hostnodes/lxcs semi-dynamic provisioning:
+# (Koha-Lappi remote host for 'development' can be any available Ubuntu-websrv)
+# - 'hostnodes' for LXC-hosts/servers
+# - file: "inventory/development/group_vars/all" defines common vars like:
+# 'ansible_become_pass', 'ansible_user', 'ansible_port', ..
+# #############################################################################
+
+## Remote/development physical/virtual koha-servers
+[development-hostnodes]
+# Koha: web+app server (+ dataenv)
+lappi1websrv ansible_host="{{ hostnode_websrv | d('kohasrv') }}" 
+# Koha: db+data server
+#lappi2dbsrv ansible_host="{{ hostnode_mdbsrv | d('kohasrv') }}"
+
+## Remote/development (static/manual networking) LXCs: Koha/other webapps:
+[development-weblxc]
+
+## Remote/development (static/manual networking) LXCs: Mariadb/Mysql dbs
+[development-mdblxc]
+
+
+## All remote/development koha-host servers: "hostnode" (HOST)
+[hostnodes:children]
+development-hostnodes
+
+## Remote/development containers of koha-related web-application LXC-guests
+[weblxc:children]
+development-weblxc
+## Remote/development containers of koha-related database LXC-guests
+[mdblxc:children]
+development-mdblxc
+
+## All remote/development containers of koha-related guests: 'kohalxcs' (LXCss)
+[kohalxcs:children]
+development-weblxc 
+development-mdblxc

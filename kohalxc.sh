@@ -191,7 +191,7 @@ function kohalxc_ansible {
     # Ansible playbook default run with specified options
     ( cd $KOHALXC_ANSIBLE_PLAYBOOKS;
       [[ -f $KOHALXC_ANSIBLE_PLAYBOOK ]] &&
-	  export KOHALXC_ANSIBLE_LOGPATH &&
+	  export ANSIBLE_LOG_PATH=$KOHALXC_ANSIBLE_LOGPATH &&
 	  /usr/local/bin/ansible-playbook \
 	      ${KOHALXC_ANSIBLE_PLAYBOOK} \
 	      -i ${KOHALXC_ANSIBLE_INVENTORY} \

@@ -1,0 +1,112 @@
+---
+# File: inventory/development/group_vars/all
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description:
+# - defaults for 'development' inventory vars: hostnodes and LXCs
+# - overrides role-settings
+# - will be overwritten by playbook-level 'group_vars/all/{main,vault}.yaml'
+# - settings in 'hosts, 'vault.yaml', 'host_vars' here override all these
+# #############################################################################
+
+## Name of this inventory: 'development'                                 :
+# - localdev, development, testing, production, ..
+hostnode_environment: "{{ inventory_dir | basename }}"
+## Just to test the inheritance in ansible playbooks:
+hostnode_testvar: inventory_development_group_vars_all
+
+## #########################
+## General: facts & handlers
+## #########################
+# Facts gathering: False/True
+gather_facts: False
+# Force all handlers always (also in case play fails..)
+#force_handlers: False
+
+## ########################
+## General: Ansible-related
+## ########################
+## - set here unless overriden in playbook-level 'group_vars/all'
+# Python interpreter:
+# - set for distros that do not have Python 2 in path (e.g 'Ubuntu 16.04')
+#ansible_python_interpreter: /usr/bin/python2.7
+# Ansible_connection: ssh/local
+ansible_connection: ssh
+# Ansible_port:
+ansible_port: "{{ hostnode_sshport | d('22') }}"
+# Ansible_user:
+ansible_user: "{{ hostnode_operuser | d('kohaoper') }}"
+# Ansible become method:
+#ansible_become_method: sudo
+# Asible_become_pass:
+ansible_become_pass: "{{ hostnode_operpass }}"
+
+## #######################
+## Server: KohaLXC tooling
+## #######################
+# - override role/inventory groups_vars/defaults here
+## KohaLXC/dataenv:
+# MMT/data-enabled
+hostnode_dataenv_enabled: False
+# KohaLXC/dataenv: dataset name(s) for MMT-migration:
+#hostnode_dataenv_dataset: {}
+hostnode_dataenv_dataset:
+# KohaLXC/dataenv+mmtenv: support creation of data+mmt-aware LXCS
+# - hostnode-role enables this when dataenv_dataset(s) have been defined for host
+#hostnode_mmtenv_enabled: False
+# KohaLXC/mmtenv: PP/MMT-tool environment
+#hostnode_ppmmtenv_enabled: False
+# KohaLXC/mmtenv: Origo/MMT-tool environment
+#hostnode_origommtenv_enabled: False
+
+## ##########################
+## Server updates/reboots/nic
+## ##########################
+# Rebootable server:
+hostnode_reboot_enabled: False
+# Upgradable server:
+hostnode_upgrade_enabled: True
+# List of (wildcareded) package names to be ignored from upgrades
+hostnode_upgrade_pckgsignore: "bacula-"
+# Network interface: (use 'vault' to define this)
+#hostnode_network_interface:
+
+## ############
+## Storage: LVM
+## ############
+## LVM support: false/true (in group only in testing/production)
+hostnode_lvm_enabled: False
+# Volume group (VG) name:
+hostnode_lvmvg: roi-vg
+
+## ############
+## Storage: ZFS
+## ############
+## ZFS support: false/true (not in group for 'development' override for hosts)
+hostnode_zfs_enabled: False
+
+## ###############
+## LXC-environment
+## ###############
+# Koha/hosts LXC/LXD-environment: false/true
+# - enabled by default only for 'testing' and 'production'
+hostnode_lxcenv_enabled: False
+# - disabled here for LXD 2.0 having serious issues with zpool/ZFS
+hostnode_lxdenv_enabled: False
+
+## LXC-networking: manual (configured) / dynamic (dhcp)
+# - by default 'dhcp' for 'testing'
+hostnode_lxcenv_networking: manual
+# LXC-network domain name: none, lxc, kohalxc, weblxc, mdblxc
+hostnode_lxcenv_domain: "{{ (hostnode_lxcenv_networking == 'dhcp') | ternary('kohalxc','lxc') }}"
+
+## ###########################
+## LXCs: defaults/provisioning
+## ###########################
+# List can contain both web and db-related LXCs for all hosts
+hostnode_lxcs:
+#  - "{{ kldev_dmdbks }}"
