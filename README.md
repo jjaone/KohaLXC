@@ -48,15 +48,19 @@ All roles/tasks in 'localdev'
 ```
 $ kohalxc -i inventory/localdev ansible
 ```
-List tags in 'development', script verbose
+List tags in 'development' (be verbose)
 ```
 $ kohalxc -v -i inventory/development ansible --list-tags
 ```
-Status tasks for hostnodes in 'testing', script debug/verbose
+Setup server and conversion/MMT environments in 'development'
+```
+$ kohalxc -i inventory/development ansible -t hostnode:setup
+```
+Status tasks for hostnodes in 'testing' (be debug verbose)
 ```
 $ kohalxc -d -v -i inventory/testing ansible -t hostnode:status
 ```
-Server host environment setup tasks in 'testing' w/ env variable, play verbosity increased
+Server host environment setup tasks in 'testing' w/ env variable (increase verbosity)
 ```
 $ kohalxc -i inventory/testing ansible - t hostnode:srvenv-setup -e "hostnode_reboot_enabled=false" -v
 ```
