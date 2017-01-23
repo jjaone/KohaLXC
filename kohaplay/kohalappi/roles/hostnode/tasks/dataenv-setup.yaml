@@ -6,8 +6,8 @@
 # Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
 # License: GNU General Public License version 3.
 # 
-# Description: "dataenv-setup"
-# - setup hostnodes data/mmt-environment in playbook inventories
+# Description: data and conversion environment setup
+# - setup hostnodes data/MMT-environment in playbook inventories
 # - availability of all required distro packages
 # - users and groups for data(set) handling and MMT
 # - get MMT/conversion data(sets) from dump-servers [control host]
@@ -20,8 +20,8 @@
 # ##############################################################################
 
 ## Ensure env.* pckgs are installed
-# [KohaLXC]: dataenv: Packages for data/mmt environment(s)
-- name: dataenv - Ensure all needed pckgs are installed
+# [KohaLXC]: dataenv: Packages for data/MMT environment(s)
+- name: dataenv - Ensure all needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"

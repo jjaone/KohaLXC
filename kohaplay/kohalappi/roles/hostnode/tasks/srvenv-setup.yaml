@@ -6,19 +6,23 @@
 # Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
 # License: GNU General Public License version 3.
 # 
-# Description: "srvenv-setup"
+# Description: server environment setup tasks
 # - setup hostnodes server-environment in playbook inventories
-# - users and groups for 'dataenv' and 'devenv'
-# - OS, distro, kernel (base installation of Ubuntu 16.04 LTS Server required)
-# - timezone, localizations
-# - filesystems: lvm, btrfs, zfs
-# - network: iptables rules
-# - apt packages: upgrade and update settings
+# - ensure availability of all required distro packages
+# - check/create users and groups for server (and development) environments
+# - setup localization (locale, timezone?) and (development) shell profile
+# - prepare KohaLXC-tools environment (directories & perms)
+# - distro package cache, server upgrades, updates and reboot support
+# [TODO]:
+# - OS, distro, kernel (base installation of Ubuntu 16.04 LTS Server)
+# - filesystems and storage: lvm, btrfs, zfs
+# - network: interfaces and iptables rules + persistence, SSL
+# - server monitoring and backups
 # ##############################################################################
 
 ## Ensure env.* pckgs are installed
 # [KohaLXC]: srvenv: Packages for server environment
-- name: srvenv - Ensure all needed pckgs are installed
+- name: srvenv - Ensure all needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"
