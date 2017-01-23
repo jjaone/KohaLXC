@@ -43,11 +43,18 @@ hostnode_kohalxc_rootdir: "{{ hostnode_kohalxc_works }}/KohaLXC"
 hostnode_kohalxc_tooldir: "{{ hostnode_kohalxc_rootdir }}/kohatools"
 ## KohaLXC: organization
 hostnode_kohalxc_organization: "{{ kohalxc_organization }}"
+
 ## KohaLXC/devenv: role default
 hostnode_devenv_enabled: true
+#hostnode_devenv_config: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
 #hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
+
 ## KohaLXC/srvenv: role default
 hostnode_srvenv_enabled: true
+# Packages needed for srvenv setup/config/tools
+hostnode_srvenv_pckgs:
+  - sshfs
+#hostnode_srvenv_config: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
 #hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
 
 ## KohaLXC/dataenv: role default
@@ -58,6 +65,7 @@ hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_orga
 hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
 # KohaLXC/dataenv: dataset source dir for MMT
 hostnode_dataenv_datasrc: source
+
 # KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
 # - by default enable here if dataenv_dataset(s) have been defined in the host
 hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
@@ -83,7 +91,10 @@ hostnode_network_interface: eth0
 ## #########################
 ## Secure/hardening of the server
 hostnode_secure_enabled: false
-
+## 00 - packages needed for security/hardening
+hostnode_secure_pckgs:
+  - openssh-client
+  - openssh-server
 ## 17 - Analyze system logs
 # Enable reports always when the script is run
 hostnode_secure_logwatch_always: false

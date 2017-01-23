@@ -25,6 +25,13 @@
   tags: hostnode,hostnode:setup,hostnode:srvenv-setup
   when: hostnode_srvenv_enabled
 
+## dataenv-{status,setup}
+- include: dataenv-status.yaml
+  tags: hostnode,hostnode:status,hostnode:dataenv-status
+- include: dataenv-setup.yaml
+  tags: hostnode,hostnode:setup,hostnode:dataenv-setup
+  when: hostnode_dataenv_enabled
+
 ## secure-{status,setup}
 - include: secure-setup.yaml
   tags: hostnode,hostnode:setup,hostnode:secure-setup
@@ -42,4 +49,3 @@
 
 ## webenv-{status,setup}
 
-## dataenv-{status,setup}

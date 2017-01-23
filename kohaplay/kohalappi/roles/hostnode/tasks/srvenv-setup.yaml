@@ -7,7 +7,7 @@
 # License: GNU General Public License version 3.
 # 
 # Description: "srvenv-setup"
-# - setup the hostnodes server-environment in playbook inventories
+# - setup hostnodes server-environment in playbook inventories
 # - users and groups for 'dataenv' and 'devenv'
 # - OS, distro, kernel (base installation of Ubuntu 16.04 LTS Server required)
 # - timezone, localizations
@@ -16,9 +16,27 @@
 # - apt packages: upgrade and update settings
 # ##############################################################################
 
+## Ensure env.* pckgs are installed
+# [KohaLXC]: srvenv: Packages for server environment
+- name: srvenv - Ensure all needed pckgs are installed
+  become: yes
+  apt: >
+    name="{{ item }}"
+    update_cache="yes"
+    state="present"
+    autoremove="yes"
+  with_flattened:
+    - hostnode_srvenv_pckgs
+    - hostnode_secure_pckgs
+  when:
+    - hostnode_srvenv_enabled or hostnode_secure_enabled
+
+## Abort play here (for testing and development):
+- fail:
+
 ## Ensure 'kohasys'-user exists (by default: kohasys/1000)
 # [KohaLXC]:srvenv
-- name: Make system user 'kohasys' for Koha/hosts-service management
+- name: srvenv - Make system user 'kohasys' for Koha/hosts-service management
   become: yes
   user: >
     name="{{ hostnode_kohasys_user }}"
@@ -32,7 +50,7 @@
 
 ## Ensure 'koha'-user (rssh) exists (by default: koha/1001)
 # [KohaLXC]:dataenv
-- name: Ensure user 'koha' (rssh) exists for Koha-data & transfers
+- name: dataenv - Ensure user 'koha' (rssh) exists for Koha-data & transfers
   become: yes
   user: >
     name="{{ hostnode_kohagrp_name }}"
@@ -51,7 +69,7 @@
 # [KohaLXC]:dataenv(!local) 
 # - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
 # - kohalxc_dataenv == kohalxc_tooldir/conf.d/env.data
-- name: Setup system-wide rssh config for remote KohaLXC/dataenv
+- name: dataenv - Setup system-wide rssh config for remote KohaLXC/dataenv
   become: yes
   template: >
     src="files/kohalxc_dataenv/rssh.conf.j2"
@@ -62,21 +80,21 @@
     - hostnode_environment != "localdev"
 
 ## Ensure 'koha'-group exists (by default: koha/1001)
-# [KohaLXC]:devenv
-- name: Ensure group 'koha' exists for Koha-data & transfers
+# [KohaLXC]:dataenv
+- name: dataenv - Ensure group 'koha' exists for Koha-data & transfers
   become: yes
   group: >
     name="{{ hostnode_kohagrp_name }}"
     gid="{{ hostnode_kohagrp_id }}"
     state="present"
   when:
-    - hostnode_devenv_enabled
+    - hostnode_dataenv_enabled
     - hostnode_kohagrp_name is defined
     - hostnode_kohagrp_id is defined
 
 ## Ensure devops (kohaoper/1002) belongs to 'koha' group and has ssh-keys
-# [KohaLXC]:devenv
-- name: Ensure devops has ssh-keys and belongs to 'koha' group
+# [KohaLXC]:srvenv
+- name: srvenv - Ensure devops has ssh-keys and belongs to 'koha' group
   become: yes
   user: >
     name="{{ hostnode_operuser }}"
@@ -86,14 +104,13 @@
     generate_ssh_key="yes"
     comment="Koha/LXC devops user"
   when:
-    - hostnode_devenv_enabled
     - hostnode_operuser is defined
     - hostnode_operid is defined
     - hostnode_kohagrp_name is defined
 
 ## Ensure locales we need are present
 # [KOHALXC]:srvenv
-- name: Ensure needed locales for internationalization are present
+- name: srvenv - Ensure needed locales for internationalization are present
   become: yes
   locale_gen:
     name: "{{ item }}"
@@ -102,11 +119,11 @@
     - en_US.UTF-8
     - fi_FI.UTF-8
 
-## Setup remote developer environment shell profile (devenv/bash-profile)
+## Setup remote user environment shell profile (devenv/bash-profile)
 # [KohaLXC]:devenv
 # - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
 # - kohalxc_devenv == kohalxc_tooldir/conf.d/env.dev
-- name: Setup system-wide Bash profile for remote KohaLXC/devenv
+- name: devenv - Setup system-wide Bash profile for remote KohaLXC/devenv
   become: yes
   template: >
     src="files/kohalxc_devenv/bash_profile.sh.j2"
@@ -118,7 +135,7 @@
 
 ## Ensure kohahosts_operuser (devops/HOME) has required dirs
 # [KOHALXC]:srvenv
-- name: Ensure devops has dirs for scripts, logs and Works
+- name: srvenv - Ensure devops has dirs for scripts, logs and Works
   file: >
     path="/home/{{ hostnode_operuser }}/{{ item }}"
     state="directory"
@@ -144,7 +161,7 @@
 # -from: srv:/home/koha/Works/KohaLappi/{{item}}
 # -to: local:{{ kohalxc_works }}/{{ kohalxc_organization }}/kohadata/"
 # -item: hostnode_dataebv_datasets: e.g. "dump4mmt-Axiell-20161019-Lappi_PallasPro"
-- name: Pull (rsync) listed dataset dumps from server (to control host)
+- name: dataenv - Pull (rsync) listed dataset dumps from server (to control host)
   synchronize: >
     mode="pull"
     src="/home/{{ hostnode_kohagrp_name | d('koha') }}/Works/{{ hostnode_kohalxc_organization }}/dump4mmt-{{ item }}"
@@ -163,7 +180,7 @@
 - debug: var=kohalxc_datadir,hostnode_dataenv_dataset
 ## Ensure dataset extraction and conv sources have required subdirs (local/control host)
 # [KohaLXC]:dataenv(local)
-- name: Set required dirs and perms for dataset extraction and conv sources (control host)
+- name: dataenv - Set required dirs and perms for dataset extraction and conv sources (control host)
   file: >
     path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/source/{{ item.1 }}"
     state="directory"
@@ -183,7 +200,7 @@
 # [KohaLXC]:dataenv(local)
 # - must use local action/gunzip cause no Ansible module for "uncompress" exists
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
-- name: Extract listed datasets/table data from pulled dumps (contol host)
+- name: dataenv - Extract listed datasets/table data from pulled dumps (contol host)
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
   when:
@@ -194,7 +211,7 @@
 ## For 'liqlocde_translation.pm' (PP/MMT) extract source CSV from Google-docs/spreadsheet:
 # [KohaLXC]:dataenv(local),ppmtenv
 # - 'File id' and 'Sheet id' required (seems to work also w/o the &gid-argument in the URL)
-- name: Extract CSVs for PP/MMT-TranslationTables/licloqde_translation from Google-spreadsheet
+- name: dataenv - Extract CSVs for PP/MMT-TranslationTables/licloqde_translation from Google-spreadsheet
   vars:
     org: "{{ hostnode_kohalxc_organization }}"
     gDocsUrl: "https://docs.google.com/spreadsheets/d"
@@ -217,7 +234,7 @@
 
 ## For 'liqlocde_translation.pm' (PP/MMT) split source CSV from Google-docs/spreadsheet:
 # [KohaLXC]:dataenv(local),ppmtenv
-- name: Fix delimiters and split source CSV by library id (first field)
+- name: dataenv - Fix delimiters and split source CSV by library id (first field)
   vars:
     srcName: liqlocde_translation
   local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables && rm -f {{ srcName }}-*.csv && cat {{ srcName }}.csv | tr ',' ';' | awk -F, 'NR>1 {print>"{{ srcName }}-" sprintf("%02d", $1) ".csv"}' && rm -f {{ kohalxc_tooldir }}/ppmmtws/PerlMMT/TranslationTables/{{ srcName }}.pm-map
@@ -231,7 +248,7 @@
 ## Run locally (control host) the kohatools/ppmmtws/ConversionTools/makeliqlocde.sh
 # [KohaLXC]:dataenv(local),ppmtenv
 # - to generate the liqlocde_translation map for $org_unitsLappi (TranslationTable)
-- name: Generate '$org_Units' mapping for PP/MMT (TranslationTables/licloqde_translation.pm-map)
+- name: dataenv - Generate '$org_Units' mapping for PP/MMT (TranslationTables/licloqde_translation.pm-map)
   vars:
     srcName: liqlocde_translation
   environment:
@@ -260,7 +277,7 @@
 ## Push/copy KohaLXC/kohatools scripts and configs to server(s):
 # [KohaLXC]:srvenv
 # - to: /home/'hostnode_operuser'/Works(/KohaLXC)
-- name: Push KohaLXC tools scripts/configs to devops/Works
+- name: srvenv - Push KohaLXC tools scripts/configs to devops/Works
   synchronize: >
     mode="push"
     src="{{ kohalxc_rootdir }}"
@@ -275,12 +292,12 @@
 - debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
 ## Ensure devops/hostnode has required symlinks in $HOME
 # [KohaLXC]:srvenv
-- name: Symlink for 'kohalxc' main script in devops/HOME
+- name: srvenv - Symlink for 'kohalxc' main script in devops/HOME
   file: >
     src="{{ hostnode_kohalxc_rootdir }}/kohalxc.sh"
     dest="{{ '/home/'~hostnode_operuser~'/bin/kohalxc' }}"
     state="link"
-- name: Symlink for 'kohasetup' script in devops/HOME
+- name: srvenv - Symlink for 'kohasetup' script in devops/HOME
   file: >
     src="{{ hostnode_kohalxc_tooldir }}/kohasetup.sh"
     dest="{{ '/home/'~hostnode_operuser~'/bin/kohasetup' }}"
@@ -290,7 +307,7 @@
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
 # [KohaLXC]:dataenv,mmtenv
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
-- name: Push KohaLXC lxc-setups & org datasets to operuser/Works 
+- name: dataenv - Push KohaLXC lxc-setups & org datasets to operuser/Works 
   synchronize: >
     mode="push"
     src="{{ item }}"
@@ -324,7 +341,7 @@
 # - loadExternalRepos: whether to load external repositories or not
 # - preprocess: do the 'PreProcess' phase in each import chain
 # - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
-- name: Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets (for MMT/LXCs)
+- name: dataenv - Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets (for MMT/LXCs)
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
     lxc_src: "/home/{{ kohalxc_operuser }}/kohadata/{{ hostnode_dataenv_datasrc }}"
@@ -347,7 +364,7 @@
 
 ## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: Push/copy MMT-tools import.pl and TranslationTables to mmt-enabled targets (for MMT/LXCs)
+- name: dataenv - Push/copy MMT-tools import.pl and TranslationTables to mmt-enabled targets (for MMT/LXCs)
   template: >-
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -368,7 +385,7 @@
   
 ## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to ppmmt-enabled targets (for MMT/LXCs)
+- name: dataenv - Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to ppmmt-enabled targets (for MMT/LXCs)
   template: >-
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -391,7 +408,7 @@
   
 ## Make sure hosts package cache is not stale
 # [KohaLXC]:srvenv
-- name: Update apt cache (kept valid for past 4 hrs)
+- name: srvenv - Update apt cache (kept valid for past 4 hrs)
   become: yes
   apt:
     update_cache: yes
@@ -400,7 +417,7 @@
 
 ## List packages that need to be updated/upgraded in the server
 # [KohaLXC]:srvenv
-- name: List what is updatable/upgradable (sans held/ignored packages)
+- name: srvenv - List what is updatable/upgradable (sans held/ignored packages)
   shell: apt list --upgradable 2>/dev/null | grep -v '{{ hostnode_upgrade_pckgsignore | d() }}' | grep -s "upgradable"
   register: cmd_aptlist_upgrades
   failed_when: cmd_aptlist_upgrades.stderr != ""
@@ -409,7 +426,7 @@
 - debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_dataenv_enabled
 ## Upgrade all packages
 # [KohaLXC]:srvenv
-- name: Upgrade all packages to the latest version.
+- name: srvenv - Upgrade all packages to the latest version.
   become: yes
   shell: apt clean && apt update -y && apt upgrade -y
   when:
@@ -419,7 +436,7 @@
 
 ## Reboot server
 # [KohaLXC]:srvenv
-- name: Reboot server (when package upgrade so requires)
+- name: srvenv - Reboot server (when package upgrade so requires)
   become: yes
   shell: >
     sleep 5 && /sbin/shutdown -r now "KohaLXC/Ansible update/upgrade triggered reboot."
@@ -434,7 +451,7 @@
 
 ## Wait for server to come back on-line
 # [KohaLXC]:srvenv
-- name: Wait for server to get online after reboot
+- name: srvenv - Wait for server to get online after reboot
   become: no
   local_action: >
     wait_for host="{{ ansible_host }}"
@@ -449,5 +466,3 @@
   #  - cmd_aptlist_upgrades.rc == 0
 
 
-## Abort play here (for testing and development):
-- fail:
