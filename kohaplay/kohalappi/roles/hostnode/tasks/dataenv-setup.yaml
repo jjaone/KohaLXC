@@ -1,0 +1,307 @@
+---
+# File: roles/hostnode/tasks/dataenv-setup.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description: "dataenv-setup"
+# - setup hostnodes data/mmt-environment in playbook inventories
+# - users and groups for 'dataenv' and 'devenv'
+# - OS, distro, kernel (base installation of Ubuntu 16.04 LTS Server required)
+# - timezone, localizations
+# - filesystems: lvm, btrfs, zfs
+# - network: iptables rules
+# ##############################################################################
+
+## Ensure env.* pckgs are installed
+# [KohaLXC]: dataenv: Packages for data/mmt environment(s)
+- name: dataenv - Ensure all needed pckgs are installed
+  become: yes
+  apt: >
+    name="{{ item }}"
+    update_cache="yes"
+    state="present"
+    autoremove="yes"
+  with_flattened:
+    - hostnode_dataenv_pckgs
+  #  - hostnode_mmtenv_pckgs
+  when:
+    - hostnode_dataenv_enabled or hostnode_mmtenv_enabled
+
+## Abort play here (for testing and development):
+#- fail:
+
+## Ensure 'koha'-user (rssh) exists (by default: koha/1001)
+# [KohaLXC]:dataenv
+- name: dataenv - Ensure user 'koha' (rssh) exists for Koha-data & transfers
+  become: yes
+  user: >
+    name="{{ hostnode_kohagrp_name }}"
+    uid="{{ hostnode_kohagrp_id }}"
+    group="{{ hostnode_kohagrp_name }}"
+    state="present"
+    shell="/usr/bin/rssh"
+    generate_ssh_key="no"
+    comment="Koha/LXC visitor user"
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_kohagrp_name is defined
+    - hostnode_kohagrp_id is defined
+
+## Setup remote data environment rssh.conf (dataenv/rssh settings)
+# [KohaLXC]:dataenv(!local) 
+# - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
+# - kohalxc_dataenv == kohalxc_tooldir/conf.d/env.data
+- name: dataenv - Setup system-wide rssh config for remote KohaLXC/dataenv
+  become: yes
+  template: >
+    src="files/kohalxc_dataenv/rssh.conf.j2"
+    dest="/etc/rssh.conf"
+    backup="no"
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_environment != "localdev"
+
+## Ensure 'koha'-group exists (by default: koha/1001)
+# [KohaLXC]:dataenv
+- name: dataenv - Ensure group 'koha' exists for Koha-data & transfers
+  become: yes
+  group: >
+    name="{{ hostnode_kohagrp_name }}"
+    gid="{{ hostnode_kohagrp_id }}"
+    state="present"
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_kohagrp_name is defined
+    - hostnode_kohagrp_id is defined
+
+- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset
+- debug: var=kohalxc_datadir,kohalxc_dataset
+## Pull/extract any uploads of dataset dumps from datasrv/'koha'
+# [KohaLXC]:dataenv
+# -from: srv:/home/koha/Works/KohaLappi/{{item}}
+# -to: local:{{ kohalxc_works }}/{{ kohalxc_organization }}/kohadata/"
+# -item: hostnode_dataebv_datasets: e.g. "dump4mmt-Axiell-20161019-Lappi_PallasPro"
+- name: dataenv - Pull (rsync) listed dataset dumps from server (to control host)
+  synchronize: >
+    mode="pull"
+    src="/home/{{ hostnode_kohagrp_name | d('koha') }}/Works/{{ hostnode_kohalxc_organization }}/dump4mmt-{{ item }}"
+    dest="{{ kohalxc_datadir }}"
+    group="yes"
+    perms="yes"
+    recursive="yes"
+    delete="no"
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+    - hostnode_dataenv_dataset is defined
+    - hostnode_dataenv_dataset != ""
+
+- debug: var=kohalxc_datadir,hostnode_dataenv_dataset
+## Ensure dataset extraction and conv sources have required subdirs (local/control host)
+# [KohaLXC]:dataenv(local)
+- name: dataenv - Set required dirs and perms for dataset extraction and conv sources (control host)
+  file: >
+    path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/source/{{ item.1 }}"
+    state="directory"
+    recurse="no"
+    group="{{ hostnode_kohagrp_id }}"
+    mode="u=rwx,g=rwxs,o-rwx"
+  with_nested:
+    - "{{ hostnode_dataenv_dataset | d({}) }}"
+    - [ 'TranslationTables', 'preprocessed', 'scripts', 'target' ]
+  when:
+    - kohalxc_datadir is defined
+    - hostnode_dataenv_enabled
+    - item.0 is defined
+  delegate_to: localhost
+
+## Extract/uncompress listed dataset(s) from pulled archives, if any (local)
+# [KohaLXC]:dataenv(local)
+# - must use local action/gunzip cause no Ansible module for "uncompress" exists
+# - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
+- name: dataenv - Extract listed datasets/table data from pulled dumps (contol host)
+  local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+
+- debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
+## For 'liqlocde_translation.pm' (PP/MMT) extract source CSV from Google-docs/spreadsheet:
+# [KohaLXC]:dataenv(local),ppmtenv
+# - 'File id' and 'Sheet id' required (seems to work also w/o the &gid-argument in the URL)
+- name: dataenv - Extract CSVs for PP/MMT-TranslationTables/licloqde_translation from Google-spreadsheet
+  vars:
+    org: "{{ hostnode_kohalxc_organization }}"
+    gDocsUrl: "https://docs.google.com/spreadsheets/d"
+    gFileId: "{{ kohalxc_dataenv_gfileid }}"
+    gSheetId: "{{ kohalxc_dataenv_gsheetid }}"
+    gExportFormat: "csv"
+    srcName: liqlocde_translation
+  uri:
+    url: "{{ gDocsUrl }}/{{ gFileId }}/export?exportFormat={{ gExportFormat }}&gid={{ gSheetId }}"
+    dest: "{{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables/{{ srcName }}.csv"
+    body_format: raw
+    return_content: yes
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - kohalxc_dataenv_gfileid is defined
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+    - hostnode_ppmmtenv_enabled
+  delegate_to: localhost
+
+## For 'liqlocde_translation.pm' (PP/MMT) split source CSV from Google-docs/spreadsheet:
+# [KohaLXC]:dataenv(local),ppmtenv
+- name: dataenv - Fix delimiters and split source CSV by library id (first field)
+  vars:
+    srcName: liqlocde_translation
+  local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables && rm -f {{ srcName }}-*.csv && cat {{ srcName }}.csv | tr ',' ';' | awk -F, 'NR>1 {print>"{{ srcName }}-" sprintf("%02d", $1) ".csv"}' && rm -f {{ kohalxc_tooldir }}/ppmmtws/PerlMMT/TranslationTables/{{ srcName }}.pm-map
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - kohalxc_datadir is defined
+    - kohalxc_tooldir is defined
+    - hostnode_dataenv_enabled
+    - hostnode_ppmmtenv_enabled
+
+## Run locally (control host) the kohatools/ppmmtws/ConversionTools/makeliqlocde.sh
+# [KohaLXC]:dataenv(local),ppmtenv
+# - to generate the liqlocde_translation map for $org_unitsLappi (TranslationTable)
+- name: dataenv - Generate '$org_Units' mapping for PP/MMT (TranslationTables/licloqde_translation.pm-map)
+  vars:
+    srcName: liqlocde_translation
+  environment:
+    KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
+    KOHALXC_DATASET: "{{ item }}"
+  shell: "{{ kohalxc_tooldir }}/ppmmtws/ConversionTools/makeliqlocde.sh {{ srcName }}"
+  args:
+    chdir: "{{ kohalxc_tooldir }}/ppmmtws/ConversionTools"
+    creates: "../PerlMMT/TranslationTables/{{ srcName }}.pm-map"
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - kohalxc_datadir is defined
+    - kohalxc_tooldir is defined
+    - hostnode_dataenv_enabled
+    - hostnode_ppmmtenv_enabled
+  delegate_to: localhost
+  notify: Sync kohalxc
+## [TODO]: Instead of the 'synchronize' task below,
+# - forcefully notify here handler to sync KohaLXC-contents to server/devops
+# - e.g. KohaLXC-tools need to be in place for 'dataenv/mmtenv'-stuff later
+# - can use '--force-handler' to ensure handler is called (atleast in the end)
+- meta: flush_handlers
+
+## [TODO]:Run locally (in control host) the "{{ kohalxc_datadir }}/{{ hostnode_dataenv_dataset }}/source/scripts/fix_source.sh"
+# [KohaLXC]:dataenv(local),ppmtenv
+# - to generate a fixed source *.kirs for iterating PP/MMT-runs
+# - may need to forcefully run abobe 'Sync KohalXC' after this task..
+
+- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
+## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
+# [KohaLXC]:dataenv,mmtenv
+# - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
+- name: dataenv - Push KohaLXC lxc-setups & org datasets to operuser/Works 
+  synchronize: >
+    mode="push"
+    src="{{ item }}"
+    dest="{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}"
+    owner="no"
+    group="yes"
+    perms="yes"
+    rsync_timeout="15"
+    rsync_opts="--include='**/' --include='/*/default/**' --include='/*/dump4mmt-default**' --include='/*/dump4mmt-*/source*/**' --exclude='*'"
+    recursive="yes"
+    delete="no"
+  with_items:
+    - "{{ kohalxc_setupdir }}"
+    - "{{ kohalxc_datadir }}"
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_dataenv_dataset is defined
+    - hostnode_dataenv_dataset != ""
+    - hostnode_mmtenv_enabled
+
+- debug: var="hostnode_kohalxc_tooldir,hostnode_ppmmtenv_enabled,hostnode_dataenv_datadir"
+## Push/copy KohaLXC/mmtenv tools and templated default config.xml to target
+# [KohaLXC]:dataenv,ppmmtenv
+# Parameters passed to {host,lxc}_config.xml
+# - name: name of the config file: {host_config,lxc_config}.xml
+# - source: source directory in dump4mmt-??? folder ('source')
+# - organization: library that we are MMT-converting
+# - threadCount: number of threads MMT should use
+# - debugACL: "DEBUGAuthoritiesCountLimit"
+# - chunkSize,starting/endingChunk: number of records in MMT-biblios chunk (start/end)
+# - loadExternalRepos: whether to load external repositories or not
+# - preprocess: do the 'PreProcess' phase in each import chain
+# - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
+- name: dataenv - Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets (for MMT/LXCs)
+  vars:
+    host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
+    lxc_src: "/home/{{ kohalxc_operuser }}/kohadata/{{ hostnode_dataenv_datasrc }}"
+    org: "{{ hostnode_kohalxc_organization }}"
+  template: >-
+    src="files/kohalxc_dataenv/config.xml.j2"
+    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.name }}.xml"
+    group="{{ hostnode_kohagrp_name }}"
+    mode="g+w"
+    backup="no"
+  with_items:
+    - { name: host_config, source: "{{ host_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
+    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 0, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, patrons_ssnindex: 120000, checkouts_run: 0, history_run: 0, serials_run: 0 }
+#    - { name: configBiblios, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -1000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0 }
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_dataenv_datadir is defined
+    - hostnode_ppmmtenv_enabled
+    - hostnode_kohalxc_tooldir is defined
+
+## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
+# [KohaLXC]:dataenv,ppmmtenv
+- name: dataenv - Push/copy MMT-tools import.pl and TranslationTables to mmt-enabled targets (for MMT/LXCs)
+  template: >-
+    src="files/kohalxc_dataenv/{{ item.name }}.j2"
+    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
+    group="{{ hostnode_kohagrp_name }}"
+    mode="g+w"
+    backup="no"
+  with_items:
+    - { name: import.pl, dir: .}
+    - { name: cutype_to_borrower_categorycode.pm, dir: TranslationTables }
+    - { name: isil_translation.pm, dir: TranslationTables }
+    - { name: liqlocde_translation.pm, dir: TranslationTables }
+    - { name: material_code_to_itype.pm, dir: TranslationTables }
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_dataenv_datadir is defined
+    - hostnode_ppmmtenv_enabled
+    - hostnode_kohalxc_tooldir is defined
+  
+## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
+# [KohaLXC]:dataenv,ppmmtenv
+- name: dataenv - Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to ppmmt-enabled targets (for MMT/LXCs)
+  template: >-
+    src="files/kohalxc_dataenv/{{ item.name }}.j2"
+    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
+    group="{{ hostnode_kohagrp_name }}"
+    mode="g+w"
+    backup="no"
+  with_items:
+    - { name: BuildMARC.pm, dir: BibliosImportChain/FinMARC_Builder }
+    - { name: Item.pm, dir: lib }
+    - { name: MarcRepair.pm, dir: BibliosImportChain }
+    - { name: Patron.pm, dir: lib }
+    - { name: Record.pm, dir: lib/MARC }
+    - { name: SharedDocidRecordsHandler.pm, dir: BibliosImportChain/FinMARC_Builder }
+    - { name: Instructions.pm, dir: PatronsImportChain }
+  when:
+    - hostnode_dataenv_enabled
+    - hostnode_dataenv_datadir is defined
+    - hostnode_ppmmtenv_enabled
+    - hostnode_kohalxc_tooldir is defined
+
+## Abort play here (for testing and development):
+- fail:
