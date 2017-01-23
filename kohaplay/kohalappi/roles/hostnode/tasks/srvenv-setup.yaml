@@ -143,7 +143,7 @@
     - bin
     - log
     - Works
-- name: Ensure devops/Works subdirs exist for KohaLXC-tools setups (datasets)
+- name: srvenv - Ensure devops/Works subdirs exist for KohaLXC-tools setups (datasets)
   file: >
     path="{{ hostnode_kohalxc_works }}/{{ item }}"
     state="directory"
@@ -270,9 +270,6 @@
 ## Run locally (in control host) the "{{ kohalxc_datadir }}/{{ hostnode_dataenv_dataset }}/source/scripts/fix_source.sh"
 ## - to generate a fixed source *.kirs for iterating PP/MMT-runs  
 
-## Abort play here (for testing and development):
-#- fail:
-  
 #- debug: var=kohalxc_rootdir,hostnode_kohalxc_works
 ## Push/copy KohaLXC/kohatools scripts and configs to server(s):
 # [KohaLXC]:srvenv

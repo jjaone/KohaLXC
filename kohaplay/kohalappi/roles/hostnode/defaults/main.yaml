@@ -46,7 +46,7 @@ hostnode_kohalxc_organization: "{{ kohalxc_organization }}"
 
 ## KohaLXC/devenv: role default
 hostnode_devenv_enabled: true
-#hostnode_devenv_config: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
+#hostnode_devenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
 #hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
 
 ## KohaLXC/srvenv: role default
@@ -54,11 +54,14 @@ hostnode_srvenv_enabled: true
 # Packages needed for srvenv setup/config/tools
 hostnode_srvenv_pckgs:
   - sshfs
-#hostnode_srvenv_config: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
+#hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
 #hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
 
 ## KohaLXC/dataenv: role default
 hostnode_dataenv_enabled: true
+# Packages needed for dataenv setup/config/tools
+hostnode_dataenv_pckgs:
+#hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
 # KohaLXC/dataenv: datadir
 hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
 # KohaLXC/dataenv: datasets name(s) for MMT-migration:
@@ -71,8 +74,9 @@ hostnode_dataenv_datasrc: source
 hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
 # KohaLXC/mmtenv: PP/MMT-tool environment
 hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
-# KohaLXC/mmtenv: Origo/MMT-tool environment
-hostnode_origommtenv_enabled: false
+# KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
+hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
+
 
 ## ###########################
 ## Server: updates/reboots/nic
