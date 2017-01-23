@@ -8,11 +8,15 @@
 # 
 # Description: "dataenv-setup"
 # - setup hostnodes data/mmt-environment in playbook inventories
-# - users and groups for 'dataenv' and 'devenv'
-# - OS, distro, kernel (base installation of Ubuntu 16.04 LTS Server required)
-# - timezone, localizations
-# - filesystems: lvm, btrfs, zfs
-# - network: iptables rules
+# - availability of all required distro packages
+# - users and groups for data(set) handling and MMT
+# - get MMT/conversion data(sets) from dump-servers [control host]
+# - set directories/permissions for dataset extraction/conversions [control host]
+# - handle (extract) source files (*,kir) from database dumps [control host]
+# - generate TranslationTables (liqlocde_translation) for PP/MMT [control host]
+# - sync [control host] KohaLXC-tools w/ hostnode devops
+# - push data environment setups/datasets to hostnodes for MMt/conversions
+# - prepare remote MMT/conversion based on [control host] dataenv+mmtenv
 # ##############################################################################
 
 ## Ensure env.* pckgs are installed
@@ -29,9 +33,6 @@
   #  - hostnode_mmtenv_pckgs
   when:
     - hostnode_dataenv_enabled or hostnode_mmtenv_enabled
-
-## Abort play here (for testing and development):
-#- fail:
 
 ## Ensure 'koha'-user (rssh) exists (by default: koha/1001)
 # [KohaLXC]:dataenv
