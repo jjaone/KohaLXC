@@ -41,6 +41,24 @@
 - name: Stop lxd
   service: name=lxd state=stopped enabled=no
 
+## Sync server/devops KohaLXC/tools+setups+data w/ control host
+- name: Sync kohalxc
+  #debug: msg="Synchronizing KohaLXC-tools/setups/data.."
+  synchronize: >
+    mode="push"
+    src="{{ kohalxc_rootdir }}"
+    dest="{{ hostnode_kohalxc_works }}"
+    owner="no"
+    group="yes"
+    perms="yes"
+    rsync_timeout="15"
+    recursive="yes"
+    delete="yes"
+  when:
+    - hostnode_srvenv_enabled
+    - kohalxc_rootdir is defined
+    - hostnode_kohalxc_works is defined
+
 ## Restart Nginx
 # [TODO]: Do we want/need this for Koha-deployments?
 #- name: Restart Nginx

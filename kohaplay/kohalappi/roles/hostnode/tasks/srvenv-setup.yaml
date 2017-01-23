@@ -31,9 +31,6 @@
   when:
     - hostnode_srvenv_enabled or hostnode_secure_enabled
 
-## Abort play here (for testing and development):
-- fail:
-
 ## Ensure 'kohasys'-user exists (by default: kohasys/1000)
 # [KohaLXC]:srvenv
 - name: srvenv - Make system user 'kohasys' for Koha/hosts-service management
@@ -143,7 +140,7 @@
     - bin
     - log
     - Works
-- name: srvenv - Ensure devops/Works subdirs exist for KohaLXC-tools setups (datasets)
+- name: srvenv - Ensure devops Works-subdirs exist for KohaLXC-tools setups (datasets)
   file: >
     path="{{ hostnode_kohalxc_works }}/{{ item }}"
     state="directory"
@@ -265,26 +262,17 @@
     - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
   delegate_to: localhost
+  notify: Sync kohalxc
+## [TODO]: Instead of the 'synchronize' task below,
+# - forcefully notify here handler to sync KohaLXC-contents to server/devops
+# - e.g. KohaLXC-tools need to be in place for 'dataenv/mmtenv'-stuff later
+# - can use '--force-handler' to ensure handler is called (atleast in the end)
+- meta: flush_handlers
 
 ## [TODO]:
 ## Run locally (in control host) the "{{ kohalxc_datadir }}/{{ hostnode_dataenv_dataset }}/source/scripts/fix_source.sh"
-## - to generate a fixed source *.kirs for iterating PP/MMT-runs  
-
-#- debug: var=kohalxc_rootdir,hostnode_kohalxc_works
-## Push/copy KohaLXC/kohatools scripts and configs to server(s):
-# [KohaLXC]:srvenv
-# - to: /home/'hostnode_operuser'/Works(/KohaLXC)
-- name: srvenv - Push KohaLXC tools scripts/configs to devops/Works
-  synchronize: >
-    mode="push"
-    src="{{ kohalxc_rootdir }}"
-    dest="{{ hostnode_kohalxc_works }}"
-    owner="no"
-    group="yes"
-    perms="yes"
-    rsync_timeout="15"
-    recursive="yes"
-    delete="yes"
+# - to generate a fixed source *.kirs for iterating PP/MMT-runs
+# - probabbly need to forcefully run 'Sync KohalXC' after this task..
 
 - debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
 ## Ensure devops/hostnode has required symlinks in $HOME
@@ -294,11 +282,13 @@
     src="{{ hostnode_kohalxc_rootdir }}/kohalxc.sh"
     dest="{{ '/home/'~hostnode_operuser~'/bin/kohalxc' }}"
     state="link"
+    force="yes"
 - name: srvenv - Symlink for 'kohasetup' script in devops/HOME
   file: >
     src="{{ hostnode_kohalxc_tooldir }}/kohasetup.sh"
     dest="{{ '/home/'~hostnode_operuser~'/bin/kohasetup' }}"
     state="link"
+    force="yes"
 
 - debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
