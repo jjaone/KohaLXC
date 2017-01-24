@@ -26,7 +26,73 @@
   when:
     - hostnode_lxcenv_enabled
 
-##
+## [TODO]: LXC networking, DNS, resolvconf, dnsmasq host settings..
+
+## Debug: some lxcenv related networking and domain settings
+- debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_pckgs,hostnode_lxcenv_networking,hostnode_lxcenv_domain
+
+## LXC-containers: retrieve defaults from 'roles/hostnode/vars/lxcs'
+- include_vars: lxcs/lxc_defaults.yaml
+# LXCs: to be provisioned/running in inventory host..
+# - 'kldev_dmdbks'
+- include_vars: file=lxcs/lxc-kldev_dmdbks.yaml name=kldev_dmdbks
+# - 'kltest_dmdbks'
+#- include_vars: file=lxcs/lxc-kltest_dmdbks.yaml name=kltest_dmdbks
+
+## LXC-containers: factize defined LXCs
+- name: Collect all defined LXCs
+  set_fact:
+    hostnode_lxcs:
+      - "{{ kldev_dmdbks }}"
+  #ignore_errors: yes
+
+## Show all LXC-containers
+- name: Show all defined LXCs (provisionable/running in inventory host)
+  debug: var=item.net.domain,item.lxc.name,item.lxc.state,item.lxc.template
+  with_items: hostnode_lxcs | d()
+  changed_when: false
+  when:
+    - item is defined
+    - item.net is defined
+    - item.net.domain is defined and item.net.domain in inventory_hostname
+
+## Ensure that LXCs to be provisioned are stopped (if they exists already)
+- name: Ensure provisionable LXCs are stopped (if they are present)
+  become: yes
+  #environment:
+  #  KOHALXC_WORKS: "{{ hostnode_kohalxc_works }}"
+  #  KOHALXC_ROOTDIR: "{{ hostnode_kohalxc_rootdir }}"
+  #  KOHALXC_TOOLDIR: "{{ hostnode_kohalxc_tooldir }}"
+  #  KOHALXC_ORGANIZATION: "{{ hostnode_kohalxc_organization }}"
+  shell: "lxc-ls --active {{ item.lxc.name }} | grep -q {{ item.lxc.name }} && lxc-stop -n {{ item.lxc.name }} || echo 'Nothing to stop.'"
+  args:
+    executable: /bin/bash
+    chdir: "/home/{{ hostnode_operuser }}"
+  with_items: hostnode_lxcs | d()
+  when:
+    - item is defined
+    - item.net is defined
+    - item.lxc is defined and item.lxc.name is defined
+
+## Abort play here (for testing and development):
+#- fail:
+
+## Create and enable all LXCs for development/testing
+- name: Create all defined LXCs (from inventory)
+  become: yes
+  lxc_container:
+    "{{ item.lxc }}"
+  with_items: hostnode_lxcs | d()
+  register: cmd_lxccreate
+  when:
+    - item is defined
+    - item.lxc is defined
+    - item.net is defined
+    - item.lxc.container_config is defined
+    - item.net.domain is defined
+    - item.net.domain in inventory_hostname
+    #- ("lxc.group = mdblxc" in item.container_config and "mdblxc" in inventory_hostname) or ("lxc.group = weblxc" in item.container_config and "weblxc" in inventory_hostname)
+
 
 ## Abort play here (for testing and development):
 - fail:
