@@ -43,7 +43,7 @@ $ kohalxc
 == kohalxc: Done.
 ```
 
-### Ansible plays
+### Ansible plays using 'kohalxc'
 All roles/tasks in 'localdev'
 ```
 $ kohalxc -i inventory/localdev ansible
@@ -63,4 +63,10 @@ $ kohalxc -d -v -i inventory/testing ansible -t hostnode:status
 Server host environment setup tasks in 'testing' w/ env variable (increase verbosity)
 ```
 $ kohalxc -i inventory/testing ansible - t hostnode:srvenv-setup -e "hostnode_reboot_enabled=false" -v
+```
+
+### Ansible plays using system 'ansible-playbook'
+Play all tasks of 'common' and 'hostnode' roles directly in 'development' (pass secret on invocation) 
+```
+$ ansible-playbook play-hostnodes.yaml -i inventory/development --vault-password-file .my.vault.pass
 ```
