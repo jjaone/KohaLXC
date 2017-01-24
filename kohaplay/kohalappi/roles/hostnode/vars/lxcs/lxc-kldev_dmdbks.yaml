@@ -29,8 +29,8 @@ lxc:
   container_log_level: "{{ lxc_default.container_log_level }}"
   container_config: 
     # lxc/mounts
-    - "{{ kohahosts_lxc_mount_kohatools }}"
-    - "{{ kohahosts_lxc_mount_kohadata }}"
+    - "{{ hostnode_lxc_mount_kohatools }}"
+    - "{{ hostnode_lxc_mount_kohadata }}"
     # lxc_groups:
     - lxc.group = "{{ hostnode_environment | d('local') }}"
     - lxc.group = weblxc
