@@ -1,4 +1,4 @@
----
+<---
 # File: roles/hostnode/tasks/srvenv-setup.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
@@ -8,10 +8,12 @@
 # 
 # Description: server environment setup tasks
 # - setup hostnodes server-environment in playbook inventories
+# - prepare dialogless installation of listed packages
 # - ensure availability of all required distro packages
 # - check/create users and groups for server (and development) environments
 # - setup localization (locale, timezone?) and (development) shell profile
 # - prepare KohaLXC-tools environment (directories & perms)
+# - handle network configuration and traffic rules (iptables) persistence
 # - distro package cache, server upgrades, updates and reboot support
 # [TODO]:
 # - OS, distro, kernel (base installation of Ubuntu 16.04 LTS Server)
@@ -19,6 +21,22 @@
 # - network: interfaces and iptables rules + persistence, SSL
 # - server monitoring and backups
 # ##############################################################################
+
+## Prevent install dialogs for select packages using debconf
+# [KohaKXC]: srvenv: dialogless package installation (if needed)
+- name: Prevent install dialogs for packages using debconf-set-selections
+  become: yes
+  debconf: >
+    name="{{ item.name }}"
+    setting="{{ item.q }}"
+    vtype="{{ item.type }}"
+    value="{{ item.value}}"
+  with_items:
+    - { name: iptables-persistent, q: autosave_v4, type: boolean, value: true }
+    - { name: iptables-persistent, q: autosave_v6, type: boolean, value: true }
+
+## Abort play here (for testing and development):
+#- fail:
 
 ## Ensure env.* pckgs are installed
 # [KohaLXC]: srvenv: Packages for server environment
@@ -111,10 +129,10 @@
     - KohaLXC
     - "{{ hostnode_kohalxc_organization | d('KohaSuomi') }}"
   notify: Sync kohalxc
-## [NOTE]: Instead of using 'synchronize' task below as previously,
+## Instead of using 'synchronize' task below as previously,
 # - forcefully notify here handler to sync KohaLXC-contents to server/devops
 # - e.g. KohaLXC-tools need to be in place for 'dataenv/mmtenv'-stuff later
-# - can use '--force-handler' to ensure handler is called (atleast in the end)
+# - can use '--force-handler' to ensure handler is called (atleast eventually)
 - meta: flush_handlers
 - debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
 ## Ensure devops/hostnode has required symlinks in $HOME
@@ -160,6 +178,16 @@
     - cmd_aptlist_upgrades.rc == 0
   changed_when: cmd_aptlist_upgrades.rc == 0
 
+## Persist current iptables rules
+# [KohaLXC]:srvenv
+- name: Persist iptables rules (if upgrades and possible reboot so requires)
+  become: yes
+  shell: >
+    service netfilter-persistent save
+  when:
+    - hostnode_reboot_enabled
+    - cmd_aptlist_upgrades.rc == 0
+
 ## Reboot server
 # [KohaLXC]:srvenv
 - name: srvenv - Reboot server (when package upgrade so requires)
@@ -191,5 +219,3 @@
   # [TODO]: keep below commented-out for reboots also when not upgrading..
   #  - cmd_aptlist_upgrades.rc == 0
 
-## Abort play here (for testing and development):
-#- fail:

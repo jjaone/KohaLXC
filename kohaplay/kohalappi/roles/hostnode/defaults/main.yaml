@@ -54,6 +54,10 @@ hostnode_srvenv_enabled: true
 # Packages needed for srvenv setup/config/tools
 hostnode_srvenv_pckgs:
   - sshfs
+  - iptables
+  - iptables-persistent
+  - bridge-utils
+  - mailutils
 #hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
 #hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
 
