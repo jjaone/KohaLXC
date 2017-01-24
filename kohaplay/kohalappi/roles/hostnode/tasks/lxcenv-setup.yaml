@@ -1,0 +1,34 @@
+---
+# File: roles/hostnode/tasks/lxcenv-setup.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description: LXC environment setup
+# - setup hostnodes LXC-environment in playbook inventories
+# - ensure availability of all required distro packages
+# -
+# #############################################################################
+
+## Ensure env.* pckgs are installed
+# [KohaLXC]: lxcenv: Packages for LXC-environment(s)
+- name: lxcenv - Ensure all needed packages are installed
+  become: yes
+  apt: >
+    name="{{ item }}"
+    update_cache="yes"
+    state="present"
+    autoremove="yes"
+  with_flattened:
+    - hostnode_lxcenv_pckgs
+  when:
+    - hostnode_lxcenv_enabled
+
+##
+
+## Abort play here (for testing and development):
+- fail:
+
+ 

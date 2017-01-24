@@ -178,6 +178,13 @@ hostnode_zfs_rootdir: lxc
 ## ###############
 ## Koha/hosts LXC-environment: false/true
 hostnode_lxcenv_enabled: true
+# Packages needed for LXC-environment
+hostnode_lxcenv_pckgs:
+ - lxc
+ - lxc-templates
+ - bridge-utils
+ - wget
+#hostnode_lxcenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.lxc"
 
 ## LXC networking:  manual (configured) / dynamic (dhcp)
 hostnode_lxcenv_networking: dhcp

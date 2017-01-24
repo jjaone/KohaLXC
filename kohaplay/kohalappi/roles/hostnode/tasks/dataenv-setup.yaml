@@ -305,4 +305,4 @@
     - hostnode_kohalxc_tooldir is defined
 
 ## Abort play here (for testing and development):
-- fail:
+#- fail:
