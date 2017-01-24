@@ -1,4 +1,4 @@
-<---
+---
 # File: roles/hostnode/tasks/srvenv-setup.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
@@ -23,20 +23,17 @@
 # ##############################################################################
 
 ## Prevent install dialogs for select packages using debconf
-# [KohaKXC]: srvenv: dialogless package installation (if needed)
+# [KohaLXC]: srvenv: dialogless package installation (if needed)
 - name: Prevent install dialogs for packages using debconf-set-selections
   become: yes
-  debconf: >
-    name="{{ item.name }}"
-    setting="{{ item.q }}"
-    vtype="{{ item.type }}"
-    value="{{ item.value}}"
+  debconf:
+    name: "{{ item.name }}"
+    setting: "{{ item.name }}/{{ item.q }}"
+    vtype: "{{ item.type }}"
+    value: "{{ item.value}}"
   with_items:
     - { name: iptables-persistent, q: autosave_v4, type: boolean, value: true }
     - { name: iptables-persistent, q: autosave_v6, type: boolean, value: true }
-
-## Abort play here (for testing and development):
-#- fail:
 
 ## Ensure env.* pckgs are installed
 # [KohaLXC]: srvenv: Packages for server environment
