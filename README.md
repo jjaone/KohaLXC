@@ -66,7 +66,11 @@ $ kohalxc -i inventory/testing ansible - t hostnode:srvenv-setup -e "hostnode_re
 ```
 
 ### Ansible plays using system 'ansible-playbook'
-Play all tasks of 'common' and 'hostnode' roles directly in 'development' (pass secret on invocation) 
+* _must be run in the $KOHALXC_ANSIBLE_PLAYBOOKS directory_
+* _pass needed options and secrets on invocation_
+
+Play all tasks of 'common' and 'hostnode' roles directly in 'development' 
 ```
+$ cd $KOHALXC_ROOTDIR/kohaplay/kohalappi
 $ ansible-playbook play-hostnodes.yaml -i inventory/development --vault-password-file .my.vault.pass
 ```
