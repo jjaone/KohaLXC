@@ -64,7 +64,7 @@
   #  KOHALXC_ROOTDIR: "{{ hostnode_kohalxc_rootdir }}"
   #  KOHALXC_TOOLDIR: "{{ hostnode_kohalxc_tooldir }}"
   #  KOHALXC_ORGANIZATION: "{{ hostnode_kohalxc_organization }}"
-  shell: "lxc-ls --active {{ item.lxc.name }} | grep -q {{ item.lxc.name }} && lxc-stop -n {{ item.lxc.name }} || echo 'Nothing to stop.'"
+  shell: "lxc-ls -f --active | grep -q {{ item.lxc.name }} && lxc-stop -n {{ item.lxc.name }} || echo 'Nothing to stop.'"
   args:
     executable: /bin/bash
     chdir: "/home/{{ hostnode_operuser }}"
@@ -73,12 +73,10 @@
     - item is defined
     - item.net is defined
     - item.lxc is defined and item.lxc.name is defined
-
-## Abort play here (for testing and development):
-#- fail:
+    - item.net.domain is defined and item.net.domain in inventory_hostname
 
 ## Create and enable all LXCs for development/testing
-- name: Create all defined LXCs (from inventory)
+- name: Create all defined LXCs
   become: yes
   lxc_container:
     "{{ item.lxc }}"
@@ -89,9 +87,23 @@
     - item.lxc is defined
     - item.net is defined
     - item.lxc.container_config is defined
-    - item.net.domain is defined
-    - item.net.domain in inventory_hostname
-    #- ("lxc.group = mdblxc" in item.container_config and "mdblxc" in inventory_hostname) or ("lxc.group = weblxc" in item.container_config and "weblxc" in inventory_hostname)
+    - item.net.domain is defined and item.net.domain in inventory_hostname
+
+- debug: var=cmd_lxccreate.results
+## Check whether our auth-key is present for sshing to LXCs
+- name: Check whether control host/user auth-key is present for sshing running LXCs
+  #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
+  shell: "ssh-keygen -l -F {{item.lxc_container.name}}.{{item.item.net.domain}} || echo {{item.lxc_container.name}}.{{item.item.net.domain}}"
+  with_items: cmd_lxccreate.results
+  register: cmd_sshkeys_missing
+  when:
+    - item.lxc_container is defined and item.lxc_container.state == "running"
+    - item.item.net is defined
+    - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
+
+- debug: var=cmd_sshkeys_missing.results
+## Ensure our auth key is present (known_hosts) for sshing LXCs
+# [TODO]: copy relevant part from kohahosts/lxcenv-setup.yaml (222)
 
 
 ## Abort play here (for testing and development):
