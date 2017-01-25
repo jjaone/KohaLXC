@@ -91,20 +91,35 @@
 
 - debug: var=cmd_lxccreate.results
 ## Check whether our auth-key is present for sshing to LXCs
-- name: Check whether control host/user auth-key is present for sshing running LXCs
+- name: Has control host already auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
-  shell: "ssh-keygen -l -F {{item.lxc_container.name}}.{{item.item.net.domain}} || echo {{item.lxc_container.name}}.{{item.item.net.domain}}"
+  environment:
+    LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
+  shell: ssh-keygen -l -F "$LXCHOST" > /dev/null || echo "$LXCHOST"
   with_items: cmd_lxccreate.results
   register: cmd_sshkeys_missing
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
     - item.item.net is defined
     - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
+  delegate_to: localhost
 
 - debug: var=cmd_sshkeys_missing.results
-## Ensure our auth key is present (known_hosts) for sshing LXCs
-# [TODO]: copy relevant part from kohahosts/lxcenv-setup.yaml (222)
-
+## Ensure control host/user auth key is present for jump-sshing to remote LXCs
+# - relevant parts copied from kohahosts/lxcenv-setup.yaml (222)
+# - above check based on 'known_hosts' entry in control host, not the key in LXCS
+# - pass only to runnning LXCs (in respective hosts) whose keys are missing
+- name: Pass control host/user auth-key for jump-sshing to remote LXCs
+  environment:
+    LXCHOST: "{{ item.stdout }}"
+    SSHPASS: "{{ kohalxc_operpass }}"
+  #debug: var=item.stdout
+  shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub {{ kohalxc_operuser }}@$LXCHOST
+  with_items: cmd_sshkeys_missing.results
+  when:
+    - item is defined
+    - item.stdout is defined and item.stdout != ''
+  delegate_to: localhost
 
 ## Abort play here (for testing and development):
 - fail:
