@@ -39,8 +39,10 @@ kohalxcs_testvar: roles_kohalxcs_defaults_main.yaml
 ## KohaLXC: works
 #hostnode_kohalxc_works: "{{ kohalxc_install }}"
 ## KohaLXC: rootdir
+#kohalxcs_kohalxc_rootdir: "{{ kohalxcs_kohalxc_works }}/KohaLXC"
 #hostnode_kohalxc_rootdir: "{{ hostnode_kohalxc_works }}/KohaLXC"
 ## KohaLXC: tooldir
+kohalxcs_kohalxc_tooldir: "/home/{{ kohalxc_operuser | d('ubuntu') }}/kohatools"
 #hostnode_kohalxc_tooldir: "{{ hostnode_kohalxc_rootdir }}/kohatools"
 ## KohaLXC: organization
 #hostnode_kohalxc_organization: "{{ kohalxc_organization }}"

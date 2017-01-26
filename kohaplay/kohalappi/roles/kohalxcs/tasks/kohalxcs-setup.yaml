@@ -28,6 +28,19 @@
     - kohalxcs_devenv_enabled
     - kohalxcs_dataenv_enabled
 
+- debug: var=kohalxcs_kohalxc_tooldir
+#- fail:
+## Push/copy run_conversion script to ConversionTools
+- name: dataenv - Push our containerized conversion script to ConversionTools
+  #become: yes
+  template: >
+    src="files/dataenv/run_conversion-perl_import_pl.sh.j2"
+    dest="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
+    mode="u+rwx,g+rx,o-rwx"
+    backup="yes"
+  when:
+    - kohalxcs_dataenv_enabled
+
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:

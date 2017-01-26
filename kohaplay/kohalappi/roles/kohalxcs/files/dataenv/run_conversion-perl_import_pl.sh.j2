@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# KohaLXC/kohatools (data+mmtenv): PP/MMT-configuration
+# file: $KOHALXC_TOOLDIR/ppmmtws/ConversionTools/run_conversion-perl_import.pl.sh
+{{ ansible_managed | comment }}
+
+## Directories:
+PPMMT_DIR="$HOME/kohatools/ppmmtws"
+DATA_DIR="$HOME/kohadata/source"
+LOGS_DIR="$DATA_DIR/logs"
+
+## PP/MMT-configuration:
+DEFAULT_CONFIG="default_config.xml"
+HOST_CONFIG="host_config.xml"
+LXC_CONFIG="lxc_config.xml"
+# Which config.xml to use: LXC_CONFIG (default)
+CONFIG_XML="$LXC_CONFIG"
+[[ -n "$1" ]] && CONFIG_XML=$1
+
+## Show configuration: verbose
+echo "PPMMT_DIR=$PPMMT_DIR"
+echo "DATA_DIR=$DATA_DIR"
+echo "LOGS_DIR=$LOGS_DIR"
+echo "CONFIG_XML=$CONFIG_XML"
+
+# Check that PP/MMT main config exists..
+[[ ! -e "${PPMMT_DIR}/${CONFIG_XML}" ]] && 
+	echo "== No config file found..exiting" && exit 1
+
+## Do the stuff ##
+
+STARTSTAMP=`date +%Y%m%d_%H%M`
+echo && echo "== conversion_run-perl_import.pl.sh: $STARTSTAMP"
+
+# Make required directories
+cd $PPMMT_DIR/PerlMMT
+mkdir -vp $LOGS_DIR
+
+# Run the PP/MMT
+perl import.pl ../$CONFIG_XML
+
+# Save logs
+cp -vpr logs $LOGS_DIR/PerlMMT-logs_$STARTSTAMP
+
+ENDSTAMP=`date +%Y%m%d_%H%M`
+
+ls -l $LOGS_DIR/PerlMMT-logs_$STARTSTAMP
+
+echo && echo "== conversion_run-perl_import.pl.sh: done on $ENDSTAMP"
+
+exit 0
