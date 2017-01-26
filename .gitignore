@@ -4,6 +4,7 @@
 *.log
 *.zip
 *.tar.gz
+*backup*
 *backup*/
 
 ## ansible/<playbook>
