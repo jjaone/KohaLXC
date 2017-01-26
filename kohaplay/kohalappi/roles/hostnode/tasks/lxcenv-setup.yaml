@@ -75,8 +75,9 @@
     - item.lxc is defined and item.lxc.name is defined
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
-## Create and enable all LXCs for development/testing
-- name: Create all defined LXCs
+## Create/re-configure and enable all LXCs
+# - should be done this way only in remote 'development' and 'testing'
+- name: Create/re-configure all defined LXCs
   become: yes
   lxc_container:
     "{{ item.lxc }}"
@@ -90,7 +91,7 @@
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
 - debug: var=cmd_lxccreate.results
-## Check whether our auth-key is present for sshing to LXCs
+## Check whether we have auth/host-key for sshing to LXCs
 - name: Has control host already auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
   environment:
@@ -113,7 +114,6 @@
   environment:
     LXCHOST: "{{ item.stdout }}"
     SSHPASS: "{{ kohalxc_operpass }}"
-  #debug: var=item.stdout
   shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub {{ kohalxc_operuser }}@$LXCHOST
   with_items: cmd_sshkeys_missing.results
   when:
@@ -121,7 +121,9 @@
     - item.stdout is defined and item.stdout != ''
   delegate_to: localhost
 
+#- debug: var=hostnode_lxcs,ansible_ssh_common_args
+
 ## Abort play here (for testing and development):
-- fail:
+#- fail:
 
  

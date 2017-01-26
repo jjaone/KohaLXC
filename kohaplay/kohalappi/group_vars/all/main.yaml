@@ -41,6 +41,9 @@ ansible_become_method: sudo
 #ansible_user: "{{ hostnode_operuser | d(kohaoper) }}"
 # Ansible become pass':
 #ansible_become_pass
+# Ansible SSH common arguments
+# - e.g. proxy-command to access containers directly from control host..
+#ansible_ssh_common_args:
 
 # ############################################################
 # Vault/secure settings:
@@ -59,7 +62,7 @@ ansible_become_method: sudo
 kohalxc_mdbenv_rootuser: root
 # MariaDB/Mysql-database root user pass:
 kohalxc_mdbenv_rootpass:
-# Database koha-user name: 'koha'
+# Database koha-user name:
 kohalxc_mdbenv_kohauser:
 # Database koha-user pass
 kohalxc_mdbenv_kohapass:

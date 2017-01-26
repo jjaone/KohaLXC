@@ -3,14 +3,19 @@
 # #############################################################################
 # Code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
-#
 # Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3x
 #
-# Description: "play for (koha-)servers and host/node environments":
-# - hosts: all koha-related server hosts (from the inventory) 
-# - tasks: 'hostnode' role: create and setup server hosts and
-#          initialize 'lxcenv' (create all specified LXCs w/ networking)
-#          for LXC-containers to be provisioned to koha-host server nodes.
+# Description:
+# - play for server host/node environments
+# 1. hosts: all (koha-related) server hostnodes (from the inventory)
+# 2. pre:
+# 3. roles: common, hostnode
+#  - 'hostnode' role: create and setup server hosts
+#  - initialize 'lxcenv' (create all specified LXCs w/ networking)
+#    for LXC-containers to be provisioned to koha-host server nodes.
+# 4. post:
+#
 # #############################################################################
 
 ## Hosts
@@ -28,7 +33,7 @@
   #vars_prompt:
   #  - name: userinput_vars
   #    prompt: "Input something?"
-  #    tags: hostnodes:prerole
+  #    tags: hostnode:prerole
 
   ## Pre-tasks
   pre_tasks:
@@ -36,13 +41,13 @@
     - debug: var=inventory_hostname,hostnode_environment,hostnode_operid,kohalxc_operuser
 
     # List contents of read vars_files (if any)
-    - name: List contents of preset vars (if any)
+    - name: hostnode/pre_tasks - List contents of preset vars (if any)
       debug: var=hostnode_var
       when:
         - hostnode_var is defined
         - userinput_vars is defined
         - userinput_vars == "y"
-      tags: hostnodes:prerole
+      tags: hostnode:prerole
 
   ## Roles
   roles:
@@ -53,22 +58,32 @@
   post_tasks:
     - raw: echo "In hostnodes(post_tasks/raw) 'play-hostnodes.yaml'"
 
-    # [debug]: List provisionable LXCs (if any)
-    - name: List provisionable LXCs (if any)
+    # [debug]: List provisioned LXCs (if any)
+    - name: hostnode/post_tasks - List provisioned LXCs (if any)
       debug: var=hostnode_lxcs,hostnode_environment
-      tags: hostnodes:postrole
+      tags: hostnode:postrole
 
     # [debug]: Show some ssh/connection vars
-    - name: Show some ssh/connection vars
-      debug: var=ansible_host,ansible_port,ansible_ssh_common_args,inventory_hostname
-      tags: hostnodes:postrole
+    - name: hostnode/post_tasks - Show some ssh/connection vars
+      debug: var=ansible_host,ansible_port,ansible_user,ansible_become_method,ansible_ssh_common_args,inventory_hostname
+      tags: hostnode:postrole
+
+    ## Abort play here (for testing and development):
+    #- fail:
       
     # Add provisionable LXCs as new hosts (grouping them by their domain name) 
-    - name: Set provisionable LXCs as hosts for detailed setup/config
+    - name: hostnode/post_tasks - Create LXC host for detailed setup/config
+      #debug: var=item
       local_action: |
-        add_host name="{{ item.name  + ('lxc.group = weblxc' in item.container_config) | ternary('.weblxc','.mdblxc') | d() }}" groups="{{ ('lxc.group = weblxc' in item.container_config) | ternary('weblxc','mdblxc') | d('lxc') }}" ansible_user="{{ kohalxc_operuser | d('ubuntu') }}" ansible_port=22 ansible_become_method="sudo" ansible_become_pass="{{ kohalxc_operpass | d('ubuntu') }}"
+        add_host name="{{ item.lxc.name  + '.' + item.net.domain }}" groups="{{ item.net.domain | d('lxc') }}" ansible_user="{{ kohalxc_operuser }}" ansible_port=22 ansible_become_pass="{{ kohalxc_operpass }}"
+#        add_host name="{{ item.lxc.name  + '.' + item.net.domain }}" groups="{{ item.net.domain | d('lxc') }}" ansible_user="{{ kohalxc_operuser | d('default-user') }}" ansible_port=22 ansible_become_method="sudo" ansible_become_pass="{{ kohalxc_operpass | d('default-pass') }}"
+      #  add_host name="{{ item.name  + ('lxc.group = weblxc' in item.container_config) | ternary('.weblxc','.mdblxc') | d() }}" groups="{{ ('lxc.group = weblxc' in item.container_config) | ternary('weblxc','mdblxc') | d('lxc') }}" ansible_user="{{ kohalxc_operuser | d('default-user') }}" ansible_port=22 ansible_become_method="sudo" ansible_become_pass="{{ kohalxc_operpass | d('default-user') }}"
 #    local_action: add_host name="{{ item.split('.')[0] }}" groups="{{ item.split('.')[-1] | d('lxc') }}"
       with_items: hostnode_lxcs | d()
       when:
       - item is defined and item != ""
-      tags: hostnodes:postrole
+      - item.lxc is defined
+      - item.net is defined
+      - item.lxc.container_config is defined
+      - item.net.domain is defined and item.net.domain in inventory_hostname
+      tags: hostnode:postrole

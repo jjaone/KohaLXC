@@ -9,9 +9,10 @@
 # 
 # Description/notes/usage:
 # - requires Ansible version 2.2.0 (should be in /usr/local/bin/ansible using)
-# - config file = $KOHALXC_ANSIBLE_PLAYBOOKS/ansible.cfg
-# - inventories: e.g -i localdev (asx default in 'ansible.cfg')
-# - [TODO: following gguide is outdated and should be updated]
+# - config file: $KOHALXC_ANSIBLE_PLAYBOOKS/ansible.cfg
+# - inventories: e.g -i inventory/localdev (set as default in 'ansible.cfg')
+#
+# [TODO: following gguide is outdated and should be updated]
 #  1a) Basic use:
 #   "cd $KOHALXC_ANSIBLE_PLAYBOOKS; ansible-playbook play-all.yaml"
 #  1b) Basic use (sub-shell in $KOHALXC_ANSIBLE_PLAYBOOKS):
@@ -30,5 +31,5 @@
 ## Include Koha-hosts server plays: LXC-hostnodes with dev/srv/web/mdb/dataenv(s)
 - include: play-hostnodes.yaml
 
-## Include Koha-LXC plays: LXC-guests with dev/web(koha)/mdb/dataenv(s)
-#- include: play-lxcs.yaml
+## Include Koha-LXC plays: LXC-guests with dev/web(koha)/mdb/data(conv/mmt)envs
+- include: play-kohalxcs.yaml

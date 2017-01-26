@@ -1,0 +1,53 @@
+---
+# File: roles/kohalxcs/tasks/kohalxcs-status.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description:
+# - status and details of Koha-related LXCs for all inventories 
+# ##############################################################################
+
+## Welcome to kohalxcs..
+- name: status - Welcome '{{ hostnode_operuser }}' to kohalxcs/status..
+  shell: |
+    uname -a
+    grep a
+    whoami
+    pwd
+    ls -la
+    history
+    #echo "inventory_hostname={{inventory_hostname}}, ansible_host={{ansible_host}}, ansible_user={{ansible_user}}"
+    #dpkg -l {{ kohalxcs_devenv_pckgs | d('bash') }} 
+  args:
+    executable: /bin/bash
+  ignore_errors: yes
+
+## Some vars: status/debug 
+- debug: var=ansible_host,ansible_user,inventory_hostname
+- debug: var=hostnode_operuser,kohalxc_operuser
+#- debug: var=hostnode_srvname
+#- debug: var=hostnode_lxcs
+- debug: var=kohalxcs_devenv_enabled
+- debug: var=kohalxcs_dataenv_enabled
+
+
+## [TODO]: Do we need the below here? ##
+
+## List all the containers: lxc-ls
+#- name: List all containers in kohahosts_srvname={{ kohahosts_srvname }}
+#  become: yes
+#  command: lxc-ls -f
+
+##########################
+## Get the container IPs
+##########################
+#- name: Get LXC-containers info now that IPs should be available for {{ ansible_host }}
+#  become: yes
+#  lxc_container:
+#    name: "{{ item.key }}"
+#  with_dict: "{{ kohahosts_lxcs }}" 
+#  register: lxcs_info
+#  when: kohahosts_lxcs is defined

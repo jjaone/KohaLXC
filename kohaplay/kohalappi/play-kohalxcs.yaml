@@ -1,0 +1,46 @@
+---
+# File: $KOHALXC_ANSIBLE_PLAYBOOKS/play-kohalxcs.yaml
+# #############################################################################
+# Code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description/notes/usage:
+# - play for containers (LXC) deployd in servers as 'lxcenv' tasks 
+#  1. hosts: all koha/conversion-related LXCs in server host/nodes 
+#  2. pre: some debugs
+#  3. roles:
+#  4. post:
+# 
+# #############################################################################
+
+## Host/groups for this play
+# - only the grouped LXCs created/configured in hostnode/lxcenv-setup
+- hosts: weblxc mdblxc
+
+  ## Pre-tasks
+  pre_tasks:
+    - raw: echo "In all(pre_tasks/raw-module) 'play-kohalxcs.yaml'"
+      tags: debug,kohalxcs:prerole
+
+    - name: kohalxcs/pre_tasks - Debug some vars 
+      debug: var=ansible_ssh_common_args,inventory_hostname,ansible_host
+      tags: debug,kohalxcs,kohalxcs:prerole
+
+  ## Tasks
+  tasks:
+    # Ping all hosts in this group
+    - name: kohalxcs/tasks - Ping all running weblxc and mdblxc hosts
+      ping:
+      tags: kohalxcs
+
+    # Debug stuff
+    - name: kohalxcs/tasks - Debug some groups and host vars..
+      debug: var=groups,hostvars
+      #debug: var=groups,hostvars,groups['all']
+      tags: debug
+
+  ## Roles
+  roles:
+  - kohalxcs

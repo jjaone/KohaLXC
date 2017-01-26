@@ -1,0 +1,22 @@
+
+# File: group_vars/mdblxc
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3
+# 
+# Description:
+# - playbook-level variables for 'mdblxc' group of hosts (dynamic remote LXCs)
+# #############################################################################
+
+## Proxy-command to enable access to containers directly from management host
+# - 'hostnode_operuser' is the mngmt-host dev/ops user
+ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ hostnode_operuser }}@{{ hostnode_mdbsrv }} -p {{ hostnode_sshport }} -W %h:%p"'
+
+## [TODO]: the below are old (from 'kohahosts-plays'), chekc and remove later.. 
+# - 'kohahosts_operuser' is the mngmt-host dev/ops user
+# - 'kohahosts_srvname' set by "add_host" in "roles/kohahosts/tasks/kohahosts-lxcenv.yaml"
+# - (kohahosts_websrv, kohahosts_mdbsrv)
+#ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ kohahosts_operuser }}@{{ kohahosts_websrv }} -p {{ kohahosts_sshport }} -W %h:%p"'
+#ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ kohahosts_operuser }}@{{ kohahosts_srvname }} -p {{ kohahosts_sshport }} -W %h:%p"'

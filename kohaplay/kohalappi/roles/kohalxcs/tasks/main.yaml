@@ -1,0 +1,35 @@
+---
+# File: roles/kohalxcs/tasks/main.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# Description:
+# - container environment specfic provisioning and setup of Koha-related LXCs
+# #############################################################################
+
+## General: debugs for LXC-related dev-work and debugging
+#- include: kohalxcs-debug.yaml
+#  tags: kohalxcs:debug
+
+## lxc-{status,setup}
+- include: kohalxcs-status.yaml
+  tags: kohalxcs,kohalxcs:status
+- include: kohalxcs-setup.yaml
+  tags: kohalxcs,kohalxcs:setup
+
+## Status of the devenv for 'lxcs'
+#- include: devenv-status.yaml
+#  tags: "kohalxcs,kohalxcs:devenv-status"
+## Setup the devenv for 'lxcs'
+#- include: devenv-setup.yaml
+#  tags: "kohalxcs,kohalxcs:devenv-setup"
+
+## Status of the srvenv for 'lxcs'
+#- include: srven-status.yaml
+#  tags: "kohalxcs,kohalxcs:srvenv-status"
+## Setup the srvenv for 'lxcs'
+#- include: srven-setup.yaml
+#  tags: "kohalxcs,kohalxcs:srvenv-setup"

@@ -1,0 +1,33 @@
+---
+# File: roles/kohalxcs/tasks/kohalxcs-setup.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description: setup tasks of Koha-related LXCs for dev/mdb/web/data envs
+# - setup Koha-related LXCs environments in playbook inventories
+# - ensure availability of all required distro packages and Perl-modules
+# - 
+# ##############################################################################
+
+## Ensure env.* pckgs are installed
+# [KohaLXC]: kohalxcs: Packages for LXCs
+- name: setup - Ensure all development and data environemnt packages are installed
+  become: yes
+  apt: >
+    name="{{ item }}"
+    update_cache="yes"
+    state="present"
+    autoremove="yes"
+  with_flattened:
+    - kohalxcs_devenv_pckgs
+    - kohalxcs_dataenv_pckgs
+  when:
+    - kohalxcs_devenv_enabled
+    - kohalxcs_dataenv_enabled
+
+
+## !! For debug/dev FAIL here on purpose..!! ##
+#- fail:

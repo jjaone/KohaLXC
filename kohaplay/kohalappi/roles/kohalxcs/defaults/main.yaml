@@ -1,0 +1,231 @@
+---
+# File: roles/kohalxcs/defaults/main.yml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# [TODO]: Description: define defaults for all variables used in this role
+# - General, KohalXC-tooling, Server-updates, Security, LVM, ZFS, LXCs
+# - vars should be named like 'hostnode_var1' etc..
+# - vars used in templates for config files should be at target OS defaults
+#
+# See also:
+# - roles/hostnode/defaults/main.yaml (defaults for hosts)
+# - roles/hostnode/vars/main.yaml ('constantized' vars for hosts)
+# - <inventory>/group_vars/{all/}{main,vault}.yaml (inventory vars..)
+# - <playbooks>/group_vars/{all,hostnode}/{main,vault}.yaml (top-level)
+# #############################################################################
+
+## Just to test/debug the inheritance in ansible playbooks..
+kohalxcs_testvar: roles_kohalxcs_defaults_main.yaml
+
+## #########################
+## General: facts & handlers
+## #########################
+# Facts gathering: False/True
+#gather_facts: False
+# Force all handlers always (also in case play fails etc):
+#force_handlers: false
+# Local/management user home directory
+#local_home: "{{ lookup('env', 'HOME') }}"
+
+## #######################
+## Server: KohaLXC tooling
+## #######################
+# - defaults in 'roles/common/defaults/main.yaml'
+# - override these in inventory/group+host_vars
+## KohaLXC: works
+#hostnode_kohalxc_works: "{{ kohalxc_install }}"
+## KohaLXC: rootdir
+#hostnode_kohalxc_rootdir: "{{ hostnode_kohalxc_works }}/KohaLXC"
+## KohaLXC: tooldir
+#hostnode_kohalxc_tooldir: "{{ hostnode_kohalxc_rootdir }}/kohatools"
+## KohaLXC: organization
+#hostnode_kohalxc_organization: "{{ kohalxc_organization }}"
+
+## KohaLXC/devenv: role default
+kohalxcs_devenv_enabled: true
+# Packages needed for dataenv setup/config/tools
+kohalxcs_devenv_pckgs:
+  - wget
+  - joe
+  - nano
+  - python2.7-minimal
+  - git
+  - tig
+#hostnode_devenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
+#hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
+
+## KohaLXC/srvenv: role default
+#hostnode_srvenv_enabled: true
+# Packages needed for srvenv setup/config/tools
+#hostnode_srvenv_pckgs:
+#  - sshfs
+#  - iptables
+#  - iptables-persistent
+#  - bridge-utils
+#  - mailutils
+#hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
+#hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
+
+## KohaLXC/dataenv: role default
+kohalxcs_dataenv_enabled: true
+# Packages needed for dataenv setup/config/tools
+kohalxcs_dataenv_pckgs:
+  - libswitch-perl
+  - libtext-autoformat-perl
+  - libxml-simple-perl
+  - libcarp-always-perl
+  - libmodern-perl-perl
+  - libdatetime-perl
+#hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
+# KohaLXC/dataenv: datadir
+#hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
+# KohaLXC/dataenv: datasets name(s) for MMT-migration:
+#hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
+# KohaLXC/dataenv: dataset source dir for MMT
+#hostnode_dataenv_datasrc: source
+
+# KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
+# - by default enable here if dataenv_dataset(s) have been defined in the host
+#hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
+# KohaLXC/mmtenv: PP/MMT-tool environment
+#hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
+# KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
+#hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
+
+
+## ###########################
+## Server: updates/reboots/nic
+## ###########################
+# Rebootable server
+kohalxcs_reboot_enabled: false
+# Upgradable server
+kohalxcs_upgrade_enabled: false
+# Pattern to ignore pckgs from upgrades
+kohalxcs_upgrade_pckgsignore:
+# Network-card interface
+kohalxcs_network_interface: eth0
+
+## #########################
+## Server security/hardening 
+## #########################
+## Secure/hardening of the server
+kohalxcs_secure_enabled: false
+## 00 - packages needed for security/hardening
+kohalxcs_secure_pckgs:
+  - openssh-client
+  - openssh-server
+## 17 - Analyze system logs
+# Enable reports always when the script is run
+kohalxcs_secure_logwatch_always: false
+# Logwatch packges
+kohalxcs_secure_logwatch_pckgs:
+  - logwatch
+  - libdate-manip-perl
+  - libsys-cpu-perl
+  - libsys-meminfo-perl
+# Output type: [stdout], mail
+kohalxcs_secure_logwatch_output: mail
+# Format of the report: [text], html
+kohalxcs_secure_logwatch_format: html
+# Range of the report: All, Today, [Yesterday]
+kohalxcs_secure_logwatch_range: All
+# Level of the report: [Low (0)], Med (5), High (10)
+kohalxcs_secure_logwatch_detail: High
+# Period to report (default: All)
+kohalxcs_secure_logwatch_reportperiod: 30
+# Where to report (email-address):
+# - @gmail addresses do not seem to work, probably cause/if
+#   the server only has 'mailutils' installed
+kohalxs_secure_logwatch_reportemail: webmaster@localhost
+
+###############
+## Storage: LVM
+###############
+## LVM support: false/true
+kohalxcs_lvm_enabled: false
+# LVM-related packages
+kohalxcs_lvm_pckgs:
+  - lvm2
+
+# Volume group (VG) name: e.g /dev/roi1_vg 
+kohalxcs_lvmvg: host_vg 
+# Logical volume for host OS (root): /dev/roi1_vg/root
+kohalxcs_lvmlv_os: root 
+# Logical volume size for host OS (root)
+kohalxcs_lvmlv_os_size: 80G
+# Logical volume for data (containers): /dev/roi1_vg/data
+kohalxcs_lvmlv_data: data 
+# Logical volume size for (containers) dir-data
+kohalxcs_lvmlv_data_size: +100%FREE
+# Filesystem for LV/data
+kohalxcs_lvmlv_data_fs: ext4
+# Logical volume for zfspool (containers): /dev/roi1_vg/tank
+kohalxcs_lvmlv_tank: tank 
+# Logical volume size for (containers) zfspool-data
+kohalxcs_lvmlv_tank_size: +100%FREE
+# Volume/zpool-name for LV/tank
+kohalxcs_lvmlv_tank_fs: zfstank
+# Logical volume for swap: /dev/roi1_vg/swap_1
+kohalxcs_lvmlv_swap: swap_1 
+# Logical volume size for swap (e.g RAM size)
+kohalxcs_lvmlv_swap_size: 128G 
+
+###############
+## Storage: ZFS
+###############
+## ZFS support: true/false
+kohalxcs_zfs_enabled: false
+# ZFS-related packages
+kohalxcs_zfs_pckgs:
+  - zfsutils-linux
+
+# ZFS/zpool name
+kohalxcs_zfs_zpool: "{{ kohalxcs_lvmlv_tank_fs | d('zfstank') }}"
+# ZFS LXC-root filesystem in LV-'tank'/zpool for LXC-containers'
+kohalxcs_zfs_rootdir: lxc
+
+## ###############
+## LXC-environment 
+## ###############
+# - not available/relevant here --> removed for now, check if they are needed?
+
+## ##########################
+## LXC: defaults/provisioning
+## ##########################
+# - most not available/relevant here --> removed for now, check the remaining?
+
+# - container command: kohalxc/mdbenv pckgs installation
+# MariaDB-5.5/Mysql-5.5 non-interactive installation (debconf/apt-get)
+hostnode_mdbenv_pckginstall: |
+  echo "== kohalxc [ansible:mdbenv]: Debconf for non-interactive install of database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
+  debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password password"
+  debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password_again password"
+  echo "== kohalxc [ansible:mdbenv]: Installing database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
+  DEBIAN_FRONTEND=noninteractive apt-get -q -y install mariadb-server-5.5
+  mysqladmin ping status -u root | tee -a {{ hostnode_lxcenv_logfile }}
+
+## LXC: template
+# - template (distro): Ubuntu
+hostnode_lxc_tmpl: ubuntu
+# - template/release: Trusty 14.04 LTS
+hostnode_lxc_tmpl_release: trusty
+# - template/packages: installed to all LXCs
+hostnode_lxc_tmpl_pckgs: "wget,joe,nano,python2.7-minimal,git,tig"
+# - template/auth_key:
+hostnode_lxc_tmpl_authkey: ".ssh/id_rsa.pub"
+
+## LXC: lists of containers
+# Default LXCs (list-of-dicts), leave undefined for now:
+#hostnode_lxc_defaults:
+
+# All LXCs (how to empty the lists/dicts here):
+#hostnode_lxcs: {} # empty dict, flow mapping (with_dict)
+#hostnode_lxcs: [] # empty hash, block mapping (with_items)
+
+# How to define a list of containers at role/defaults level:
+#hostnode_lxcs:
+#  - "{{ kldev_dmdbks }}"

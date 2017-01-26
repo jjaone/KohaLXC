@@ -1,0 +1,39 @@
+
+# File: group_vars/weblxc
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3
+# 
+# Description:
+# - playbook-level variables for 'weblxc' group of hosts (dynamic remote LXCs)
+# - these override the settings in group_vars/all/{main,vault}.yaml
+# #############################################################################
+
+## ###########################
+## General: facts & hanldlers
+## ###########################
+# Facts gathering:
+#gather_facts: False
+# Force all handlers always (also in case play fails etc):
+#force_handlers: false
+
+## ###############
+## Ansible related
+## ###############
+#ansible_python_interpreter:
+#ansible_connection:
+#ansible_port:
+#ansible_become_method:
+#ansible_user:
+#ansible_become_pass:
+# proxy-command to enable access to containers directly from control host
+ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ hostnode_operuser }}@{{ hostnode_websrv }} -p {{ hostnode_sshport }} -W %h:%p"'
+
+## [TODO]: the below are old (from 'kohahosts-plays'), chekc and remove later.. 
+# - 'kohahosts_operuser' is the mngmt-host dev/ops user
+# - 'kohahosts_srvname' set by "add_host" in "roles/kohahosts/tasks/kohahosts-lxcenv.yaml"
+#ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o ProxyCommand="ssh -q {{ kohahosts_operuser }}@{{ kohahosts_websrv }} -W %h:%p"'
+#ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o ProxyCommand="ssh -q {{ kohahosts_operuser }}@{{ inventory_hostname }} -W %h:%p"'
+#ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ kohahosts_operuser }}@{{ kohahosts_srvname }} -W %h:%p"'
