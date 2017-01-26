@@ -64,6 +64,10 @@ Server host environment setup tasks in 'testing' w/ env variable (increase verbo
 ```
 $ kohalxc -i inventory/testing ansible - t hostnode:srvenv-setup -e "hostnode_reboot_enabled=false" -v
 ```
+Build, deploy and (re)start Koha-related LXC-container(s) to run e.g. PP/MMT-conversions 
+```
+$ kohalxc -i inventory/testing ansible -t hostnode:lxcenv-setup,hostnode:postrole,kohalxcs:setup
+```
 
 ### Ansible plays using system 'ansible-playbook'
 * _must be run in the $KOHALXC_ANSIBLE_PLAYBOOKS directory_
