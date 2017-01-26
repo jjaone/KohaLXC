@@ -14,9 +14,3 @@
 # - 'hostnode_operuser' is the mngmt-host dev/ops user
 ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ hostnode_operuser }}@{{ hostnode_mdbsrv }} -p {{ hostnode_sshport }} -W %h:%p"'
 
-## [TODO]: the below are old (from 'kohahosts-plays'), chekc and remove later.. 
-# - 'kohahosts_operuser' is the mngmt-host dev/ops user
-# - 'kohahosts_srvname' set by "add_host" in "roles/kohahosts/tasks/kohahosts-lxcenv.yaml"
-# - (kohahosts_websrv, kohahosts_mdbsrv)
-#ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ kohahosts_operuser }}@{{ kohahosts_websrv }} -p {{ kohahosts_sshport }} -W %h:%p"'
-#ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ kohahosts_operuser }}@{{ kohahosts_srvname }} -p {{ kohahosts_sshport }} -W %h:%p"'
