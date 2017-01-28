@@ -54,6 +54,7 @@ hostnode_srvenv_enabled: true
 # Packages needed for srvenv setup/config/tools
 hostnode_srvenv_pckgs:
   - sshfs
+  - sshpass
   - iptables
   - iptables-persistent
   - bridge-utils

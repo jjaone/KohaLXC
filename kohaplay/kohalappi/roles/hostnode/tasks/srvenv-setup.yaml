@@ -91,11 +91,11 @@
     - en_US.UTF-8
     - fi_FI.UTF-8
 
-## Setup remote user environment shell profile (devenv/bash-profile)
+## Setup remote developer environment shell profile (devenv/bash-profile)
 # [KohaLXC]:devenv
 # - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
 # - kohalxc_devenv == kohalxc_tooldir/conf.d/env.dev
-- name: devenv - Setup system-wide Bash profile for remote KohaLXC/devenv
+- name: devenv - Setup system-wide Bash profile for remote KohaLXC-development
   become: yes
   template: >
     src="files/kohalxc_devenv/bash_profile.sh.j2"
@@ -131,6 +131,7 @@
 # - e.g. KohaLXC-tools need to be in place for 'dataenv/mmtenv'-stuff later
 # - can use '--force-handler' to ensure handler is called (atleast eventually)
 - meta: flush_handlers
+
 - debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
 ## Ensure devops/hostnode has required symlinks in $HOME
 # [KohaLXC]:srvenv
@@ -146,6 +147,32 @@
     dest="{{ '/home/'~hostnode_operuser~'/bin/kohasetup' }}"
     state="link"
     force="yes"
+
+- debug: var=ansible_host,hostnode_backupsrv,hostnode_backup_mountpath
+## Enable Backup-locations using 'sshfs' (e.g. from 'ansible_host' to backupsrv)
+- name: srvenv/backup(ssfs) - Ensure backup/source is unmounted from backup/target
+  become: yes
+  shell: mount | grep -q {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }} || exit 0 && umount {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
+  when:
+    - ansible_host != hostnode_backupsrv
+- name: srvenv/backup(sshfs) - Ensure the mount-point for backup/target exist
+  become: yes
+  file: >
+    path="{{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}"
+    state="directory"
+    owner="{{ hostnode_operuser }}"
+  when:
+    - ansible_host != hostnode_backupsrv
+- name: srvenv/backup(sshfs) - Ensure backup/source key is in backup/target server
+  environment:
+    SSHPASS: "{{ hostnode_operpass }}"
+  shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -i /home/{{ hostnode_operuser }}/.ssh/id_rsa.pub {{ hostnode_operuser }}@{{ hostnode_backupsrv }}
+  when:
+    - ansible_host != hostnode_backupsrv
+- name: srvenv/backup(sshfs) - Mount remote backup/target location
+  shell: /usr/bin/sshfs -o idmap=user,reconnect {{ hostnode_operuser }}@{{ hostnode_backup_sshfssrv | d(hostnode_backupsrv) }}:/{{ hostnode_backup_targetdir | d('Backup') }} {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
+  when:
+    - ansible_host != hostnode_backupsrv
 
 ## Make sure hosts package cache is not stale
 # [KohaLXC]:srvenv
