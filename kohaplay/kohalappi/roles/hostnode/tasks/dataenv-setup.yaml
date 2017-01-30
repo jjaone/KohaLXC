@@ -239,7 +239,7 @@
 # - loadExternalRepos: whether to load external repositories or not
 # - preprocess: do the 'PreProcess' phase in each import chain
 # - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
-- name: dataenv - Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets (for MMT/LXCs)
+- name: dataenv - Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
     lxc_src: "/home/{{ kohalxc_operuser }}/kohadata/{{ hostnode_dataenv_datasrc }}"
@@ -262,7 +262,7 @@
 
 ## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv - Push/copy MMT-tools import.pl and TranslationTables to mmt-enabled targets (for MMT/LXCs)
+- name: dataenv - Push/copy MMT-tools import.pl and TranslationTables to data/mmt-enabled targets
   template: >-
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -283,7 +283,7 @@
   
 ## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv - Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to ppmmt-enabled targets (for MMT/LXCs)
+- name: dataenv - Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled targets
   template: >-
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"

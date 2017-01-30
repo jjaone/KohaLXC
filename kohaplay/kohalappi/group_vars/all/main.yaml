@@ -70,12 +70,14 @@ kohalxc_mdbenv_kohapass:
 kohalxc_mdbenv_kohadb:
 
 ## Settings in 'testing'/'production' for 'hostnode'/severs
-# Server name of "koha" web/applications and services:
+# Server name of "koha" web/applications and services
 hostnode_websrv:
-# Server name of "koha" databases and services:
+# Server name of "koha" databases and services
 hostnode_mdbsrv:
-# Server name of "koha" data/mmt storage/utilities:
+# Server name of "koha" data/mmt storage/utilities
 hostnode_datasrv:
+# Server name of backup-location/services
+hostnode_backupsrv:
 
 # Koha-system user name: 'kohasys'
 hostnode_kohasys_user:

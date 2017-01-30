@@ -74,13 +74,22 @@ hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
 # KohaLXC/dataenv: dataset source dir for MMT
 hostnode_dataenv_datasrc: source
 
-# KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
+## KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
 # - by default enable here if dataenv_dataset(s) have been defined in the host
 hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
 # KohaLXC/mmtenv: PP/MMT-tool environment
 hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
+
+# KohaLXC/backup: enable support for each server
+hostnode_backup_enabled: false
+# KohaLXC/backup: server
+#hostnode_backupsrv:
+# KohaLXC/backup(sshfs): server
+hostnode_backup_sshfssrv: "{{ hostnode_backupsrv }}"
+# KosaLXC/backup:  mount path
+hostnode_backup_mountpath: /mnt/Backup@remote
 
 
 ## ###########################

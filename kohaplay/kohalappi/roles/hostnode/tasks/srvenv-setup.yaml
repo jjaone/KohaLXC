@@ -148,13 +148,13 @@
     state="link"
     force="yes"
 
-- debug: var=ansible_host,hostnode_backupsrv,hostnode_backup_mountpath
+- debug: var=ansible_host,hostnode_backupsrv,hostnode_backup_sshfssrv,hostnode_backup_mountpath
 ## Enable Backup-locations using 'sshfs' (e.g. from 'ansible_host' to backupsrv)
-- name: srvenv/backup(ssfs) - Ensure backup/source is unmounted from backup/target
+- name: srvenv/backup(sshfs) - Ensure backup/source is unmounted from backup/target
   become: yes
   shell: mount | grep -q {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }} || exit 0 && umount {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
   when:
-    - ansible_host != hostnode_backupsrv
+    - ansible_host != hostnode_backup_sshfssrv
 - name: srvenv/backup(sshfs) - Ensure the mount-point for backup/target exist
   become: yes
   file: >
@@ -162,17 +162,26 @@
     state="directory"
     owner="{{ hostnode_operuser }}"
   when:
-    - ansible_host != hostnode_backupsrv
-- name: srvenv/backup(sshfs) - Ensure backup/source key is in backup/target server
+    - ansible_host != hostnode_backup_sshfssrv
+- name: srvenv/backup(sshfs) - Ensure backup/source auth-key is in backup/target
   environment:
     SSHPASS: "{{ hostnode_operpass }}"
   shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -i /home/{{ hostnode_operuser }}/.ssh/id_rsa.pub {{ hostnode_operuser }}@{{ hostnode_backupsrv }}
   when:
-    - ansible_host != hostnode_backupsrv
+    - ansible_host != hostnode_backup_sshfssrv
 - name: srvenv/backup(sshfs) - Mount remote backup/target location
   shell: /usr/bin/sshfs -o idmap=user,reconnect {{ hostnode_operuser }}@{{ hostnode_backup_sshfssrv | d(hostnode_backupsrv) }}:/{{ hostnode_backup_targetdir | d('Backup') }} {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
   when:
-    - ansible_host != hostnode_backupsrv
+    - ansible_host != hostnode_backup_sshfssrv
+- name: srvenv/backup(sshfs) - Symlink for '/Backup' to mounted target location
+  become: yes
+  file: >
+    src="{{ hostnode_backup_mountpath }}"
+    dest="/Backup"
+    state="link"
+    force="yes"
+  when:
+    - ansible_host != hostnode_backup_sshfssrv
 
 ## Make sure hosts package cache is not stale
 # [KohaLXC]:srvenv
