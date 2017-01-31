@@ -1,0 +1,2256 @@
+FINMARC(98) bibliographic to MARC 21 bibliographic
+versio 20.1.2011 - Kansalliskirjasto
+
+// KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: BibliosImportChain
+// file: $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/BibliosImportChain/Usemarcon/fi2ma/{{ item.name }}
+{{ ansible_managed | comment }}
+
+
+#define macro Pvalimerkitys()         | If (PreviousSubIn(S, $p, '=1') = 'n') ReplaceOcc ('$p' By ',$p', '=1') Else ReplaceOcc ('$p' By '.$p', '=1'); \
+                                        If (PreviousSubIn(S, $p, '=2') = 'n') ReplaceOcc ('$p' By ',$p', '=2') Else ReplaceOcc ('$p' By '.$p', '=2'); \
+                                        If (PreviousSubIn(S, $p, '=3') = 'n') ReplaceOcc ('$p' By ',$p', '=3') Else ReplaceOcc ('$p' By '.$p', '=3')
+
+#define macro ISBNRegExp              | (RegFind('^[\\dxX]{10}( \\(.*\\))?\$') >= 0 Or RegFind('^[\\dxX\\-]{13}( \\(.*\\))?\$') >= 0 Or RegFind('^\\d{13}( \\(.*\\))?\$') >= 0 Or RegFind('^[\\d\\-]{17}( \\(.*\\))?\$') >= 0)
+
+#define macro KirjastotunnusISILiksi  | S; \
+                                        RegReplace('^[Ff][Ii]-?', ''); \
+                                        If (S != '') Then 'FI-' + S; \
+                                        RegReplaceTable('skandit-aakkosiksi.tbl')
+
+// *** 000 LEADER = NIMIÖ *** merkkipaikat 00-23
+
+//000             | 005             | Year+Month+Day+Hour+Minute+Second+'.0'
+000/1-5/        | 000/1-5/        | S
+000/6/          | 000/6/          | S; Replace (' ' By 'c')
+000/7-8/        | 000/7-8/        | Table ('000-06-07-tyyppi+taso.tbl') // Info: l jätetty taulukosta pois, ks. alla. Oletuksena 'am', jos input tyhjÃ¤.
+000/7/          | 000/7/          | If (S = 'l' And @008/22/ = 'd') Then 'a'
+000/7/          | 000/7/          | If (S = 'l' And @008/22/ != 'd') Then 'm'
+000/7/          | 007/1-14/       | If (S = 'l') Then 'c|||||||||||||'
+000/7/          | 007/1-13/       | If (S = 'h') Then 'hu|||||||||||'
+000/8/          | 000/8/          | If (@000/7/ = 'l') Then S
+// Info: Kun 310 $a:ssa fraasi 'Päivitetään jatkuvasti' (Fennica), muutetaan kohteeksi 'i'.
+000/8/          | 000/8/          | If (S = 's' And RegFind(@310$a, '[Pp]\c3\a4ivitet\c3\a4\c3\a4n jatkuvasti') >= 0) Then 'i'
+000/8/          | 006/1-18/       | If (@000/8/ = 's' And @000/7/ != 'a' And @000/7/ != 'd' And @000/7/ != 'f' And @000/7/ != 't') Then 's|||||||||||||||||'
+000/9/          | 000/9/          | ' '
+000/10/         | 000/10/         | 'a'
+000/11-12/      | 000/11-12/      | '22'
+000/13-17/      | 000/13-17/      | S
+000/18/         | 000/18/         | Table ('000-17-koodaustaso.tbl')
+000/19/         | 000/19/         | 'a'
+000/20/         | 000/20/         | ' '
+000/21-24/      | 000/21-24/      | '4500'
+
+001(1)          | 001(1)          | S
+
+//Kohaa varten 001:n lähdetieto
+003             | 003             | S
+
+005             | 005             | S
+
+// *** 008 INFORMAATIOKOODIT *** merkkipaikat 00-39
+
+008             | 008/1-40/       | '||||||||||||||||||||||||||||||||||||||||'
+
+// 008 ALL MATERIALS = KAIKKI AINEISTOT
+
+008/1-6/        | 008/1-6/        | S
+008/7/          | 008/7/          | If (S = 'x') Then 'u' Else S
+008/8-11/       | 008/8-11/       | S; Replace (' ' By 'u')
+008/12-15/      | 008/12-15/      | If (@008/7/ = 's') Then '    ' Else If (@008/7/ = 'x') Then 'uuuu' Else S
+008/16-18/      | 008/16-18/      | Table ('008-15-maakoodit.tbl')
+008/40/         | 008/40/         | If (@000/18/ = '5') Then ' ' Else 'c'
+
+// 008 (BK) BOOKS = KIRJAT
+#if (InTable(@000/7-8/, '000-06-07.tbl'))
+008/23/         | 008/23/         | Table ('008-22-kohderyhma.tbl')
+008/24/         | 008/24/         | Table ('008-23-BK-ilmiasu.tbl')
+008/24/         | 904(new)$a      | If (S = 'p' or S = 'r') Then S
+008/25/         | 008/25/         | Table ('008-24-BK-sisalto.tbl')
+008/26/         | 008/26/         | If (@008/25/ != ' ') Then Table ('008-25-BK-sisalto.tbl')
+008/27-28/      | 008/27-28/      | If (@008/25/ != ' ') Then '  '
+008/29/         | 008/29/         | Table ('008-28-virallisjulkaisut.tbl')
+008/30/         | 008/30/         | If (S != ' ') Then S
+008/31/         | 008/31/         | If (S != ' ') Then S
+008/32/         | 008/32/         | If (S != ' ') Then S
+008/33/         | 008/25/         | If (S != ' ') Then 'o'
+008/33/         | 500(new)$a      | If (InTable(S, '008-32-arvostelukoodi.tbl')) Then Table ('008-32-arvostelukoodi.tbl')
+008/33/         | 008/33/         | '|'
+008/34/         | 008/34/         | Table ('008-33-kirjallisuuslaji.tbl')
+008/34/         | 008/25/         | If (@008/34/ = 't') Then 'z' Else If (@008/34/ = 'w') Then 'u' Else If (@008/34/ = 'x') Then 'l' 
+008/35/         | 008/35/         | If (S != ' ') Then S
+// 008 --> 007
+008/24/         | 007/1-13/       | If (S = 'a') Then 'hu|||||||||||'
+008/24/         | 007/1-13/       | If (S = 'b') Then 'he|||||||||||'
+008/24/         | 007/1-2/        | If (S = 'd') Then 'tb'
+008/24/         | 007/1-10/       | If (S = 'f') Then 'fb||||||||'
+008/24/         | 007/1-6/        | If (S = 'g') Then 'ku||||'
+008/24/         | 007/1-9/        | If (S = 'h') Then 'gu||||||'
+008/24/         | 007/1-14/       | If (S = 'm') Then 'cu||||||||||||'
+008/24/         | 007/1-8/        | If (S = 'k') Then 'au||||||'
+008/24/         | 007/1-14/       | If (S = 'v') Then 'su|||||||||||'
+008/24/         | 007/1-2/        | If (S = 'y') Then 'ou'
+#endif
+
+// Moniviestin, muutos 000/06=m (BK) -> 000/06=o (VM)
+#if (@000/7/ = 'm')
+008/23/         | 008/23/         | Table ('008-22-kohderyhma.tbl')
+008/24/         | 008/30/         | Table ('008-23-BK-ilmiasu.tbl')
+008/24/         | 008/34/         | Table ('008-23-p-ilmiasu.tbl')
+// 008 --> 006
+008/25/         | 006/1-18/       | If (S != ' ' Or @008/29-35/ != '       ') Then 'a|||||||||||||||||'
+008/25/         | 006/8/          | If (S != ' ' Or @008/29-35/ != '       ') Then Table ('008-24-BK-sisalto.tbl')
+008/26/         | 006/9-11/       | If ((@008/25/ != ' ' Or @008/29-35/ != '       ') And @008/25/ != 'h' And @008/25/ != 'u' And @008/25/ != ' ') Then '   '
+008/29/         | 006/12/         | If ((@008/25/ != ' ' Or @008/29-35/ != '       ') And S != ' ') Then Table ('008-28-virallisjulkaisut')
+008/30/         | 006/13/         | If ((@008/25/ != ' ' Or @008/29-35/ != '       ') And S != ' ') Then S
+008/31/         | 006/14/         | If ((@008/25/ != ' ' Or @008/29-35/ != '       ') And S != ' ') Then S
+008/32/         | 006/15/         | If ((@008/25/ != ' ' Or @008/29-35/ != '       ') And S != ' ') Then S
+008/33/         | 006/8/          | If ((@008/25/ != ' ' Or @008/29-35/ != '       ') And S != ' ') Then 'o'
+008/34/         | 006/17/         | If (@008/25/ != ' ' Or @008/29-35/ != '       ') Then Table ('008-33-kirjallisuuslaji.tbl')
+008/35/         | 006/18/         | If ((@008/25/ != ' ' Or @008/29-35/ != '       ') And S != ' ') Then S
+// 008 --> 007
+008/24/         | 007/1-13/       | If (S = 'a' Or S = 'b')) Then 'hu|||||||||||'
+008/24/         | 007/1-2/        | If (S = 'd') Then 'tb'
+008/24/         | 007/1-10/       | If (S = 'f') Then 'fb||||||||'
+008/24/         | 007/1-6/        | If (S = 'g') Then 'ku||||'
+008/24/         | 007/1-9/        | If (S = 'h') Then 'gu||||||'
+008/24/         | 007/1-14/       | If (S = 'm') Then 'cu||||||||||||'
+008/24/         | 007/1-8/        | If (S = 'k') Then 'au||||||'
+008/24/         | 007/1-14/       | If (S = 'v') Then 'su|||||||||||'
+008/24/         | 007/1-2/        | If (S = 'y') Then 'ou'
+#endif
+
+// 008 (CR) CONTINUING RESOURCES = JATKUVAT JULKAISUT
+#if (@000/7-8/ = 'ab' Or @000/7-8/ = 'as')
+008/19/         | 008/19/         | Table ('008-18-CR-ilmestymistiheys.tbl')
+008/22/         | 008/22/         | Table ('008-21-CR-tyyppi.tbl')
+008/23/         | 008/23/         | '|'
+008/24/         | 008/24/         | Table ('008-23-CR-ilmiasu.tbl')
+008/25/         | 008/25/         | Table ('008-24-CR-sisalto.tbl')
+008/29/         | 008/29/         | Table ('008-28-virallisjulkaisut.tbl')
+008/30/         | 008/30/         | If (S != ' ') Then S
+008/34/         | 008/34/         | S; Replace (' ' By '|')
+008/35/         | 008/35/         | If (%000/8/ = 'i') Then '1' Else '0'
+// 008 --> 007
+008/24/         | 007/1-13/       | If (S = 'a') Then 'hu|||||||||||'
+008/24/         | 007/1-10/       | If (S = 'f') Then 'fb||||||||'
+008/24/         | 007/1-6/        | If (S = 'g') Then 'ku||||'
+008/24/         | 007/1-14/       | If (S = 'm' Or S = 't' Or S = 's' Or S = 'i') Then 'cu||||||||||||'
+008/24/         | 007/1-14/       | If (S = 'v') Then 'su|||||||||||'
+008/24/         | 007/1-2/        | If (S = ' ') Then 'tu'
+008/24/         | 007/2/          | If ((S = 'm' Or S = 't' Or S = 's' Or S = 'i') And InTable(S, '008-23-CR-ilmiasu-to-007-01.tbl')) Then Table ('008-23-CR-ilmiasu-to-007-01.tbl')
+008/25/         | 655(new)I1      | If (InTable(S, '008-24-CR-muototermi.tbl')) Then ' '
+008/25/         | 655(newest)I2   | If (InTable(S, '008-24-CR-muototermi.tbl')) Then '7'
+008/25/         | 655(newest)$a   | If (InTable(S, '008-24-CR-muototermi.tbl')) Then Table('008-24-CR-muototermi.tbl')
+008/25/         | 655(newest)$2   | If (InTable(S, '008-24-CR-muototermi.tbl')) Then 'ysa'
+008/29/         | 655(new)I1      | If (InTable(S, '008-28-CR-muototermi.tbl')) Then ' '
+008/29/         | 655(newest)I2   | If (InTable(S, '008-28-CR-muototermi.tbl')) Then '7'
+008/29/         | 655(newest)$a   | If (InTable(S, '008-28-CR-muototermi.tbl')) Then Table('008-28-CR-muototermi.tbl')
+008/29/         | 655(newest)$2   | If (InTable(S, '008-28-CR-muototermi.tbl')) Then 'ysa'
+008/30/         | 655(new)I1      | If (InTable(S, '008-29-CR-muototermi.tbl')) Then ' '
+008/30/         | 655(newest)I2   | If (InTable(S, '008-29-CR-muototermi.tbl')) Then '7'
+008/30/         | 655(newest)$a   | If (InTable(S, '008-29-CR-muototermi.tbl')) Then Table('008-29-CR-muototermi.tbl')
+008/30/         | 655(newest)$2   | If (InTable(S, '008-29-CR-muototermi.tbl')) Then 'ysa'
+008/31/         | 655(new)I1      | If (InTable(S, '008-30-CR-muototermi.tbl')) Then ' '
+008/31/         | 655(newest)I2   | If (InTable(S, '008-30-CR-muototermi.tbl')) Then '7'
+008/31/         | 655(newest)$a   | If (InTable(S, '008-30-CR-muototermi.tbl')) Then Table('008-30-CR-muototermi.tbl')
+008/31/         | 655(newest)$2   | If (InTable(S, '008-30-CR-muototermi.tbl')) Then 'ysa'
+#endif
+
+
+// 008 (MP) MAPS = KARTAT
+#if (@000/7/ = 'e' Or @000/7/ = 'f')
+008/19/         | 008/19/         | If (S = 'l') Then 'z' Else If (S != ' ') Then S
+008/20/         | 008/20/         | If (@008/20/ != ' ') Then Table ('008-19-MP-korkeustiedot.tbl')
+008/21/         | 008/21/         | If (@008/20/ != ' ') Then Table ('008-19-MP-korkeustiedot.tbl')
+008/22/         | 500(new)$a      | If (InTable(S, '008-26-MP-kartan-esitystekniikka.tbl')) Then Table ('008-26-MP-kartan-esitystekniikka.tbl')
+008/23-24/      | 008/23-24/      | Table ('008-22-MP-projektio.tbl')
+008/25/         | 500(new)$a      | If (InTable(S, '008-24-MP-0-meridiaani.tbl')) Then Table ('008-24-MP-0-meridiaani.tbl')
+008/26/         | 008/26/         | Table ('008-25-MP-karttatyyppi.tbl')
+008/29/         | 008/29/         | Table ('008-28-virallisjulkaisut.tbl')
+008/31/         | 500(new)$a      | If (InTable(S, '008-29-MP-kartan-teksti.tbl')) Then Table ('008-29-MP-kartan-teksti.tbl')
+008/32/         | 008/32/         | Table ('008-31-MP-sijaintihakemisto.tbl')
+// 008 --> 007
+008/26/         | 007/1-6/        | If (S = 'd') Then 'du||||'
+008/26/         | 007/1-6/        | If (S = 'e') Then 'ad||||'
+008/26/         | 007/1-8/        | If (S != 'd' And S != 'e') Then 'au||||||'
+008/27/         | 007/7/          | Table ('007-06-a-valmistusmenetelma.tbl')
+008/30/         | 007/4/          | S; Replace ('b' By 'c');
+                                    Replace (' ' By '|')
+008/33/         | 007/5/          | Table ('007-04-a-valmistusmateriaali.tbl')
+#endif
+
+// 008 (MU) MUSIC = MUSIIKKI
+#if (@000/7/ = 'c' Or @000/7/ = 'd' Or @000/7/ = 'i' Or @000/7/ = 'j')
+008/21/         | 008/19-20/      | Table ('008-18-MU-musiikinlaji.tbl')
+008/22/         | 008/21/         | Table ('008-20-nuottijulkaisun-tyyppi.tbl')
+008/23/         | 008/23/         | If (@008/21/ = 'h') Then 'j' Else Table ('008-22-kohderyhma.tbl')
+008/24/         | 008/24/         | If (@000/7/ = 'c' Or @000/7/ = 'd') Then Table ('008-23-MU-ilmiasu.tbl')
+008/26/         | 008/25/         | If (S = 'a' Or S = 'b') Then 'z'
+008/28/         | 008/32/         | '|'
+008/34/         | 008/31-32/      | Table ('008-30-MU-kirjallisuuslaji.tbl')
+// 008 --> 007
+008/24          | 007/1-2/        | If ((@000/7/ = 'c' Or @000/7/ = 'd') And S = ' ') Then 'qu'
+008/24/         | 007/1-13/       | If ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = 'a' Or S = 'b')) Then 'hu|||||||||||'
+008/24/         | 007/1-2/        | If ((@000/7/ = 'c' Or @000/7/ = 'd') And S = 'd') Then 'tb'
+008/24/         | 007/1-9/        | If ((@000/7/ = 'c' Or @000/7/ = 'd') And S = 'e') Then 'vd|||||||'
+008/24/         | 007/1-10/       | If ((@000/7/ = 'c' Or @000/7/ = 'd') And S = 'f') Then 'fb||||||||'
+008/24/         | 007/1-14/       | If ((@000/7/ = 'c' Or @000/7/ = 'd') And S = 'm') Then 'cu||||||||||||'
+008/24/         | 007/1-14/       | If (@000/7/ = 'i' Or @000/7/ = 'j') Then 's|||||||||||||'
+008/24          | 007/2/          | If (@000/7/ = 'i' Or @000/7/ = 'j') Then Table ('007-01-s-erityismaare.tbl')
+008/27/         | 007/14/         | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then S; Replace (' ' By '|')
+008/29/         | 007/4/          | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then Table ('007-03-s-nopeus.tbl')
+008/30/         | 007/5/          | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then S; Replace (' ' By '|')
+008/31/         | 007/7/          | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then Table ('007-06-s-mitat.tbl')
+008/32/         | 007/8/          | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then Table ('007-07-s-nauhan-leveys.tbl')
+008/33/         | 007/11/         | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then Table ('007-10-s-materiaali.tbl')
+008/35/         | 007/9/          | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then Table ('007-08-s-raitojen-maara.tbl')
+008/36/         | 007/10/         | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then S; Replace (' ' By '|')
+008/37/         | 007/13/         | If (Not ((@000/7/ = 'c' Or @000/7/ = 'd') And (S = ' ') Or (S = 'd'))) Then S; Replace (' ' By '|')
+#endif
+
+// 007 (sd) Äänilevy
+#if ((@000/7/ = 'i' Or @000/7/ = 'j') And @008/24/ = 'q')
+008/24/         | 007/2/          | 'd'
+008/29/         | 007/4/          | If (S = 'b' Or S = 'c') Then S
+008/33/         | 007/11/         | 'p'
+008/27/         | 007/14/         | 'e'
+#endif
+
+// 007 (sr) CD-levy
+#if ((@000/7/ = 'i' Or @000/7/ = 'j') And @008/24/ = 'r')
+008/24/         | 007/2/          | 'd'
+008/33/         | 007/11/         | 'm'
+008/27/         | 007/14/         | 'd'
+#endif
+
+// 007 (ss) C-kasetti
+#if ((@000/7/ = 'i' Or @000/7/ = 'j') And @008/24/ = 's')
+008/24/         | 007/2/          | 's'
+008/31          | 007/7/          | 'j'
+#endif
+
+// 007 (sf) DAT
+#if ((@000/7/ = 'i' Or @000/7/ = 'j') And @008/24/ = 't')
+008/24/         | 007/2/          | 's'
+008/27/         | 007/14/         | 'd'
+#endif
+
+// 008 (VM) VISUAL MATERIALS = VISUAALINEN AINEISTO
+
+#if (@000/7/ = 'g' Or @000/7/ = 'k' Or @000/7/ = 'r')
+008/21/         | 008/35/         | If (S = 'c') Then 'a' Else '|'
+008/23/         | 008/23/         | S; Replace (' ' By '|')
+008/24/         | 008/34/         | If (S != 'c' Or S != 'd') Then Table ('008-33-VM-tyyppi.tbl')
+008/24/         | 008/30/         | If (S = 'c' Or S = 'd') Then Table ('008-29-VM-form.tbl')
+008/26/         | 500(new)$a      | If (InTable(S, '008-23-VM-liiteaineisto.tbl')) Then Table ('008-23-VM-liiteaineisto.tbl')
+008/28/         | 008/24/         | ' '
+// 008 --> 007
+008/30/         | 007/4/          | Table ('007-03-v-varit')
+#endif
+
+
+//008/24 = Visuaalisen aineiston ilmiasu
+// Dia
+#if (@000/7/ = 'g' And @008/24/ = 'a')
+008/24/         | 007/1-9/        | 'gs|||||||'
+#endif
+
+// Kalvo
+#if (@000/7/ = 'g' And @008/24/ = 'b')
+008/24/         | 007/1-9/        | 'gt|||||||'
+#endif
+
+
+// Mikrotallenne, muutos 000/06-07=ha tai hm (VM) -> 000/06-07=aa tai am (BK)
+// Mikrotallenne, muutos 000/06-07=hb tai hs (VM) -> 000/06-07=ab tai as (CR)
+// <-- BK:lle ja CR:lle soveltuu samat sÃ¤Ã¤nnÃ¶t.
+#if (@000/7/ = 'h' And @008/24/ = 'c' Or @008/24/ = 'd')
+008/23/         | 008/23/         | If (@000/8/ = 'a' Or @000/8/ = 'm') Then Table ('008-22-kohderyhma.tbl')
+008/23/         | 008/23/         | If (@000/8/ != 'a' And @000/8/ != 'm') Then ' '
+008/34/         | 008/24/         | Table ('008-33-h-ilmiasu.tbl')
+//008 -> 007
+008/24/         | 007/1-13/       | If (@000/7/ = 'h' And @008/24/ = 'd') Then 'he|||||||||||'
+008/31/         | 007/6/          | S; Replace (' ' By '|')
+008/32          | 007/5/          | S; Replace (' ' By '|')
+008/33/         | 007/11/         | Table ('007-10-h-laatu.tbl')
+#endif
+
+// Filmi
+#if (@000/7/ = 'g' And @008/24/ = 'e')
+008/24/         | 007/1-23/       | 'mu|||||||||||||||||||||'
+008/22/         | 007/13/         | Table ('007-filmipohja.tbl')
+008/25/         | 007/17/         | Table ('007-16-m-taydellisyys.tbl')
+008/32/         | 007/8/          | Table ('007-07-m-leveys.tbl')
+008/34/         | 007/5/          | S; Replace (' ' By '|')
+008/35/         | 007/7/          | Table ('007-06-m-aanilahde.tbl')
+008/36/         | 007/12/         | Table ('007-11-m-sukupolvi.tbl')
+008/37/         | 007/11/         | S; Replace (' ' By '|')
+#endif
+
+// Hologrammi
+#if (@000/7/ = 'g' And @008/24/ = 'f')
+008/24/         | 007/1-9/        | 'gu|||||||'
+#endif
+
+// Graafinen lehti
+#if (@000/7/ = 'k' And @008/24/ = 'g')
+008/24/         | 007/1-6/        | 'kj||||'
+008/29/         | 007/5/          | If (@008/29 = 'b') Then 'c' Else If (@008/29 = 'f') Then 'v' Else S
+#endif
+
+// Juliste
+#if (@000/7/ = 'k' And @008/24/ = 'h')
+008/24/         | 007/1-6/        | 'kk||||'
+008/29/         | 007/5/          | If (@008/29 = 'b') Then 'c' Else If (@008/29 = 'f') Then 'v' Else S
+#endif
+
+// Maalaus
+#if (@000/7/ = 'k' And @008/24/ = 'i')
+008/24/         | 007/1-6/        | 'ke||||'
+008/29/         | 007/5/          | If (@008/29 = 'b') Then 'c' Else If (@008/29 = 'f') Then 'v' Else S
+#endif
+
+// Piirros
+#if (@000/7/ = 'k' And @008/24/ = 'j')
+008/24/         | 007/1-6/        | 'kd||||'
+008/29/         | 007/5/          | If (@008/29 = 'b') Then 'c' Else If (@008/29 = 'f') Then 'v' Else S
+#endif
+
+// Painokuva
+#if (@000/7/ = 'k' And @008/24/ = 'k')
+008/24/         | 007/1-6/        | 'kf||||'
+008/29/         | 007/5/          | If (@008/29 = 'b') Then 'c' Else If (@008/29 = 'f') Then 'v' Else SS
+#endif
+
+// Valokuva
+#if (@000/7/ = 'k' And @008/24/ = 'l')
+008/24/         | 007/1-6/        | 'kv||||'
+008/29/         | 007/5/          | If (@008/29 = 'b') Then 'c' Else If (@008/29 = 'f') Then 'v' Else S
+#endif
+
+// Optinen levy
+#if (@000/7/ = 'g' And @008/24/ = 'm')
+008/24/         | 007/1-9/        | 'vd|||||||'
+008/27/         | 007/5/          | Table ('007-04-v-jarjestelma.tbl');
+                                    If (RegFind(@300$z, '[dD][vV][dD]') >= 0) 'v';
+                                    If (RegFind(@300$z, '[bB][lL][uU]-?[rR][aA][yY]') >= 0) 's'
+008/30/         | 007/4/          | Table ('007-03-v-varit')
+#endif
+
+//Videokasetti
+#if (@000/7/ = 'g' And @008/24/ = 'n')
+008/24/         | 007/1-9/        | 'vf|||||||'
+008/27/         | 007/5/          | Table ('007-04-v-jarjestelma.tbl')
+008/30/         | 007/4/          | Table ('007-03-v-varit')
+#endif
+
+// Videokela
+#if (@000/7/ = 'g' And @008/24/ = 'o')
+008/24/         | 007/1-9/        | 'vr|||||||'
+008/27/         | 007/5/          | Table ('007-04-v-jarjestelma.tbl')
+008/30/         | 007/4/          | Table ('007-03-v-varit')
+#endif
+
+// Esine, peli, muu
+#if (@000/7/ = 'r' And (@008/24/ = 'p' Or @008/24/ = 'r' Or @008/24/ = 'z'))
+008/24/         | 007/1-2/        | 'zu'
+#endif
+
+// Kooste
+#if ((@000/7/ = 'g' Or @000/7/ = 'k' Or @000/7/ = 'r') And @008/24/ = 'q')
+008/24/         | 007/1-2/        | 'ou'
+#endif
+
+// Bly-ray
+#if (@000/7/ = 'g' And @008/24/ = 'x')
+008/24/         | 007/1-2/        | 'vd'
+008/24/         | 007/5/          | 's'
+#endif
+// DVD puukotus avoin kirjasto jee jee
+#if (@000/7/ = 'g' And @008/24/ = 'z')
+008/24/         | 007/1-2/        | 'vd'
+008/24/         | 007/5/          | 'v'
+//ei ollutkaan tämä rivi hyvä idea 008/24/         | 008/24/         | 'm'
+#endif
+
+
+// 008 (AM) ARCHIVAL MATERIALS = ARKISTOAINEISTO
+// muutos 000/06-07=ba, bm, bb tai bs (AM) --> 000/06-07=pc (MX)  [Kaikista arkistoaineistoista tulee kokoelmia (pc).]
+#if (@000/7/ = 'b')
+008/22/         | 500(new)$a      | If (InTable(S, '008-21-AM-tyyppi.tbl')) Then Table ('008-21-AM-tyyppi.tbl')
+008/24/         | 008/24/         | Table ('008-23-AM-ilmiasu.tbl')
+// 008 --> 007
+008/24/         | 007/1-9/        | If (S = 'a' Or S = 'b') Then 'gu||||||'
+008/24/         | 007/1-13/       | If (S = 'c' Or S = 'd') Then 'hu|||||||||||'
+008/24/         | 007/1-10/       | If (S = 'f') Then 'fb||||||||'
+008/24/         | 007/1-6/        | If (S = 'j' Or S = 'l') Then 'ku||||'
+008/24/         | 007/1-14/       | If (S = 'm' Or S = 'o') Then 'cu||||||||||||'
+008/24/         | 007/1-9/        | If (S = 'n') Then 'vf|||||||'
+008/24/         | 007/1-8/        | If (S = 'q') Then 'au||||||'
+008/24/         | 007/1-2/        | If (S = 'r') Then 'qu'
+008/24/         | 007/1-14/       | If (S = 'v') Then 'su|||||||||||'
+008/24/         | 007/2/          | If (InTable(S, '008-23-AM-ilmiasu-to-007-01.tbl')) Then Table ('008-23-AM-ilmiasu-to-007-01.tbl')
+#endif
+
+// 008 (CF) COMPUTER FILES = ELEKTRONINEN AINEISTO
+// Seuraavilla kolmilla ehdoilla koko 008: 1. tuloksena BK, 2. tuloksena CR, 3. tuloksena CF
+// 1. If (@000/7/ = 'l') And (@000/8/ = 'a' Or @000/8/ = 'm') And (@008/22/ = 'd')
+// 2. If (@000/7/ = 'l') And (@000/8/ = 'b' Or @000/8/ = 's') And (@008/22/ = 'd')
+// 3. If (@000/7/ = 'l') And (@008/22/ != 'd')
+
+// 1. 000/06-07 la tai lm (CF) --> aa tai am (BK)
+#if (@000/7/ = 'l' And (@000/8/ = 'a' Or @000/8/ = 'm') And @008/22/ = 'd')
+008/23/         | 008/23/         | Table ('008-22-kohderyhma.tbl')
+008/24/         | 008/24/         | 's'
+008/25/         | 008/25/         | Table ('008-24-BK-sisalto.tbl')
+008/26/         | 008/26/         | If (@008/26/ != ' ') Then Table ('008-25-BK-sisalto.tbl')
+008/27-28/      | 008/27-28/      | If (@008/26/ != ' ') Then '  '
+008/29/         | 008/29/         | If (S != ' ') Then S
+008/34/         | 008/34/         | Table ('008-33-kirjallisuuslaji.tbl')
+008/34/         | 008/25/         | If (@008/34/ = 't') Then 'z' Else If (@008/34/ = 'w') Then 'u' Else If (@008/34/ = 'x') Then 'l'
+// 008 --> 007
+008/24/         | 007/2/          | Table ('008-23-CF-ilmiasu-to-007.tbl')
+#endif
+
+// 2. 000/06-07 lb tai ls (CF) --> ab tai as (CR)
+#if (@000/7/ = 'l' And (@000/8/ = 'b' Or @000/8/ = 's') And @008/22/ = 'd')
+008/19/         | 008/19/         | Table ('008-18-CR-ilmestymistiheys.tbl')
+008/24/         | 008/24/         | 's'
+008/25/         | 008/25/         | Table ('008-24-CR-sisalto.tbl')
+008/29/         | 008/29/         | If (S != ' ') Then S
+// 008 --> 007
+008/24/         | 007/2/          | Table ('008-23-CF-ilmiasu-to-007.tbl')
+#endif
+
+// 3. 000/06-07 la tai lm (CF) --> ma tai mm (CF)
+#if (@000/7/ = 'l' And @008/27/ != 'd')
+008/22/         | 008/27/         | If (S != ' ') Then S Else '|'
+008/23/         | 008/23/         | Table ('008-22-kohderyhma.tbl')
+008/29/         | 008/29/         | If (S != ' ') Then S
+// 008 --> 007
+008/24/         | 007/2/          | Table ('008-23-CF-ilmiasu-to-007.tbl')
+#endif
+
+// *** VAIHTUVAMITTAISET KENTÄT ***
+
+
+012$a           | 015(new)$a      | S + '$2skl'
+
+// Oletuksena 014 konvertoituu kenttään 019 (Local field).
+// Jos FINUC-tunnusta ei haluta säilyttää, kommentoidaan seuraava rivi pois.
+014$a           | 019$a           | S
+
+015I1           | 015I1           | ' '
+015I2           | 015I2           | ' '
+015$a           | 015(new)$a      | S + '$2skl'
+
+021I1           | 020I1           | ' '
+021I2           | 020I2           | ' '
+021$a           | 020(nt)$a       | S
+//OPLIB puukotus, muutettu alla olevaan riviin  021$c           | 020(nt)$a       | +' (' +S +')'
+021$c           | 020(nt)$q       | S
+021$d           | 020(nt)$c       | S
+021$e           | 020(nt)$c       | If Exists ($d) Then ($d+', ' + S) Else S
+021$z           | 020(nt)$z       | S
+
+022I1           | 022I1           | If (I1=0 Or I1=1) Then S Else ' '
+022I2           | 022I2           | ' '
+022             | 022             | S
+
+024I1           | 024I1           | '0'
+024I2           | 024I2           | ' '
+024             | 024             | S
+
+025I1           | 024(no)I1       | '2'
+025I2           | 024(no)I2       | ' '
+025$a           | 024(no)$a       | S
+025$c           | 024(no)$a       | +' (' +S +')'
+025$d           | 024$c           | S
+025$e           | 024$c           | If Exists ($d) Then ', '+S Else S
+025$z           | 024$z           | S
+
+027             | 027I1           | ' '
+027             | 027I2           | ' '
+027$a           | 027$a           | S
+
+028I1           | 028(new)I1      | If (Exists ($a) Or Exists ($e)) Then '0' Else ' '
+028I2           | 028(newest)I2   | '1'   // Arvo marc21musa-sovellusohjeesta
+028$a           | 028$b           | S
+// Buginen paska rivi ;) 028$e           | 028$b           | If (Not Exists($a)) Then @260(1)$b; RegReplace('(.+)\\s?\\[.+\\]', '\\1')
+//Korjataan meidän OMALLA muutoksella käyttäen lookahead assertionia ja tuhoamalla suorituskyvyn täysin.
+028$e           | 028$b           | If (Not Exists($a)) Then @260(1)$b; RegReplace('(.+)(?=\\s)\\s?\\[.+\\]', '\\1')
+028$e           | 028$a           | S
+028$b           | 028(nto)I1      | If (n=1) Then '1'
+028$b           | 028(nto)I2      | If (n=1) Then '1'
+028$b           | 028(nto)$a      | If (n=1) Then S
+028$b           | 028$a(nso)      | If (n=2) Then S
+028$b           | 028$a(nso)      | If (n=3) Then S
+028$b           | 028$a(nso)      | If (n=4) Then S
+028$b           | 028$a(nso)      | If (n=5) Then S
+028$c           | 028(nto)I1      | If (n=1) Then '2'
+028$c           | 028(nto)I2      | If (n=1) Then '1'
+028$c           | 028(nto)$a      | If (n=1) Then S
+028$c           | 028$a(nso)      | If (n=2) Then S
+028$c           | 028$a(nso)      | If (n=3) Then S
+028$c           | 028$a(nso)      | If (n=4) Then S
+028$c           | 028$a(nso)      | If (n=5) Then S
+028$d           | 028$q           | S 
+
+029I1           | 024(new)I1      | '3'
+029I2           | 024(newest)I2   | ' '
+029$a           | 024(newest)$a   | S
+029$c           | 024(newest)$d   | S
+
+//Oletuksena Allfons-numero konvertoidaan kenttÃ¤Ã¤n 972.  Vaihtoehtona on kenttÃ¤ 024 8_.
+031             | 972             | S
+//031I1           | 024I1            | '8'
+//031I2           | 024I2            | ' '
+//031             | 024              | S
+
+033I1           | 033I1           | '0'
+033I2           | 033I2           | ' '
+033$a           | 033$a           | Replace('r' By '', at Beginning); If (Len(S)=4) Then S + '----'
+033$a           | 033$a           | Replace('r' By '', at Beginning); If (Len(S)=6) Then S + '--'
+033$a           | 033$a           | Replace('r' By '', at Beginning); If (Len(S)>6) Then S
+033$b           | 033$p           | S 
+
+034I1           | 034I1           | If (I1='2') Then '3' Else S
+034I2           | 034I2           | ' '
+034$a           | 034$a           | Replace ('b' By 'a'); Replace ('ab' By 'a')
+034$b           | 034$b           | S
+034$c           | 034$c           | S
+034$d           | 034$d           | S
+034$e           | 034$e           | S 
+034$f           | 034$f           | S
+034$g           | 034$g           | S
+034$h           | 034$h           | S
+034$j           | 034$j           | S
+034$k           | 034$k           | S
+034$l           | 034$m           | S
+034$n           | 034$n           | S
+034$p           | 034$p           | S
+
+035I1           | 035I1           | ' '
+035I2           | 035I2           | ' '
+035$a           | 035$a           | S
+
+039             | 039             | S
+
+040$a           | 040$a           | KirjastotunnusISILiksi
+040$b           | 040$d           | KirjastotunnusISILiksi
+//JOKUNEN läpivienti KOHA:lle
+040$c           | 040$c           | S
+
+
+041I1           | 041I1           | If (I1=' ') Then '0' Else S
+041I2           | 041I2           | ' '
+041$a/1-3/(n=1) | 008/36-38/      | If (n=1) Then Table ('041-kielikoodit.tbl') 
+041$a           | <D41$a(no)      | Sto(0); RegFind('^(.{1,3})'); RegMatch(1); Redo; Mem(0); From(4)
+041$a           | <D41$d(no)      | Sto(0); RegFind('^(.{1,3})'); RegMatch(1); Redo; Mem(0); From(4)
+041$b           | <D41$b(no)      | Sto(0); RegFind('^(.{1,3})'); RegMatch(1); Redo; Mem(0); From(4)
+041$c           | <D41$h(no)      | Sto(0); RegFind('^(.{1,3})'); RegMatch(1); Redo; Mem(0); From(4)
+D41$a           | 041$a           | If (Not (@000/7/ = 'i' Or @000/7/ = 'j' Or (@000/7/ = 'a' And @008/24/ = 'v'))) Then S; Table('041-kielikoodit.tbl'); Replace ('$x' By '$a')
+D41$d           | 041$d           | If (@000(1)/7/ = 'i' Or @000/7/ = 'j' Or (@000/7/ = 'a' And @008/24/ = 'v')) Then S; Table('041-kielikoodit.tbl'); Replace ('$x' By '$d')
+D41$b           | 041$b           | If (@000(1)/7/ != 'g') Then Table('041-kielikoodit.tbl'); Replace ('$x' By '$b')
+D41$b           | 041$j           | If (@000(1)/7/ = 'g') Then Table('041-kielikoodit.tbl'); Replace ('$x' By '$j')
+D41$h           | 041$h           | Table('041-kielikoodit.tbl'); Replace ('$x' By '$h')
+
+044I1           | 521I1           | ' '
+044I2           | 521I2           | ' '
+044$c           | 521$a           | S;
+044$d           | 521$b           | S;
+
+044$a           | 007/18-23/      | If (%007(1)/01/='m' Or %007(2)/01/='m' Or %007(3)/01/='m') Then S
+
+045(1)I1        | 045I1           | If ((Not Exists(@045$a)) And (Not Exists(@045$b))) Then ' ' Else S
+045(1)I2        | 045I2           | ' '
+045$a           | 045$b           | S
+045$b           | 045$c           | S
+045$c           | 045$b           | 'd' + S
+
+050             | 080(new)$a      | S;
+                                    Replace ('(' By '$x(');
+                                    Replace ('-' By '$x-');
+                                    Replace ('=' By '$x=');
+                                    Replace ('"' By '$x"');
+                                    Replace ('*' By '$x*')
+
+052             | 052(new)        | S
+
+//Info: 1)  Kirjastokohtaiset luokitukset konvertoidaan 09-alkuisiin kenttiin.
+//2) Kirjastokohtaiset luokitukset ovat hyllyluokituksia, jolloin ne konvertoidaan sijaintikenttään 852.
+//1) Kaikki konvertoitu 090-kenttään:
+053             | 090(new)        | S
+
+054             | 090(new)        | S
+
+055             | 090(new)        | S
+
+056             | 090(new)        | S
+
+057             | 090(new)        | S
+
+058             | 090(new)        | S
+
+059             | 090(new)        | S
+
+060             | 090(new)        | S
+
+061             | 090(new)        | S
+
+062             | 090(new)        | S
+
+063             | 090(new)        | S
+
+064             | 090(new)        | S
+
+065             | 090(new)        | S
+
+066             | 090(new)        | S
+
+067             | 090(new)        | S
+
+068             | 090(new)        | S
+
+069             | 090(new)        | S
+
+070             | 090(new)        | S
+
+071             | 090(new)        | S
+
+072             | 090(new)        | S
+
+073             | 090(new)        | S
+
+074             | 090(new)        | S
+
+075             | 090(new)        | S
+
+076             | 090(new)        | S
+
+077             | 090(new)        | S
+
+078             | 090(new)        | S
+
+079             | 090(new)        | S
+
+//2) Hyllyluokitukset konvertoidaan sijaintikenttään 852 $h. 
+// Osakenttään $a tulee kirjaston ISIL-tunnus. Tässä esimerkkejä Piki-tietokannasta:
+
+//053$a      	| 852(new)$a       | 'Fi-Hamkun'
+//053$a      	| 852(newest)$h    | S
+
+//054$a      	| 852(new)$a       | 'Fi-Kang'
+//054$a      	| 852(newest)$h    | S
+
+//055$a      	| 852(new)$a       | 'Fi-Lemp'
+//055$a      	| 852(newest)$h    | S
+
+//056$a      	| 852(new)$a       | 'Fi-Pirkka'
+//056$a      	| 852(newest)$h    | S
+
+//058$a      	| 852(new)$a       | 'Fi-Ylo'
+//058$a      	| 852(newest)$h    | S
+
+//059$a      	| 852(new)$a       | 'Fi-Vesil'
+//059$a      	| 852(newest)$h    | S
+
+080$a           | 080(new)$a      | S;
+                                    Replace ('(' By '$x(');
+                                    Replace ('-' By '$x-');
+                                    Replace ('=' By '$x=');
+                                    Replace ('"' By '$x"');
+                                    Replace ('*' By '$x*')
+
+081$a           | <AAF(new)$a(nt) | S
+AAF             | 084(new)        | S + '$2kssb'
+
+085$a           | 080(new)$a      | S;
+                                    Replace ('(' By '$x(');
+                                    Replace ('-' By '$x-');
+                                    Replace ('=' By '$x=');
+                                    Replace ('"' By '$x"');
+                                    Replace ('*' By '$x*')
+
+082I1           | 082I1           | '1'
+082I2           | 082I2           | ' '
+082$a           | 082$a           | S
+
+083I1           | 050I1           | ' '
+083I2           | 050I2           | '0'
+083$a           | 050$a           | S
+
+085$a           | 080(new)$a      | S;
+                                    Replace ('(' By '$x(');
+                                    Replace ('-' By '$x-');
+                                    Replace ('=' By '$x=');
+                                    Replace ('"' By '$x"');
+                                    Replace ('*' By '$x*')
+
+090             | 060(new)I1      | ' '
+090             | 060(newest)I2   | '0'
+090             | 060(newest)     | S
+
+092$a           | <AAA(new)$a(nt) | S
+AAA             | 084(new)        | S + '$2msc'
+
+093$a           | <AAB(new)$a(nt) | S
+AAB             | 084(new)        | S + '$2acmccs'
+
+094$a           | <AAC(new)$a(nt) | S
+AAC             | 084(new)        | S + '$2gfdc'
+
+095$a           | <AAD(new)$a(nt) | S
+AAD             | 084(new)        | S + '$2rubbk'
+
+098$a           | <AAE(new)I1     | If (I1 = '1') Then '9' Else ' '
+098$a           | <AAE(newest)I2  | ' '
+098$a           | <AAE(newest)$a(nt) | S
+AAEI1           | 084(new)I1      | S
+AAEI2           | 084(newest)I2   | S
+AAE             | 084(newest)     | S + '$2ykl'
+//Info: 098-kenttä hyllyluokituksena voidaan lisäksi konvertoida sijaintikenttään 852 $h.  Osakenttään $a konvertoidaan kirjaston ISIL-tunnus.
+
+
+100I1           | 100I1           | If (I1=1 Or I1=2) Then '1' Else S
+100I2           | 100I2           | ' '
+100$a           | <E00$a          | S
+100$h           | <E00$a          | + ', '+S; RegReplace('\\s*\\([^\\.]{2,} [^\\.]{2,}\\)\$', '')
+100$f           | <E00$c          | S
+100$c           | <E00$d          | S
+100$x           | <E00$e          | S; RegReplace('^\\((.*)\\)\$', '\\1')
+E00             | 100             | S;
+                                    MoveBefore ('d', $e);
+                                    MoveBefore ('c', $d);
+                                    Replace ('$c' By ',$c');
+                                    Replace ('$d' By ',$d');
+                                    Replace ('$e' By ',$e');
+                                    If (((RegFind('.*\\$(.)') < 0) Or (RegMatch(1) != '4')) And RegFind('\\.\$') < 0 And RegFind('\\-\$') < 0) S + '.'
+
+110I1           | 110I1           | If (S = '1') Then '1' Else If ((S = '2' Or S = ' ') And (RegFind(@110$a, ', ') >= 0)) Then '0' Else '2'
+110I2           | 110I2           | ' '
+110$p           | <E10$a          | S
+110$a           | <E10$a          | If Exists($p) Then $p +'. '+S Else S  
+110$c           | <E10$b          | S
+110$i           | <E10$n          | '(' + S + ')'
+110$k           | <E10$d          | '(' + S + ')'
+110$j           | <E10$c          | '(' + S + ')'
+110$f           | <E10$a          | + ' (' + S + ')'
+110$x           | <E10$e          | S; RegReplace('^\\((.*)\\)\$', '\\1')
+E10             | 110             | If (((RegFind('.*\\$(.)') < 0) Or (RegMatch(1) != '4')) And RegFind('\\.\$') < 0 And RegFind('\\)\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By '.$b');
+                                    Replace (')$d(' By ' :$d', Strict);
+                                    Replace (')$c(' By ' :$c', Strict);
+                                    Replace ('$e' By ',$e')
+
+111I1           | 111I1           | If (RegFind(@111$a, ', ') >= 0) Then '0' Else '2'
+111I2           | 111I2           | ' '
+111$a           | <E11$a          | S
+111$c           | <E11$e          | S
+111$i           | <E11$n          | '(' + S + ')'
+111$k           | <E11$d          | '(' + S + ')'
+111$j           | <E11$c          | '(' + S + ')'
+111$f           | <E11$a          | + ' (' + S + ')'
+111$x           | <E11$j          | S; RegReplace('^\\((.*)\\)\$', '\\1')
+E11             | 111             | If (((RegFind('.*\\$(.)') < 0) Or (RegMatch(1) != '4')) And RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    Replace ('$e' By '.$e');
+                                    Replace (')$d(' By ' :$d', Strict);
+                                    Replace (')$c(' By ' :$c', Strict);
+                                    Replace ('$j' By ',$j')
+
+210I1           | 210I1           | '1'
+210I2           | 210I2           | ' '
+210$a           | 210$a           | S
+210$b           | 210$b           | '(' + S + ')'; Replace ('Atk-tall' By 'Elektroninen ain')
+210$c           | 210$b           | + ' (' + S + ')'
+
+222I1           | 222I1           | ' '
+222I2           | 222I2           | S; Replace (' ' By '0')
+222$a           | 222$a           | S
+222$b           | 222$b           | '(' + S + ')'; Replace ('Atk-tallenne' By 'Elektroninen aineisto')
+
+// Info: 240:stä tehdään 130, jos inputissa ei ole 1XX-kenttää.//
+240I1           | 130I2           | If (Not Exists(@1??)) Then ' '
+240I2           | 130I1           | If (Not Exists(@1??)) Then S; Replace (' ' By '0')
+240I1           | 240I1           | If (Exists(@1??)) Then '1'
+240I2           | 240I2           | If (Exists(@1??)) Then S; Replace (' ' By '0')
+240$a           | <E40$a          | S
+240$n           | <E40(nt)$g(1)   | If ((Not Exists(@1??)) And (RegFind('[Tt]rad.') >= 0)) Then '(Trad.)'
+240$f           | <E40$m          | S
+240$i           | <E40$A          | + If (D != '') Then ', ' + S Else S
+240$j           | <E40$A          | + If (D != '') Then ', ' + S Else S
+240$k           | <E40$A          | + If (D != '') Then ', ' + S Else S
+240$m           | <E40$r          | S
+// TV:
+// Oletuksena $p:n sisältö siirtyy osakentän $a loppuun sulkuihin. Poikkeuksena $p:stä tulee $k, jos sen sisältönä on 'Valikoima'.
+// Toinen vaihtoehto //2//: $p voidaan konvertoida $g:ksi (sopii musiikkiaineistolle). Poikkeuksena $p:stä tulee $k, jos sen sisältönä on 'Valikoima'.
+// Jos ei haluta käyttää oletusta, kommentoidaan seuraava rivi pois ja otetaan käyttöön toinen vaihtoehto poistamalla kommenttimerkit ja vaihtoehdon numero (//2//).
+240$p           | <E40$a          | + If (RegFind('[Vv]alikoima') < 0) Then ' (' + S + ')'
+//2//240$p           | <E40(nt)$g(1)   | + If (RegFind('[Vv]alikoima') < 0) Then {
+//2//                                      If (D != '') Then ' (' + S + ')' Else '(' + S +  //2//     //2//                                ')';
+//2//                                      }           
+240$g           | <E40$n          | S
+240$s           | <E40$p          | If (RegFind('[Vv]alikoima') < 0) Then S
+240$s           | <E40$k          | If (RegFind('[Vv]alikoima') >= 0) Then 'Valikoima'
+240$t           | <E40$s          | S
+240$q           | <E40$s          | S
+240$u           | <E40$o          | S
+240$l           | <E40$l          | S
+240$p           | <E40$k          | If (RegFind('[Vv]alikoima') >= 0) Then 'Valikoima'
+E40             | 130             | If (Not Exists(@1??)) Then S;
+                                    Replace ('$m' By ',$m');
+                                    Replace ('$r' By ',$r');
+                                    Pvalimerkitys();
+                                    Replace ('$s' By '.$s');
+                                    Replace ('$o' By ';$o');
+                                    Replace ('$l' By ',$l');
+                                    Replace ('$n' By '.$n');
+                                    Replace ('$A' By ',$n'); 
+                                    Replace ('$k' By '.$k');
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl');
+                                    MoveBefore('l', $o, 'l', '', '', ',|;|.');
+                                    If (RegFind('[\\)\\.\\-]\$') < 0) Then S + '.'
+
+
+// Info: 240:stå tehdään 240, jos inputissa on 1XX-kenttä.
+E40             | 240             | If (Exists(@1??)) Then S;
+                                    Replace ('$m' By ',$m');
+                                    Replace ('$r' By ',$r');
+                                    Pvalimerkitys();
+                                    Replace ('$k' By '.$k');
+                                    Replace ('$s' By '.$s');
+                                    Replace ('$o' By ';$o');
+                                    Replace ('$l' By ',$l');
+                                    Replace ('$n' By '.$n');
+                                    Replace ('$A' By ',$n');
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl');
+                                    MoveBefore('l', $o, 'l', '', '', ',|;|.');
+                                    RegReplace('\\.\$', '')
+
+241I1           | <E41I1          | S
+241I2           | <E41I2          | S
+241$a           | <E41$a          | S
+
+#if (Exists(@100) Or Exists(@110) Or Exists(@111))
+E41I1           | <F41I1          | If (nt=1 And (Not Exists(%240))) Then S
+E41I2           | <F41I2          | If (nt=1 And (Not Exists(%240))) Then S
+E41             | <F41            | If (nt=1 And (Not Exists(%240))) Then S
+F41I1           | 240I1           | '1'
+F41I2           | 240I2           | S; Replace (' ' By '0')
+F41$a           | 240$a           | S
+#endif
+#if (Not (Exists(@100) Or Exists(@110) Or Exists(@111)))
+E41I1           | <F41I1          | If (nt=1 And (Not Exists(%240))) Then S
+E41I2           | <F41I2          | If (nt=1 And (Not Exists(%240))) Then S
+E41             | <F41            | If (nt=1 And (Not Exists(%240))) Then S
+F41I2           | 130I1           | S; Replace (' ' By '0')
+F41I1           | 130I2           | ' '
+F41$a           | 130$a           | S
+#endif
+
+E41I1           | <G41I1          | If (nt>1 Or (Exists(%240(1)))) Then S
+E41I2           | <G41I2          | If (nt>1 Or (Exists(%240(1)))) Then S
+E41             | <G41            | If (nt>1 Or (Exists(%240(1)))) Then S
+G41I1           | 730(new)I2      | ' '
+G41I2           | 730(newest)I1   | S; Replace (' ' By '0')
+G41$a           | 730(newest)$a   | S + '.'
+
+
+242I1           | 242I1           | '1'
+242I2           | 242I2           | S; Replace (' ' By '0')
+242$a           | 242$a           | If (RegFind('[\\)\\.]\$') < 0) Then S + '.' Else S;
+
+
+// ***245+248 ALKAA TÄSTÄ***
+245I1           | <F45I1          | ' '
+245I2           | <F45I2          | S; Replace (' ' By '0')
+245$a           | <F45$a          | S
+// Info: Vain ensimmäinen $z otetaan mukaan.
+245$z(1)        | <F45$h          | If (RegFind('^\\[(.*)\\]\$') >= 0) Then RegMatch(1) Else S;
+                                    RegReplaceTable('pieni-isoksi-merkkijonon-alussa.tbl');
+                                    If (%000/7/ = 'p' And RegFind('[Aa]rkisto') < 0) 'Arkistoaineisto';
+                                    '[' + S + ']'
+245$b           | <F45$b          | S
+245$n           | <F45$c          | S
+245$g           | <F45$n          | S
+245$h           | <F45$p          | S
+245$r           | <F45$r          | S
+245$c           | <F45$t          | S
+245$d           | <F45$d          | S
+245$e           | <F45$e          | If (Exists($c) Or Exists($d)) Then S
+245$e           | <F45$d          | If (Not (Exists($c) Or Exists($d))) Then S
+
+// Info: Z48 vain loppupistettä varten
+245             | <Z48            | '.'
+
+// Info: Ladotaan 245
+F45I1           | 245I1           | If (Not Exists(%1??)) Then '0' Else '1'
+F45I2           | 245I2           | S
+F45             | 245             | S;
+                                    MoveBefore('r', $d);
+                                    If (NextSub($a, '=1') = 'a') Replace ('$b' By ' : ', Strict) Else ReplaceOcc ('$b' By ' :$b', '=1', Strict);
+                                    If (NextSub($a, '=1') != 'a') ReplaceOcc ('$b' By ' : ', '>1', Strict);
+                                    If (NextSub($a, '=1') = 'a') ReplaceOcc ('$a' By ' ;$b', '=2', Strict);
+                                    ReplaceOcc ('$a' By ' ; ', '>1', Strict);
+                                    If (NextSub($a, '=1') != 'a' And Not ExistsIn(S, $b)) ReplaceOcc ('$r' By ' =$b', '=1', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$t' By '. ', Strict);
+                                    ReplaceOcc ('$c' By ' / ', '>1', Strict); Replace ('$c' By ' /$c', Strict);
+                                    If (ExistsIn(S, $c)) Replace ('$d' By ' / ', Strict); ReplaceOcc ('$d' By ' / ', '>1', Strict); Replace ('$d' By ' /$c', Strict);
+                                    Replace ('$e' By ' ; ', Strict);
+
+                                    If (PreviousSub($n, '=1') = 'h' Or PreviousSub($p, '=1') = 'h') MoveBefore('np', $h, 'np', '', '', ' :| /| ;|.| =');
+
+                                    If ($c Precedes $p And PreviousSub($p, '=1') = 'n') ReplaceOcc ('$p' By ', ', '=1', Strict);
+                                    If ($c Precedes $p And PreviousSub($p, '=1') != 'n') ReplaceOcc ('$p' By '. ', '=1', Strict);
+
+                                    If ($c Precedes $p And PreviousSub($p, '=2') = 'n') ReplaceOcc ('$p' By ', ', '=2', Strict);
+                                    If ($c Precedes $p And PreviousSub($p, '=2') != 'n') ReplaceOcc ('$p' By '. ', '=2', Strict);
+
+                                    If ($c Precedes $n) Replace ('$n' By '. ', Strict) Else Replace ('$n' By '.$n')
+
+// Info: Käsitellään 248
+248$g           | <I48$G          | S; RegReplaceTable('roomalaiset-arabialaisiksi.tbl')
+248$h           | <I48$H          | S
+248$b           | <I48$B          | S
+248$r           | <I48$R          | S
+248$c           | <I48$C          | S
+248$d           | <I48$D          | S
+248$e           | <I48$E          | If (Exists($d)) Then S
+248$e           | <I48$D          | If (Not Exists($d)) Then S
+
+I48             | 245             | D + S;
+                                    // Info: 248:ssa $D:
+                                    If (Exists(@245$d)) Then ReplaceOcc ('$D' By ' ; ', '>1', Strict) Else ReplaceOcc ('$D' By ' / ', '>1', Strict);
+                                    RegReplace ('($D.*)$B', '\\1 : ', 'g');
+                                    RegReplace ('($D.*)$R', '\\1 = ', 'g');
+                                    RegReplace ('($D.*)$C', '\\1. ', 'g');
+                                    If (Exists(@245$d) Or Exists(@248$d)) Then
+                                    {
+                                      while (RegFind ('$D.*$E') >= 0)
+                                      {
+                                        RegReplace ('($D.*)$E', '\\1 ; ', 'g');
+                                      };
+                                    }
+                                    Else
+                                    {
+                                      while (RegFind ('$D.*$E') >= 0)
+                                      {
+                                        RegReplace ('($D.*)$E', '\\1 / ', 'g');
+                                      };
+                                    }
+
+                                    // Info: Jos $n/$p on ennen $b:tä tai $b:tä ei ole, siirretään $n/$p $a:n perään
+                                    If (RegFind('$b.*$[np]') < 0) MoveAfter('np', $a, 'np', '', '', ' : | / | ; |. | = ');
+
+                                    // Info: G:n (n) ja H:n (p) välimerkit
+                                    Replace ('$G' By '.$G', Strict);
+
+                                    // Info: Siirretään g ja h oikeille paikoille
+                                    If (PreviousSub(@245$n, '>=1') != 'c' And PreviousSub(@245$p, '>=1') != 'c' And ExistsIn(S, $c)) MoveBefore('GH', $c, 'np', '', '', ' :| /| ;|.| =', 'BR');
+                                    If ((Not ExistsIn(S, $n)) And (Not ExistsIn(S, $p)) And (Not ExistsIn(S, $b))) MoveAfter('GH', $a, 'np', '', '', ' :| /| ;|.| =', 'BR');
+                                    Replace ('$G' By '$n');
+                                    Replace ('$H' By '$p');
+
+                                    If (ExistsIn(S, $c))
+                                    {
+                                      If (Exists(@245$d)) Then Replace ('$D' By ' ; ', Strict) Else Replace ('$D' By ' / ', Strict);
+                                    }
+                                    Else Replace ('$D' By ' /$c', Strict);
+
+                                    If (Not ExistsIn(S, $b)) ReplaceOcc ('$B' By ' :$b', '=1', Strict);
+                                    If (Not ExistsIn(S, $b)) ReplaceOcc ('$R' By ' :$b', '=1', Strict);
+                                    Replace ('$B' By ' : ', Strict);
+                                    Replace ('$R' By ' = ', Strict);
+                                    Replace ('$C' By '. ', Strict);
+
+                                    If (ExistsIn(S, $b)) MoveBefore('h', $b, 'h', '', '', ' :| /| ;|.| =') Else If (ExistsIn(S, $c)) MoveBefore('h', $c, 'h', '', '', ' :| /| ;|.| =');
+
+                                    For (OCC From 1 To 3) While (PreviousSubIn(S, $n, '=OCC') = 'c' Or PreviousSubIn(S, $p, '=OCC') = 'c') {
+                                      If (PreviousSubIn(S, $p, '=OCC') = 'c') {
+                                        If (RegFind(S, '$c.*\\.$') < 0) ReplaceOcc('$p' By '. ', '=OCC', Strict) Else ReplaceOcc('$p' By ' ', '=OCC', Strict);
+                                      }
+                                      Else ReplaceOcc('$p' By ', ', '=OCC', Strict);
+                                      If (RegFind(S, '$c.*\\.$') < 0) ReplaceOcc('$n' By '. ', '=OCC', Strict) Else ReplaceOcc('$n' By ' ', '=OCC', Strict);
+                                    };
+
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl')
+
+Z48             | 245             | If (RegFind(D, '\\.\$') < 0) D + S Else D;
+                                    Pvalimerkitys();
+// ***245+248 PÄÄTTYY TÄHÄN***
+
+
+246I1           | 246I2           | If (I1=0) Then '3' Else S
+246I2           | 246I1           | '1'
+246$a           | <E46$a          | S;
+                                    Upper(To(1)) + From(2);
+                                    RegReplace('^\c3\a5', '\c3\85');
+                                    RegReplace('^\c3\a4', '\c3\84');
+                                    RegReplace('^\c3\b6', '\c3\96')
+246$z           | <E46$h          | If (RegFind('^\\[.*\\]\$') >= 0) Then S Else '[' + S + ']'
+246$b           | <E46$b          | S
+246$n           | <E46$c          | S
+246$g           | <E46$n          | S
+246$h           | <E46$p          | S
+246$d           | <E46$d          | S
+246$e           | <E46$e          | S
+E46             | 246             | S;
+                                    ReplaceOcc ('$b' By ' : ','>1', Strict);
+                                    Replace ('$b' By ' :$b', Strict);
+                                    Replace ('$c' By ' / ', Strict);
+                                    Replace ('$d' By ' / ', Strict);
+                                    Replace ('$e' By ' ; ', Strict);
+                                    Replace ('$n' By '.$n');
+                                    Pvalimerkitys()
+
+250I1           | 250I1           | ' '
+250I2           | 250I2           | ' '
+250$a           | 250$a           | S
+250$c           | 250$b           | S
+250             | 250             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    If (PreviousSub($c, '=1') = 'a') ReplaceOcc ('$c' By ' /$b', '=1', Strict) Else Replace ('$c' By ' / ', Strict);
+                                    If (PreviousSub($r, '=1') = 'a') ReplaceOcc ('$r' By ' =$b', '=1', Strict); Replace ('$r' By ' = ', Strict)
+
+254(1)I1        | 254I1           | ' '
+254(1)I2        | 254I2           | ' '
+254(1)          | 254             | + If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    Replace ('$r' By ' = ', Strict)
+
+255I1           | 362I1           | '0'
+255I2           | 362I2           | ' '
+255$a           | 362$a           | S
+255$b           | 362$a           | +' (' + S  +')'
+255             | 362             | If (RegFind('[\\)\\.\\-]\$') < 0) Then S + '.' Else S;
+                                    Replace ('$r' By ' = ', Strict)
+
+256I1           | 255I1           | ' '
+256I2           | 255I2           | ' '
+256$a           | <E55$a          | S
+256$b           | <E55$b          | S
+256$c           | <E55$c          | '(' + S + ')'
+256$d           | <E55$e          | '(' + S + ')'
+E55             | 255             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    ReplaceOcc ('$b' By ' ; ', '>1', Strict);
+                                    Replace ('$b' By ' ;$b', Strict);
+                                    Replace (')$c(' By ' ', Strict);
+                                    Replace (')$e(' By '$e');
+                                    Replace (')(' By ' ,', Strict);
+                                    Replace ('), (' By ' ,', Strict)
+
+258(1)I1        | 256I1           | ' '
+258(1)I2        | 256I2           | ' '
+258(1)$a        | <E56$a          | S
+258(1)$b        | <E56$b          | '(' + S + ')'
+E56             | 256             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By ' ', Strict)
+
+260I1           | 260I1           | ' '
+260I2           | 260I2           | ' '
+260$a           | <E60(1)$a(ns)   | S
+260$b           | <E60(1)$b(ns)   | S
+260$c           | <E60(1)$c(ns)   | If S != '()' Then S;
+                                    RegReplace('^c(\\d\\d\\d\\d)', 'cop. \\1');
+//260$r           | <E60(1)$r(ns)   | S
+260$e           | <E60(1)$e(ns)   | '(' + S + ')'
+260$f           | <E60(1)$f(ns)   | '(' + S + ')'
+260$g           | <E60(1)$g(ns)   | '(' + S + ')'
+E60             | 260             | If (RegFind('[)\\.\\-\\]]\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By ' :$b', Strict);
+                                    Replace ('$c' By ',$c', Strict);
+//                                    Replace ('$r' By ' = ', Strict);
+                                    Replace (')$f(' By ' :$f', Strict);
+                                    Replace (')$g(' By ',$g');
+                                    ReplaceOcc ('$a' By ' ;$a', '>1', Strict)
+
+
+300I1           | 300I1           | ' '
+300I2           | 300I2           | ' '
+//Old usemarcon directive not working for us for no reason EGDATA-147
+//300$a           | <F30$a          | If (Not Exists ($z)) Then S
+//300$z           | <F30$a          | S
+//300$a           | <F30$a          | + If (Exists ($z) And (RegFind('^\\(.*\\)\$') >= 0)) Then ' ' + S Else If (Exists ($z)) Then ' (' + S + ')'
+//Replacing with these passthroughs because MMT makes this fix.
+300$a           | <F30$a          | S
+300$b           | <F30$b          | S
+300$c           | <F30$c          | S
+300$d           | <F30$e          | S
+F30             | 300             | If (RegFind('[\\)\\.]\$') < 0) Then S + '.' Else S;
+                                    ReplaceOcc ('$b' By ', ','>1', Strict);
+                                    Replace ('$b' By ' :$b', Strict);
+                                    Replace ('$c' By ' ;$c', Strict);
+                                    ReplaceOcc ('$e' By ', ','>1', Strict);
+                                    Replace ('$e' By ' +$e', Strict)
+
+306I1           | 306I1           | ' '
+306I2           | 306I2           | ' '   
+306$a           | 306$a           | S
+
+351I1           | 351I1           | ' '
+351I2           | 351I2           | ' '
+351$a           | 351$a           | If (RegFind('[\\)\\.]\$') < 0) Then S + '.' Else S
+
+
+410I1           | <G90I1          | S
+410I2           | <G90I2          | S
+410             | <G90            | S; RegReplace('$[xyz].*', '')
+G90I1           | 490(new)I1      | '1'
+G90I2           | 490(newest)I2   | ' '
+G90             | 490(newest)     | S;
+                                    Replace ('$c' By '. ', Strict);
+                                    Replace ('$g' By '. ', Strict);
+                                    Replace ('$h' By ', ', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$w' By ',$x');
+                                    Replace ('$v' By ' ;$v');
+                                    RegReplaceTable ('pieni-isoksi-pisteen-jalkeen.tbl', 'g')
+
+G90I1           | 810(new)I1      | If (S = '1') Then '1' Else If ((S = '2' Or S = ' ') And (RegFind(@110$a, ', ') >= 0)) Then '0' Else '2'
+G90I2           | 810(newest)I2   | ' '
+G90             | 810(newest)     | S;
+                                    Replace ('$c' By '.$b');
+                                    Replace ('$g' By '.$n');
+                                    Replace ('$h' By ',$p');
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$w' By ',$x');
+                                    Replace ('$v' By ' ;$v');
+                                    RegReplaceTable ('pieni-isoksi-pisteen-jalkeen.tbl', 'g')
+
+#if (@000(1)/8/ = 's')
+440I1           | <G60I1          | '0'
+440I2           | <G60I2          | ' '
+440$a           | <G60$t          | S
+440$n           | <G60$f          | S
+440$g           | <G60$n          | S
+440$h           | <G60$p          | If (Exists (@G60$n)) Then S
+440$h           | <G60$P          | If (Not Exists (@G60$n)) Then S
+440$w           | <G60$x          | S
+#endif
+
+G60I1           | 760(new)I1      | S
+G60I2           | 760(newest)I2   | S
+G60             | 760(newest)     | S;
+                                    Replace ('$f' By ' / ', Strict);
+                                    Replace ('$n' By '. ', Strict);
+                                    Replace ('$p' By ', ', Strict);
+                                    Replace ('$P' By '. ', Strict);
+
+#if (@000(1)/8/ != 's' And ((Not Exists (@540)) Or Exists(@440(2)) Or Exists(@490)))
+440I1           | <H40I1          | ' '
+440I2           | <H40I2          | S; Replace (' ' By '0')
+440$a           | <H40$a          | S
+440$b           | <H40$b          | S
+440$d           | <H40$d          | S
+440$n           | <H40$f          | S
+440$g           | <H40$n          | S
+440$h           | <H40$p          | S
+440$r           | <H40$r          | S
+440$w           | <H40$x          | S
+440$v           | <H40$v          | S
+#endif
+H40I1           | 490(new)I1      | '1'
+H40I2           | 490(newest)I2   | ' '
+H40             | 490(newest)     | S;
+                                    Replace ('$b' By ' : ', Strict);
+                                    Replace ('$d' By ' / ', Strict);
+                                    Replace ('$f' By ' / ', Strict);
+                                    Replace ('$n' By '. ', Strict);
+                                    Replace ('$p' By ', ', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$x' By ',$x');
+                                    Replace ('$v' By ' ;$v');
+                                    RegReplaceTable ('pieni-isoksi-pisteen-jalkeen.tbl', 'g')
+
+H40I1           | 830(new)I1      | ' '
+H40I2           | 830(newest)I2   | S; Replace (' ' By '0')
+H40             | 830(newest)     | S;
+                                    Replace ('$b' By ' : ', Strict);
+                                    Replace ('$d' By ' / ', Strict);
+                                    Replace ('$f' By ' / ', Strict);
+                                    Replace ('$n' By '.$n', Strict);
+                                    Replace ('$p' By ',$p', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$x' By ',$x');
+                                    Replace ('$v' By ' ;$v', Strict);
+                                    MoveBefore ('x', $v);
+                                    RegReplaceTable ('pieni-isoksi-pisteen-jalkeen.tbl', 'g');
+                                    If (RegFind('[\\)\\.\\-]\$') < 0) Then S + '.'
+
+#if (@000(1)/8/ != 's' And (Exists (@542) And (Not Exists(@440(2))) And (Not Exists(@490))))
+440I1           | <I40I1          | '1'
+440I2           | <I40I2          | S
+440             | <I40            | S; RegReplace('$[xyz].*', '')
+#endif
+I40I1           | 490(new)I1      | S
+I40I2           | 490(newest)I2   | ' '
+I40             | 490(newest)     | S;
+                                    Replace ('$b' By ' : ', Strict);
+                                    Replace ('$d' By ' / ', Strict);
+                                    Replace ('$f' By ' / ', Strict);
+                                    Replace ('$b' By ' : ', Strict);
+                                    Replace ('$n' By '. ', Strict);
+                                    Replace ('$p' By ', ', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$w' By ',$x');
+                                    Replace ('$v' By ' ;$v');
+                                    RegReplaceTable ('pieni-isoksi-pisteen-jalkeen.tbl', 'g')
+
+I40I1           | 830(new)I1      | ' '
+I40I2           | 830(newest)I2   | S
+I40             | 830(newest)     | S;
+                                    Replace ('$b' By ' : ', Strict);
+                                    Replace ('$d' By ' / ', Strict);
+                                    Replace ('$f' By ' / ', Strict);
+                                    Replace ('$n' By '.$n', Strict);
+                                    Replace ('$p' By ',$p', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$x' By ',$x');
+                                    Replace ('$v' By ' ;$v');
+                                    RegReplaceTable ('pieni-isoksi-pisteen-jalkeen.tbl', 'g')
+
+490I1           | 490(new)I2        | ' '
+490I2           | 490(newest)I1     | If (I2 = ' ' Or I2 = '0') Then '0' Else '1'
+490             | 490(newest)       | S;
+                                    RegReplace('$[xyz].*', '');
+                                    Replace ('$b' By ' : ', Strict);
+                                    Replace ('$d' By ' / ', Strict);
+                                    Replace ('$n' By ' / ', Strict);
+                                    Replace ('$g' By ' .', Strict);
+                                    Replace ('$h' By ', ', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$w' By ',$x');
+                                    Replace ('$v' By ' ;$v')
+
+500$a           | <H00$a          | S; Replace('. - ' By '$a')
+H00$a           | <I00$a          | If ((RegFind('(\c3\a4|\c3\84)\c3\a4nitetty|[Kk]onsertti\c3\a4\c3\a4nitys|[Ll]ive\c3\a4\c3\a4nitys|[Rr]adiol\c3\a4hetys|[Tt]allennettu') < 0) And (RegFind('\\b[Tt]eksti: |\\b[Ss]anat: |\\b[Kk]ieli: |\\b[Ee]sityskieli: ') < 0 Or (RegFind('[Kk]alevala|[Kk]anteletar|[Rr]aamattu') >= 0))) Then S;
+                                    RegReplaceTable('pieni-isoksi-merkkijonon-alussa.tbl')
+
+H00$a           | 518(new)$a      | If (RegFind('(\c3\a4|\c3\84)\c3\a4nitetty|[Kk]onsertti\c3\a4\c3\a4nitys|[Ll]ive\c3\a4\c3\a4nitys|[Rr]adiol\c3\a4hetys|[Tt]allennettu') >= 0) Then S;
+                                    If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    RegReplaceTable('pieni-isoksi-merkkijonon-alussa.tbl')
+
+H00$a           | 546(new)$a      | If (RegFind('\\b[Tt]eksti: |\\b[Ss]anat: |\\b[Kk]ieli: |\\b[Ee]sityskieli: ') >= 0 And RegFind('[Kk]alevala|[Kk]anteletar|[Rr]aamattu') < 0) Then S;
+                                    If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    RegReplaceTable('pieni-isoksi-merkkijonon-alussa.tbl')
+
+I00$a           | 500(new)$a      | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    ReplaceOcc ('$a' By '. - ', '>1', Strict)
+
+501$a           | 500(new)$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+502I1           | <M02I1           | ' '
+502I2           | <M02I2           | ' '
+502$a           | <M02$a           | S
+502$b           | <M02$c           | S + ' : '
+502$c           | <M02$c           | + S
+502$d           | <M02$d           | S
+M02             | 502              | S;
+                                    MoveLast('9');
+                                    Replace ('$c' By ' :$c', Strict);
+                                    Replace ('$d' By ',$d', Strict);
+                                    If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+504I1           | 504I1           | ' '
+504I2           | 504I2           | ' '
+504$a           | 504$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    ReplaceOcc ('$a' By '. - ','>1', Strict) 
+
+
+505I1           | 505I1           | '0'
+505I2           | 505I2           | ' '
+505             | 505             | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+506I1           | 520I1           | ' '
+506I2           | 520I2           | ' '
+506             | 520             | If (RegFind('.*$(\\w)') >= 0 And (RegMatch(1) != 'u') And (RegFind('\\.\$') < 0)) Then S + '.' Else S;
+                                    Replace ('$b' By ': ', Strict')
+
+507I1           | 506I1           | ' '
+507I2           | 506I2           | ' '
+507             | 506             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By ';$e');
+                                    Replace ('$c' By ';$b')
+
+509I1           | <M09I1          | ' '
+509I2           | <M09I2          | ' '
+509$a           | <M09$a          | S
+509$b           | <M09$c          | S
+509$c           | <M09$c          | + ', ' + S
+509$d           | <M09$d          | S
+M09             | 509             | S;
+                                    MoveLast('9');
+                                    Replace ('$c' By ' :$c', Strict);
+                                    Replace ('$d' By ',$d', Strict);
+                                    If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+510I1           | 510I1           | If (Exists (@510$c)) Then '4' Else '3'
+510I2           | 510I2           | ' '
+510             | 510             | S; Replace('$c' By ',$c')
+
+511I1           | 511I1           | '0'
+511I2           | 511I2           | ' '
+511             | 511             | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+519I1           | 520I1           | ' '
+519I2           | 520I2           | ' '
+519$a           | 520$a           | + If (D != '') Then ' ' + S Else S; If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+520I1           | 310I1           | ' '
+520I2           | 310I2           | ' '
+520$a           | 310$a           | If (RegFind('[\\)\\.\\-]\$') < 0) Then S + '.' Else S
+
+526I1           | 382I1           | ' '
+526I2           | 382I2           | ' '
+526             | 382$a           | S; Replace (', ' By ',$a')
+
+528I1           | 031I1           | ' '
+528I2           | 031I2           | ' '
+528$a           | 031$t           | S
+
+529I1           | 530I1           | ' '
+529I2           | 530I2           | ' '
+529$a           | 530$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+530I1           | 588I1           | ' '
+530I2           | 588I2           | ' '
+530$a           | 588$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+534I1           | 534I1           | ' '
+534I2           | 534I2           | ' '
+534             | <J34$p          | 'Alkuper\c3\a4inen:'
+534$a           | <J34$a          | S
+534$t           | <J34$t          | S
+534$b           | <J34$b          | S
+534$m           | <J34$m          | S
+534$c           | <J34$c          | S
+534$e           | <J34$e          | S
+534$f           | <J34$f          | S
+534$l           | <J34$l          | S
+534$k           | <J34$k          | S
+534$x           | <J34$x          | If (RegFind('\\d{4}-\\d{4}') >= 0) Then S
+534$x           | <J34$z          | If (ISBNRegExp) Then S
+534$x           | <J34$o          | If (RegFind('\\d{4}-\\d{4}') < 0 And (Not ISBNRegExp)) Then S
+J34             | 534             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    If (PreviousSub($t, '>=1') != 'p') Replace ('$t' By '.$t');
+                                    If (PreviousSub($b, '>=1') != 'p') Replace ('$b' By ',$b');
+                                    If (PreviousSub($m, '>=1') != 'p') Replace ('$m' By ',$m');
+                                    If (PreviousSub($c, '>=1') != 'p') Replace ('$c' By ',$c');
+                                    If (PreviousSub($e, '>=1') != 'p') Replace ('$e' By '.$e');
+                                    If (PreviousSub($f, '>=1') != 'p') Replace ('$f' By '.$f');
+                                    If (PreviousSub($k, '>=1') != 'p') Replace ('$k' By ':$k');
+                                    If (PreviousSub($x, '>=1') != 'p') Replace ('$x' By ',$x');
+                                    If (PreviousSub($z, '>=1') != 'p') Replace ('$z' By '.$z');
+                                    If (PreviousSub($o, '>=1') != 'p') Replace ('$o' By '.$o')
+
+
+538I1           | 515I1           | ' '
+538I2           | 515I2           | ' '
+538             | 515             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    If (Exists($a)) Replace ('$b' By ' ', Strict) Else Replace ('$b' By '$a', Strict)
+
+539$a           | 500(new)$a      | If (RegFind('\\.\$') < 0) Then 'Nimekkeen selitys: ' + S + '.' Else 'Nimekkeen selitys: ' + S
+
+
+540I1           | <J30I1          | ' '
+540I2           | <J30I2          | '0' 
+540$a           | <J30$a          | S
+540$c           | <J30$a          | + '. ' + S
+540$b           | <J30$a          | + ' (' + S + ')' 
+540$d           | <J30$a          | + ' / ' + S
+540$n           | <J30$a          | + ' / ' + S
+540$g           | <J30$n          | S
+540$h           | <J30$p          | S
+540$w           | <J30$x          | S
+540$v           | <J30$v          | S
+J30I1           | 830(new)I1      | S
+J30I2           | 830(newest)I2   | S
+J30             | 830(newest)     | If (RegFind('[\\)\\.\\]]\$') < 0) Then S + '.' Else S;
+                                    Replace ('$n' By '.$n');
+                                    Pvalimerkitys();
+                                    Replace ('$v' By ' ;$v', Strict);
+                                    MoveBefore('x', $v);
+                                    Replace ('$x' By ',$x', Strict)
+
+541I1           | 541I1           | ' '
+541I2           | 541I2           | ' '
+541             | 541             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By ';$b');
+                                    Replace ('$c' By ';$c');
+                                    Replace ('$d' By ';$d')
+
+545I1           | 545I1           | ' '
+545I2           | 545I2           | ' '
+545$a           | 545$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+
+548I1           | 538I1           | ' '
+548I2           | 538I2           | ' '
+548$a           | 538$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+
+550$a           | 720(new)$a      | S
+
+555$a           | 500(new)$a      | If (RegFind('\\.\$') < 0) Then 'Lis\c3\a4painokset: ' + S + '.' Else 'Lis\c3\a4painokset: ' + S
+
+560I1           | 787I1           | '0'
+560I2           | 787I2           | '8'
+560             | <J87$i          | 'Arvosteltu teos:'
+560$d           | <J87$a          | S + ', '
+560$a           | <J87$t          | S
+560$j           | <J87$j          | S
+560$l           | <J87$l          | S
+560$k           | <J87$k          | S
+560$x           | <J87$x          | If (RegFind('\\d{4}-\\d{4}') >= 0) Then S
+560$x           | <J87$z          | If (ISBNRegExp) Then S
+560$x           | <J87$o          | If (Not (RegFind('\\d{4}-\\d{4}') >= 0 Or ISBNRegExp)) Then S
+J87             | 787             | S;
+                                    MoveFirst('a');
+                                    MoveFirst('i');
+                                    Replace ('$j' By '.$d');
+                                    Replace ('$l' By ' : ', Strict);
+                                    Replace ('$k' By ', ', Strict)
+
+561$a           | 561$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+563$a           | 583$a           | If (RegFind('\\.\$') < 0) Then S + '.' Else S
+
+//Info: Kirjastokohtaiset huomautuskentät konvertoidaan: 565-589->590, kentät 590-599 säilyvät samoina.
+//Tietokantakohtaisesti kenttiä voi konvertoida toisinkin, riippuu huomautuksen sisällöstä.
+565             | 590(new)        | S
+
+566             | 590(new)        | S
+
+567             | 590(new)        | S
+
+568             | 590(new)        | S
+
+569             | 590(new)        | S
+
+570             | 590(new)        | S
+
+571             | 971(new)I1      | ' '
+571             | 971(newest)I2   | ' '
+571             | 971(newest)     | S
+// 571u Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
+571$u(1)        | 856$u           | S; Replace('Kuvaus' By 'TEXT') ; Replace('Kansikuva' By 'IMAGE')
+//571$u(1)        | <J88I1          | '4'
+//571$u(1)        | <J88I2          | '2'
+//571$u(1)        | <J88$u          | S
+571$x(1)        | 856$z           | S; Replace('Kuvaus' By 'TEXT') ; Replace('Kansikuva' By 'IMAGE')
+//571$x(1)        | <J88$q          | S; Replace('Kuvaus' By 'TEXT') ; Replace('Kansikuva' By 'IMAGE')
+//571$x(1)        | <J88$z          | S
+//#This line is supposedly not needed# 571$x(1)        | <J88$y          | S
+// 571(a-t) Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
+571$a           | 971$a           | S
+571$b           | 971$b           | S
+571$c           | 971$c           | S
+571$d           | 971$d           | S
+571$e           | 971$e           | S
+571$f           | 971$f           | S
+571$g           | 971$g           | S
+571$h           | 971$h           | S
+571$i           | 971$i           | S
+571$j           | 971$j           | S
+571$k           | 971$k           | S
+571$l           | 971$l           | S
+571$m           | 971$m           | S
+571$n           | 971$n           | S
+571$o           | 971$o           | S
+571$p           | 971$p           | S
+571$q           | 971$q           | S
+571$r           | 971$r           | S
+571$s           | 971$s           | S
+571$t           | 971$t           | S
+J88             | 856(new)        | S
+
+571$u(2)        | <J89I1          | '4'
+571$u(2)        | <J89I2          | '2'
+571$u(2)        | <J89$u          | S
+571$x(2)        | <J89$q          | S; Replace('Kuvaus' By 'TEXT') ; Replace('Kansikuva' By 'IMAGE')
+571$x(2)        | <J89$z          | S
+//#This is not needed either :) #571$x(2)        | <J89$y          | S
+J89             | 856(new)        | S
+
+572             | 590(new)        | S
+
+573             | 590(new)        | S
+
+574             | 590(new)        | S
+
+575             | 590(new)        | S
+
+576             | 590(new)        | S
+
+577             | 590(new)        | S
+
+578             | 590(new)        | S
+
+579             | 590(new)        | S
+
+580             | 590(new)        | S
+
+581             | 590(new)        | S
+
+582             | 590(new)        | S
+
+583             | 590(new)        | S
+
+584             | 590(new)        | S
+
+585             | 590(new)        | S
+
+586             | 590(new)        | S
+
+// 587-Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
+// - commented out for we do not need this
+//587             | 590(new)        | S
+
+588             | 590(new)        | S
+
+589             | 590(new)        | S
+
+590             | 590(new)        | S
+
+591             | 591(new)        | S
+
+592             | 592(new)        | S
+
+593             | 593(new)        | S
+
+594             | 594(new)        | S
+
+595             | 595(new)        | S
+
+596             | 596(new)        | S
+
+597             | 597(new)        | S
+
+598             | 598(new)        | S
+
+599             | 599(new)        | S
+
+600I1           | 600I1           | If (S = '1' Or S = '2') Then '1'
+                                    Else If (S = ' ' And Exists(@600(1)$h)) Then '1'
+                                    Else If (S = ' ' And (Not Exists(@600(1)$h))) Then '0' Else S
+
+600I2           | 600I2           | '4'
+600$a           | <K00$a          | S
+600$h           | <K00$a          | + ', '+S
+600$f           | <K00$c          | S
+600$c           | <K00$d          | S
+600$t           | <K00$t          | S
+600$x           | <K00$x          | S
+600$y           | <K00$z          | S
+600$z           | <K00$y          | S
+K00             | 600             | S;
+                                    MoveBefore ('d', $t);
+                                    MoveBefore ('c', $d);
+                                    Replace ('$c' By ',$c');
+                                    Replace ('$d' By ',$d');
+                                    RegReplace('([^\\.])$t', '\\1.$t'); // Replace ('$t' By '.$t');
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl');
+                                    If (((RegFind('.*\\$(.)') < 0) Or (RegMatch(1) != '4')) And RegFind('\\.\$') < 0 And RegFind('\\-\$') < 0) S + '.'
+
+610I1           | 610I1           | If (S = '1') Then '1' Else If ((S = '2' Or S = ' ') And (RegFind(@610$a, ', ') >= 0)) Then '0' Else '2'
+610I2           | 610I2           | '4'
+610$p           | <K10$a          | S
+610$a           | <K10$a          | If Exists($p) Then $p +'. '+S Else S  
+610$c           | <K10$b          | If ($c Precedes $t Or (Not Exists($t))) Then S
+610$i           | <K10$n          | If ($i Precedes $t Or (Not Exists($t))) Then ' (' + S + ')' Else S
+610$k           | <K10$d          | ' (' + S + ')'
+610$j           | <K10$c          | If ($j Precedes $t Or (Not Exists($t))) Then ' (' + S + ')'
+610$j           | <K10$A          | If ($t Precedes $j) Then S
+610$f           | <K10$a          | If ($f Precedes $t Or (Not Exists($t))) Then + ' (' + S + ')'
+610$f           | <K10$g          | If ($t Precedes $f) Then ' (' + S + ')'
+610$t           | <K10$t          | S
+610$x           | <K10$x          | S
+610$z           | <K10$y          | S
+610$y           | <K10$z          | S
+K10             | 610             | If (((RegFind('.*\\$(.)') < 0) Or (RegMatch(1) != '4')) And RegFind('\\.\$') < 0 And RegFind('\\)\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By '.$b');
+                                    Replace (')$d(' By ' :$d', Strict);
+                                    Replace (')$c(' By ' :$c', Strict);
+                                    Replace (')$g(' By ' :$g', Strict);
+                                    If ($t Precedes $g) Replace ('$g' By '');
+                                    Replace ('$t' By '.$t');
+                                    Replace ('$n' By '.$n');
+                                    Replace ('$A' By ',$n');
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl')
+
+640I2           | 630I1           | If (S > 0 And S < 9) Then S Else '0'
+640I1           | 630I2           | '4'
+640$a           | <K30$a          | S
+640$n           | <K30(nt)$g(1)   | If (RegFind('[Tt]rad.') >= 0) Then '(Trad.)'
+640$f           | <K30$m          | S
+640$i           | <K30$A          | + If (D != '') Then ', ' + S Else S
+640$j           | <K30$A          | + If (D != '') Then ', ' + S Else S
+640$k           | <K30$A          | + If (D != '') Then ', ' + S Else S
+640$m           | <K30$r          | S
+// TV:
+// Oletuksena $p:n sisältö siirtyy osakentän $a loppuun sulkuihin. Poikkeuksena $g:stä tulee $k, jos sen sisältönä on 'Valikoima'.
+// Toinen vaihtoehto //2//: $p voidaan konvertoida $g:ksi (sopii musiikkiaineistolle). Poikkeuksena $p:stä tulee $k, jos sen sisältönä on 'Valikoima'.
+// Jos ei haluta käyttää oletusta, kommentoidaan seuraava rivi pois ja otetaan käyttöön toinen vaihtoehto poistamalla kommenttimerkit ja vaihtoehdon numero (//2//).
+640$p           | <K30$a          | If (RegFind('[Vv]alikoima') < 0) Then + ' (' + S + ')'
+//2//630$p           | <K30(nt)$g(1)   | + If (RegFind('[Vv]alikoima') < 0) Then {
+//2//                                      If (D != '') Then ' (' + S + ')' Else '(' + S + ')';
+//2//                                    }
+640$p           | <K30$k          | If (RegFind('[Vv]alikoima') >= 0) Then 'Valikoima'
+640$g           | <K30$n          | S
+640$s           | <K30$p          | If (RegFind('[Vv]alikoima') < 0) Then S
+640$s           | <K30$k          | If (RegFind('[Vv]alikoima') >= 0) Then 'Valikoima'
+640$q           | <K30$s          | S
+640$t           | <K30$s          | S
+640$u           | <K30$o          | S
+640$l           | <K30$l          | S
+640$x           | <K30$x          | S
+640$y           | <K30$z          | S
+640$z           | <K30$y          | S
+K30             | 630             | S;
+                                    Replace ('$m' By ',$m');
+                                    Replace ('$r' By ',$r');
+                                    Pvalimerkitys();
+                                    Replace ('$k' By '.$k');
+                                    Replace ('$s' By '.$s');
+                                    Replace ('$o' By ';$o');
+                                    Replace ('$l' By ',$l');
+                                    Replace ('$n' By '.$n');
+                                    Replace ('$A' By ',$n');
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl');
+                                    MoveBefore('l', $o, 'l', '', '', ',|;|.');
+                                    If (RegFind('[\\)\\.]\$') < 0) S + '.'
+
+650             | 650(new)I1      | ' '
+650             | 650(newest)I2   | '0'
+650             | 650(newest)     | S
+
+652             | 650(new)I1      | ' '
+652             | 650(newest)I2   | '7'
+652             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace ('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2ysa'
+
+653             | 650(new)I1      | ' '
+653             | 650(newest)I2   | '7'
+653             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2musa'
+
+654             | 650(new)I1      | ' '
+654             | 650(newest)I2   | '7'
+654             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2kaunokki'
+
+
+655             | 651(new)I1      | ' '
+655             | 651(newest)I2   | '7'
+655             | 651(newest)     | S; Replace('$b' By '$C');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y'); 
+                                       Replace('$A' By '$z');
+                                       Replace('$C' By '$z') + '$2ysa' 
+
+656             | 650(new)I1      | ' '
+656             | 650(newest)I2   | '7'
+656             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2allars'
+
+657             | 650(new)I1      | ' '
+657             | 650(newest)I2   | '7'
+657             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y'); 
+                                       Replace('$A' By '$z') + '$2cilla'
+
+
+658             | 650(new)I1      | ' '
+658             | 650(newest)I2   | '7'
+658             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y'); 
+                                       Replace('$A' By '$z') + '$2bella'
+
+660             | 650(new)I1      | ' '
+660             | 650(newest)I2   | '7'
+660             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2kaa'
+
+665             | 650(new)I1      | ' '
+665             | 650(newest)I2   | '7'
+665             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2eks'
+
+670             | 650(new)I1      | ' '
+670             | 650(newest)I2   | '7'
+670             | 650(newest)     | S + '$2sosa'
+
+680             | 650(new)I1      | ' '
+680             | 650(newest)I2   | '7'
+680             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$c' By '$x');
+                                       Replace('$d' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2atla'
+
+681$a           | <G81(new)I1     | ' '
+681$a           | <G81(newest)I2  | '7'
+681$a           | <G81(newest)$a  | S
+681$b           | <G81(newest)$b  | S
+681$x           | <G81(newest)$x  | S
+681$y           | <G81(newest)$y  | S
+681$z           | <G81(newest)$z  | S
+G81I1           | 650(new)I1      | S
+G81I2           | 650(newest)I2   | S
+G81             | 650(newest)     | S + '$2sao'
+
+685             | 650(new)I1      | ' '
+685             | 650(newest)I2   | '7'
+685             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2agrofors'
+
+686             | 650(new)I1      | ' '
+686             | 650(newest)I2   | '7'
+686             | 650(newest)     | S; Replace('$b' By '$x');
+                                       Replace('$y' By '$A');
+                                       Replace('$z' By '$y');
+                                       Replace('$A' By '$z') + '$2agrofors'
+
+690             | 650(new)I1      | ' '
+690             | 650(newest)I2   | '2'
+690             | 650(newest)     | S; Replace('$b' By '$x')
+
+692             | 653(new)I1      | ' '
+692             | 653(newest)I2   | ' '
+692             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+693             | 653(new)I1      | ' '
+693             | 653(newest)I2   | ' '
+693             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+694             | 653(new)I1      | ' '
+694             | 653(newest)I2   | ' '
+694             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+695             | 653(new)I1      | ' '
+695             | 653(newest)I2   | ' '
+695             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+696             | 653(new)I1      | ' '
+696             | 653(newest)I2   | ' '
+696             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+697             | 653(new)I1      | ' '
+697             | 653(newest)I2   | ' '
+697             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+698             | 653(new)I1      | ' '
+698             | 653(newest)I2   | ' '
+698             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+699             | 653(new)I1      | ' '
+699             | 653(newest)I2   | ' '
+699             | 653(newest)     | S; Replace ('$b' By '$a');
+                                       Replace ('$x' By '$a');
+                                       Replace ('$z' By '$a');
+                                       Replace ('$y' By '$a')
+
+700I1           | <L00I1          | If (S = '1' Or S = '2') Then '1'
+                                    Else If (S = ' ' And Exists(@700(1)$h)) Then '1'
+                                    Else If (S = ' ' And (Not Exists(@700(1)$h))) Then '0' Else S
+700I2           | <L00I2          | ' '
+700$a           | <L00$a          | S
+700$h           | <L00$a          | + ', '+S; RegReplace('\\s*\\([^\\.]{2,} [^\\.]{2,}\\)\$', '')
+700$f           | <L00$c          | S
+700$c           | <L00$d          | S
+700$t           | <L00$t          | S
+700$x           | <L00$e          | S; RegReplace('^\\((.*)\\)\$', '\\1')
+L00I1           | 700(new)I1      | S
+L00I2           | 700(newest)I2   | S
+L00             | 700(newest)     | S;
+                                    MoveBefore ('e', $t);
+                                    MoveBefore ('d', $e);
+                                    MoveBefore ('c', $d);
+                                    Replace ('$c' By ',$c');
+                                    Replace ('$d' By ',$d');
+                                    RegReplace('([^\\.])$t', '\\1.$t'); //Replace ('$t' By '.$t');
+                                    Replace ('$e' By ',$e');
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl');
+                                    If (((RegFind('.*\\$(.)') < 0) Or (RegMatch(1) != '4')) And RegFind('\\.\$') < 0 And RegFind('\\-\$') < 0) S + '.'
+
+710I1           | 710I1           | If (S = '1') Then '1' Else If (S = '2' And (RegFind(@710$a, ', ') >= 0)) Then '0' Else '2'
+710I2           | 710I2           | ' '
+710$p           | <L10$a          | S
+710$a           | <L10$a          | If Exists($p) Then $p +'. '+S Else S 
+710$c           | <L10$b          | If ($c Precedes $t Or (Not Exists($t))) Then S
+710$i           | <L10$n          | If ($i Precedes $t Or (Not Exists($t))) Then '(' + S + ')' Else S
+710$k           | <L10$d          | '(' + S + ')'
+710$j           | <L10$c          | If ($j Precedes $t Or (Not Exists($t))) Then '(' + S + ')'
+710$j           | <L10$A          | If ($t Precedes $j Or (Not Exists($t))) Then S
+710$f           | <L10$a          | If ($f Precedes $t Or (Not Exists($t))) Then + ' (' + S + ')'
+710$f           | <L10$g          | If ($t Precedes $f) Then ' (' + S + ')'
+710$t           | <L10$t          | S
+710$x           | <L10$e          | S; RegReplace('^\\((.*)\\)\$', '\\1')
+L10             | 710             | If (((RegFind('.*\\$(.)') < 0) Or (RegMatch(1) != '4')) And RegFind('\\.\$') < 0 And RegFind('\\)\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By '.$b');
+                                    Replace (')$d(' By ' :$d', Strict);
+                                    Replace (')$c(' By ' :$c', Strict);
+                                    Replace (')$g(' By ' :$g', Strict);
+                                    If ($t Precedes $g) Replace ('$g' By '');
+                                    Replace ('$t' By '.$t');
+                                    Replace ('$e' By ',$e');
+                                    Replace ('$A' By ',$n');
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl')
+
+711I1           | 711I1           | If (RegFind(@711$a, ', ') >= 0) Then '0' Else '2'
+711I2           | 711I2           | ' '
+711$a           | <L11$a          | S
+711$c           | <L11$e          | S
+711$i           | <L11$n          | '(' + S + ')'
+711$k           | <L11$d          | '(' + S + ')'
+711$j           | <L11$c          | '(' + S + ')'
+711$f           | <L11$a          | + ' (' + S + ')'
+711$t           | <L11$t          | S
+711$x           | <L11$j          | S; RegReplace('^\\((.*)\\)\$', '\\1')
+L11             | 711             | If (RegFind('.*\\$(.)') < 0) Then S + '.' Else S;
+                                    Replace ('$e' By '.$e', Strict);
+                                    Replace (')$d(' By ' :$d', Strict);
+                                    Replace (')$c(' By ' :$c', Strict);
+                                    Replace ('$t' By '.$t', Strict);
+                                    Replace ('$j' By ',$j', Strict)
+
+720$a           | 720$a           | S
+
+//745-info: konversio ei voi mennä kokonaan oikein, 745-kentässä on monenlaisia
+//nimekelisäkirjauksia (MARC 21: 240, 246 + eri indikaattoreita, 740)
+//Vaihtoehto 1: 246 = Muut nimekkeet, esim. rinnakkaisnimekkeet, osannimekkeet
+745$a           | <L46(new)I1     | '3'
+745$a           | <L46(newest)I2  | ' '   //Tyyppiä ei määritelty
+745$a           | <L46(newest)$a  | S
+745$b           | <L46(newest)$b  | S
+745$n           | <L46(newest)$A  | S
+745$d           | <L46(newest)$B  | S
+L46I1           | 246I1           | S
+L46I2           | 246I2           | S
+L46             | 246             | S; Replace ('$n' By ' : $b', Strict);
+                                    Replace ('$A' By ' / ', Strict);
+                                    Replace ('$B' By ' / ', Strict)
+//Vaihtoehto 2: 740 = Analyyttinen nimekekirjaus, sopii nuottikokoelmille tai
+//kokoomateoksille, joiden sisällöstä tehty 745-kentät
+//745I1           | 740I2           | ' '
+//745I2           | 740I1           | If (I2=' ') Then '0' Else S
+//745             | 740             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+//                                      Replace ('$n' By ' / ', Strict);
+//                                      Replace ('$d' By ' / ', Strict)
+
+759I1           | 765I1           | '0'
+759I2           | 765I2           | ' '
+759		| 765             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict);
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict) 
+
+760I1           | 760I1           | '0'
+760I2           | 760I2           | ' '
+760		| 760             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict);
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict) 
+
+762I1           | 762I1           | '0'
+762I2           | 762I2           | ' '
+762		| 762             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict);
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict) 
+
+769I1           | 767I1           | '0'
+769I2           | 767I2           | ' '
+769		| 767             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict);
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict) 
+
+773I1           | 773I1           | '0'
+773I2           | 773I2           | ' '
+773$7           | <L73$7          | S
+773I1           | <L73$7          | If (Not Exists(@773$7)) Then 'nn'
+
+773$w           | <L73$w          | S; RegReplace('\\s*\\(\\s*\\)\\s*', '')
+773$a           | <L73$a          | S
+773$s           | <L73$s          | '[' + S + ']'
+773$t           | <L73$t          | S
+773$c           | <L73$t          | + ' (' + S + ')'
+773(1)$i        | <L73$h          | If (RegFind('^\\[.*\\]\$') >= 0) Then S Else '[' + S + ']'
+773$b           | <L73$b          | S
+773$e           | <L73$m          | S
+773$d           | <L73$d          | S
+773$j           | <L73$m(no)      | S
+773$k           | <L73$k          | S
+773$u           | <L73$u          | S
+773$x           | <L73$x          | S
+773$z           | <L73$z          | S
+773$m           | <L73$o          | S
+773$n           | <L73$o(no)      | S
+773$p           | <L73$o(no)      | S
+773$h           | <L73$o(no)      | S
+773$g           | <L73$g          | S
+773$v           | <L73$g(no)      | + ', ' + S
+L73             | 773             | S;
+                                    Replace ('$b' By '. -$b', Strict);
+                                    Replace ('$m' By '. -$m', Strict);
+                                    Replace ('$d' By '. -$d', strict);
+                                    Replace ('$k' By '. -$k', Strict);
+                                    Replace ('$u' By '. -$u', Strict);
+                                    Replace ('$x' By '. -$x', Strict);
+//No idea why this line affects subfield 773$w as well, but we can't have silly characters after the strong link
+//subfield $w                       Replace ('$z' By '. -$z', Strict);
+                                    Replace ('$o' By '. -$o', Strict);
+                                    Replace ('$r' By '. -$r', Strict);
+                                    Replace ('$g' By '. -$g', Strict)
+
+776I1           | 776I1           | '0'
+776I2           | 776I2           | ' ' 
+776             | 776             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict); 
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict)
+
+779I1           | 772I1           | '0'
+779I2           | 772I2           | ' ' 
+779             | 772             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict); 
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict)
+
+780I1           | 780I2           | If (I1=' ') Or (I1='0') Then '0' Else S
+780I2           | 780I1           | '0' 
+780             | 780             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict); 
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict)
+
+785I1           | 785I2           | If (S > 0 And S <= 7) Then S Else If (S = '9') Then '7' Else '0'' 
+785I2           | 785I1           | '0' 
+785             | 785             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict);
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict)   
+
+787I1           | 787I1           | '0'
+787I2           | 787I2           | ' ' 
+787             | 787             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict); 
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict)
+
+789I1           | 770I1           | '0'
+789I2           | 770I2           | ' ' 
+789             | 770             | S; Replace ('$a' By '$t', Strict);
+                                       Replace ('$n' By ' / ', Strict);
+                                       Replace ('$g' By '. ', Strict); 
+                                       Replace ('$h' By '. ', Strict);
+                                       Replace ('$b' By '(' + $c + ')', Strict);
+                                       Replace ('$w' By '$x', Strict)
+
+790I1           | 790I1           | ' '
+790I2           | 790I2           | ' '
+790             | 790             | S
+   
+810I1           | 810I1           | If (S = '1') Then '1' Else If (S = '2' And (RegFind(@810$a, ', ') > 0)) Then '0' Else '2'
+810I2           | 810I2           | ' '
+810$a           | <M10$a          | S
+810$c           | <M10$b          | S
+810$n           | <M10$t          | S
+810$b           | <M10$t          | + ' : ' + S
+810$g           | <M10$n          | S
+810$h           | <M10$p          | S
+810$r           | <M10$t          | + ' = ' + S
+810$w           | <M10$x          | S
+810$v           | <M10$v          | S
+M10             | 810             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By '.$b');
+                                    Replace ('$t' By '.$t');
+                                    Replace ('$n' By '.$n');
+                                    Pvalimerkitys();
+                                    Replace ('$v' By ' ; $v', Strict);
+                                    RegReplaceTable('pieni-isoksi-osakentan-alussa.tbl');
+                                    If (RegFind('[\\)\\.]\$') < 0) S + '.'
+
+840I1           | 830I1           | ' '
+840I2           | 830I2           | S; Replace (' ' By '0')
+840$a           | <M30$a          | S
+840$b           | <M30$b          | S
+840$d           | <M30$d          | S
+840$n           | <M30$f          | S
+840$r           | <M30$r          | S
+840$g           | <M30$n          | S
+840$h           | <M30$p          | S
+840$v           | <M30$v          | S
+840$w           | <M30$x          | S
+M30             | 830             | If (RegFind('\\.\$') < 0) Then S + '.' Else S;
+                                    Replace ('$b' By ' : ', Strict);
+                                    Replace ('$d' By ' / ', Strict);
+                                    Replace ('$f' By ' / ', Strict);
+                                    Replace ('$r' By ' = ', Strict);
+                                    Replace ('$n' By '.$n');
+                                    Pvalimerkitys();
+                                    Replace ('$v' By ' ; $v', Strict);
+                                    Replace ('$x' By ',$x', Strict)
+                                    
+//Make a passthrough for pre-created 852.
+852$?           | 852$?      | S
+
+856I1           | 856(new)I1      | S
+856I2           | 856(newest)I2   | ' '
+856             | 856(newest)     | S; Replace (' base target=_blank ' By '');
+                                    Replace ('$g' By '$u');
+                                    If (@856$z = 'Kuvaus') S + '$qTEXT';
+                                    If (@856$z = 'Kansikuva') S + '$qIMAGE'
+
+872$a           | 080(new)$a      | S;
+                                    Replace ('UDK: ' By '');
+                                    Replace ('UDK:' By '');
+                                    Replace ('(' By '$x(');
+                                    Replace ('-' By '$x-');
+                                    Replace ('=' By '$x=');
+                                    RegReplace('(".*")', '$x\\1'); // - " -
+                                    Replace ('*' By '$x*');  // - " -
+                                    Replace (' $' By '$')
+
+900I1      | 900I1         | If (I1=1 Or I1=2) Then '1' Else S
+900I2      | 900I2         | If (I2=0) Then ' ' Else S 
+900$a      | 900$a         | S
+900$h      | 900$a         | +', ' + S
+900$f      | 900$c         | S
+900$t      | 900$t         | S
+900$y      | 900$y         | S
+
+910I1      | 910I1         | If (I1=0) Then '2' Else S
+910I2      | 910I2         | If (I2=0) Then ' ' Else S 
+910$p      | 910$a         | S
+910$a      | 910$a         | If Exists ($p) Then $p +'. ' + S Else S
+910$c      | 910$b         | S
+910$i      | 910$n         | S
+910$k      | 910$d         | S
+910$j      | 910$c         | S
+910$f      | 910$g         | S
+910$t      | 910$t         | S
+910$y      | 910$y         | S
+
+911I1      | 911I1         | '2'
+911I2      | 911I2         | If (I2=0) Then ' ' Else S 
+911$a      | 911$a         | S
+911$c      | 911$e         | S
+911$i      | 911$n         | S
+911$k      | 911$d         | S
+911$j      | 911$c         | S
+911$f      | 911$g         | S
+911$t      | 911$t         | S
+911$y      | 911$y         | S
+
+//Kohan vakioaineistolajin läpivienti
+942        | 942           | S
+
+945I1      | 940I1         | If (I1=0 Or I1=' ') Then ' ' Else S 
+945I2      | 940I2         | If (I2=0 Or I1=' ') Then '0' Else S 
+945$a      | 940$a         | S
+945$y      | 940$y         | S
+
+
+// *** SIJOITUSPAIKKATIEDOT 950-969, 971, 991-992 ***
+
+950$a           | 852(new)$a      | KirjastotunnusISILiksi
+950$b           | 852(newest)$b   | S
+950$c           | 852(newest)$c   | S
+950$h           | 852(newest)$i   | S
+950$x           | 852(newest)$x   | S
+
+// 951-Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
+// - commented out for we do not need these in our MARC21
+//951$a           | 852(new)$a      | KirjastotunnusISILiksi
+//951$b           | 852(newest)$b   | S
+//951$c           | 852(newest)$c   | S
+
+// 952-Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
+// - added a/b/c rules for this
+952$a           | 852(new)$a      | KirjastotunnusISILiksi
+952$b           | 852(newest)$b   | S
+952$c           | 852(newest)$c   | S
+//952           | 952      | S
+
+953$a           | 852(new)$a      | KirjastotunnusISILiksi
+953$b           | 852(newest)$b   | S
+953$c           | 852(newest)$c   | S
+
+954$a           | 852(new)$a      | KirjastotunnusISILiksi
+954$b           | 852(newest)$b   | S
+954$c           | 852(newest)$c   | S
+
+955$a           | 852(new)$a      | KirjastotunnusISILiksi
+955$b           | 852(newest)$b   | S
+955$c           | 852(newest)$c   | S
+955$d(1)        | 852(newest)$t   | S
+
+956$a           | 852(new)$a      | KirjastotunnusISILiksi
+956$b           | 852(newest)$b   | S
+956$c           | 852(newest)$c   | S
+956$d(1)        | 852(newest)$t   | S
+
+957$a           | 852(new)$a      | KirjastotunnusISILiksi
+957$b           | 852(newest)$b   | S
+957$c           | 852(newest)$c   | S
+
+958$a           | 852(new)$a      | KirjastotunnusISILiksi
+958$b           | 852(newest)$b   | S
+958$c           | 852(newest)$c   | S
+
+959$a           | 852(new)$a      | KirjastotunnusISILiksi
+959$b           | 852(newest)$b   | S
+959$c           | 852(newest)$c   | S
+
+960$a           | 852(new)$a      | KirjastotunnusISILiksi
+960$b           | 852(newest)$b   | S
+960$c           | 852(newest)$c   | S
+
+961$a           | 852(new)$a      | KirjastotunnusISILiksi
+961$b           | 852(newest)$b   | S
+961$c           | 852(newest)$c   | S
+
+// 962-Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
+// - commented out, we do not need these in our MARC21
+//962$a           | 852(new)$a      | KirjastotunnusISILiksi
+//962$b           | 852(newest)$b   | S
+//962$c           | 852(newest)$c   | S
+
+963$a           | 852(new)$a      | KirjastotunnusISILiksi
+963$b           | 852(newest)$b   | S
+963$c           | 852(newest)$c   | S
+
+964$a           | 852(new)$a      | KirjastotunnusISILiksi
+964$b           | 852(newest)$b   | S
+964$c           | 852(newest)$c   | S
+
+965$a           | 852(new)$a      | KirjastotunnusISILiksi
+965$b           | 852(newest)$b   | S
+965$c           | 852(newest)$c   | S
+
+966$a           | 852(new)$a      | KirjastotunnusISILiksi
+966$b           | 852(newest)$b   | S
+966$c           | 852(newest)$c   | S
+
+967$a           | 852(new)$a      | KirjastotunnusISILiksi
+967$b           | 852(newest)$b   | S
+967$c           | 852(newest)$c   | S
+
+968$a           | 852(new)$a      | KirjastotunnusISILiksi
+968$b           | 852(newest)$b   | S
+968$c           | 852(newest)$c   | S
+
+969$a           | 852(new)$a      | KirjastotunnusISILiksi
+969$b           | 852(newest)$b   | S
+969$c           | 852(newest)$c   | S
+
+980$a           | 852(new)$a      | KirjastotunnusISILiksi
+980$b           | 852(newest)$b   | S
+980$c           | 852(newest)$c   | S
+
+981$a           | 852(new)$a      | KirjastotunnusISILiksi
+981$b           | 852(newest)$b   | S
+981$c           | 852(newest)$c   | S
+
+986$a           | 852(new)$a      | KirjastotunnusISILiksi
+986$b           | 852(newest)$b   | S
+986$c           | 852(newest)$c   | S
+
+987$?           | 987(new)$?      | S
+
+988$a           | 852(new)$a      | KirjastotunnusISILiksi
+988$b           | 852(newest)$b   | S
+988$c           | 852(newest)$c   | S
+
+990$a           | 852(new)$a      | KirjastotunnusISILiksi
+990$b           | 852(newest)$b   | S
+990$c           | 852(newest)$c   | S
+
+991$a           | 852(new)$a      | KirjastotunnusISILiksi
+991$b           | 852(newest)$b   | S950
+991$c           | 852(newest)$c   | S
+
+992$a           | 852(new)$a      | KirjastotunnusISILiksi
+992$b           | 852(newest)$b   | S
+992$c           | 852(newest)$c   | S
+
+995$a           | <N55(1)$a       | S; RegReplace('\\s+', '$a', 'g')
+N55$a           | 850(1)$a(1)     | KirjastotunnusISILiksi;
+                                    If (D = '') Then S Else D + '$a' + S
+
+996$a           | <N56(1)$a       | S; RegReplace('\\s+', '$a', 'g')
+N56$a           | 850(1)$a(1)     | KirjastotunnusISILiksi;
+                                    If (D = '') Then S Else D + '$a' + S
+
+// 997a-Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
+997$a           | 599(new)$a      | S
+//997             | 907             | S
+//Tässä kentässä joissain kirjastoissa (mm. Kemi, Vaski) YLE-koodi.
+//997$a           | <N57(1)$a       | S; RegReplace('\\s+', '$a', 'g')
+//N57$a           | 850(1)$a(1)     | KirjastotunnusISILiksi;
+//                                    If (D = '') Then S Else D + '$a' + S
+
+998$a           | <N58(new)$a     | S; RegReplace('\\s+', '$a', 'g')
+N58$a           | 850(1)$a(1)     | KirjastotunnusISILiksi;
+                                    If (D = '') Then S Else D + '$a' + S
+
+999             | 999             | S
+
+
