@@ -19,6 +19,9 @@
   tags: kohalxcs,kohalxcs:status
 - include: kohalxcs-setup.yaml
   tags: kohalxcs,kohalxcs:setup
+  when:
+    - kohalxcs_devenv_enabled
+    - kohalxcs_dataenv_enabled
 
 ## Status of the devenv for 'lxcs'
 #- include: devenv-status.yaml

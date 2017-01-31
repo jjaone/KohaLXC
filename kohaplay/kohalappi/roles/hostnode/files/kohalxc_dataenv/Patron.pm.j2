@@ -833,7 +833,6 @@ sub buildABarcode {
     my $countyNumber;
 
     #Check overrides for licloqde-rules
-    # TODO: Do we need this for 'kohalappi'?
     if ($CFG::CFG->{organization} eq 'pielinen') {
         if ($createdLocationId == 1) { #municipal code 541
             $nochecknumber = 1;
@@ -852,6 +851,10 @@ sub buildABarcode {
         elsif ($createdLocationId == 9) {
             $nochecknumber = 1;
         }
+    }
+    # [TODO/FIX]:Kohalappi; don't check number to not add additional checksum to the end
+    elsif ($CFG::CFG->{organization} eq 'kohalappi') {
+	$nochecknumber = 1;
     }
 
     unless ($countyNumber) {
