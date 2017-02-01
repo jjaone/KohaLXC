@@ -3,7 +3,7 @@ versio 20.1.2011 - Kansalliskirjasto
 
 // KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: BibliosImportChain
 // file: $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/BibliosImportChain/Usemarcon/fi2ma/{{ item.name }}
-{{ ansible_managed | comment }}
+{{ ansible_managed | comment('c') }}
 
 
 #define macro Pvalimerkitys()         | If (PreviousSubIn(S, $p, '=1') = 'n') ReplaceOcc ('$p' By ',$p', '=1') Else ReplaceOcc ('$p' By '.$p', '=1'); \
@@ -1440,6 +1440,7 @@ J87             | 787             | S;
 //571$x(1)        | <J88$q          | S; Replace('Kuvaus' By 'TEXT') ; Replace('Kansikuva' By 'IMAGE')
 //571$x(1)        | <J88$z          | S
 //#This line is supposedly not needed# 571$x(1)        | <J88$y          | S
+//so, this should be obsolete, too#J88             | 856(new)        | S
 // 571(a-t) Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
 571$a           | 971$a           | S
 571$b           | 971$b           | S
@@ -1461,7 +1462,6 @@ J87             | 787             | S;
 571$r           | 971$r           | S
 571$s           | 971$s           | S
 571$t           | 971$t           | S
-J88             | 856(new)        | S
 
 571$u(2)        | <J89I1          | '4'
 571$u(2)        | <J89I2          | '2'
