@@ -91,10 +91,11 @@
     - en_US.UTF-8
     - fi_FI.UTF-8
 
+- debug: var=hostnode_environment,kohalxc_install,kohalxc_tooldir,kohalxc_organization
 ## Setup remote developer environment shell profile (devenv/bash-profile)
 # [KohaLXC]:devenv
-# - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
-# - kohalxc_devenv == kohalxc_tooldir/conf.d/env.dev
+# - default settings for 'KohaLXC' are in: 'roles/common/defauls/main.yaml'
+# - kohalxc_devenv (local) configs are in: '[kohalxc_tooldir]/conf.d/env.dev'
 - name: devenv - Setup system-wide Bash profile for remote KohaLXC-development
   become: yes
   template: >

@@ -42,14 +42,25 @@
     - hostnode_environment != "localdev"
 
 - debug: var=kohalxcs_kohalxc_tooldir
-## Push/copy run_conversion script to ConversionTools
-- name: dataenv - Push containerized main conversion script to ConversionTools
+## Push/copy 'run_conversion' script to ConversionTools
+- name: dataenv - Push containerized conversion main script to ConversionTools
   #become: yes
   template: >
     src="files/dataenv/run_conversion-perl_import_pl.sh.j2"
     dest="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
     mode="u+rwx,g+rx,o-rwx"
     backup="yes"
+  when:
+    - kohalxcs_dataenv_enabled
+
+## Ensure 'run_conversion' script is symlinked to container $HOME/bin
+# [KohaLXC]:srvenv
+- name: dataenv - Symlink conversion main script in container HOME/bin
+  file: >
+    src="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
+    dest="{{ '/home/'~ansible_user~'/bin/run_conversion' }}"
+    state="link"
+    force="yes"
   when:
     - kohalxcs_dataenv_enabled
 

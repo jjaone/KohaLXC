@@ -4,9 +4,19 @@
 # file: $KOHALXC_TOOLDIR/ppmmtws/ConversionTools/run_conversion-perl_import.pl.sh
 {{ ansible_managed | comment }}
 
+## KOHALXC environment
+# - Check that KOHALXC_TOOLDIR is set and directory exists..
+[[ -z "$KOHALXC_TOOLDIR" ]] || [[ ! -e "$KOHALXC_TOOLDIR" ]] &&
+    echo "== No KOHALXC_TOOLDIR set or dir does not exist ..exiting" && exit 1
+# - Check that KOHALXC_DATADIR is set and directory exists..
+[[ -z "$KOHALXC_DATADIR" ]] || [[ ! -e "$KOHALXC_DATADIR" ]] &&
+    echo "== No KOHALXC_DATADIR set or dir does not exist ..exiting" && exit 1
+
 ## Directories:
-PPMMT_DIR="$HOME/kohatools/ppmmtws"
-DATA_DIR="$HOME/kohadata/source"
+PPMMT_DIR="${KOHALXC_TOOLDIR}/ppmmtws"
+#PPMMT_DIR="$HOME/kohatools/ppmmtws"
+DATA_DIR="${KOHALXC_DATADIR}/source"
+#DATA_DIR="$HOME/kohadata/source"
 LOGS_DIR="$DATA_DIR/logs"
 
 ## PP/MMT-configuration:

@@ -20,8 +20,8 @@
 #force_handlers:
 #local_home:
 
-## KohaLXC
-kohalxc_install: "/home/{{ ansible_user }}/Works"
+## KohaLXC: install
+#kohalxc_install: "/home/{{ ansible_user }}/Works"
 #kohalxc_works:
 #kohalxc_root:
 #kohalxc_tools:

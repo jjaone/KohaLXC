@@ -36,13 +36,17 @@ kohalxcs_testvar: roles_kohalxcs_defaults_main.yaml
 ## #######################
 # - defaults in 'roles/common/defaults/main.yaml'
 # - override these in inventory/group+host_vars
+## KohaLXC: install dir
+kohalxc_install: "/home/{{ ansible_user }}"
 ## KohaLXC: works
+kohalxcs_kohalxc_works: "{{ kohalxc_install }}"
 #hostnode_kohalxc_works: "{{ kohalxc_install }}"
 ## KohaLXC: rootdir
-#kohalxcs_kohalxc_rootdir: "{{ kohalxcs_kohalxc_works }}/KohaLXC"
+kohalxcs_kohalxc_rootdir: "{{ kohalxcs_kohalxc_works }}/KohaLXC"
 #hostnode_kohalxc_rootdir: "{{ hostnode_kohalxc_works }}/KohaLXC"
 ## KohaLXC: tooldir
-kohalxcs_kohalxc_tooldir: "/home/{{ kohalxc_operuser | d('ubuntu') }}/kohatools"
+kohalxcs_kohalxc_tooldir: "{{ kohalxcs_kohalxc_rootdir }}/kohatools"
+#kohalxcs_kohalxc_tooldir: "/home/{{ kohalxc_operuser | d('ubuntu') }}/kohatools"
 #hostnode_kohalxc_tooldir: "{{ hostnode_kohalxc_rootdir }}/kohatools"
 ## KohaLXC: organization
 #hostnode_kohalxc_organization: "{{ kohalxc_organization }}"

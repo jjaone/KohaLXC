@@ -228,9 +228,9 @@ hostnode_lxcenv_loglevel: DEBUG
 
 ## LXC: mount entries
 # - kohatools
-hostnode_lxc_mount_kohatools: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools home/{{ kohalxc_operuser }}/kohatools none bind,create=dir 0 0
+hostnode_lxc_mount_kohatools: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools home/{{ kohalxc_operuser }}/KohaLXC/kohatools none bind,create=dir 0 0
 # - kohadata
-hostnode_lxc_mount_kohadata: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }} home/{{ kohalxc_operuser }}/kohadata none bind,create=dir 0 0
+hostnode_lxc_mount_kohadata: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }} home/{{ kohalxc_operuser }}/{{ kohalxc_organization }}/kohadata none bind,create=dir 0 0
 hostnode_lxc_mounts:
   - "{{ hostnode_lxc_mount_kohatools }}" 
   - "{{ hostnode_lxc_mount_kohadata }}"
