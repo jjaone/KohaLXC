@@ -17,7 +17,7 @@
 
 ## Show server lsb and os release and kernel details
 - name: Show server lsb and os release details
-  shell: cat /etc/lsb-release && cat /etc/os-release && uname -a
+  shell: lsb_release -d && cat /etc/os-release && uname -a
   changed_when: false
 
 ## Localizations: timezone
