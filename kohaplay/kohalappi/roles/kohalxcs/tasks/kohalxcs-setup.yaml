@@ -28,17 +28,18 @@
     - kohalxcs_devenv_enabled
     - kohalxcs_dataenv_enabled
 
-- debug: var=hostnode_environment
+- debug: var=hostnode_environment,kohalxc_install,kohalxc_organization
 ## Setup remote developer environment shell profile (devenv/bash-profile)
-#- name: devenv - Setup system-wide Bash profile for KohaLXC-development
-#  become: yes
-#  template: >
-#    src="files/devenv/bash_profile.sh.j2"
-#    dest="/etc/profile.d/kohalxc-devenv.sh"
-#    backup="no"
-#  when:
-#    - kohalxcs_devenv_enabled
-#    - hostnode_environment != "localdev"
+# - [TODO]: KOHALXC_ vars have wrong paths (mounts are not in Works but in HOME)
+- name: devenv - Setup system-wide Bash profile for KohaLXC-development
+  become: yes
+  template: >
+    src="files/devenv/bash_profile.sh.j2"
+    dest="/etc/profile.d/kohalxc-devenv.sh"
+    backup="no"
+  when:
+    - kohalxcs_devenv_enabled
+    - hostnode_environment != "localdev"
 
 - debug: var=kohalxcs_kohalxc_tooldir
 ## Push/copy run_conversion script to ConversionTools

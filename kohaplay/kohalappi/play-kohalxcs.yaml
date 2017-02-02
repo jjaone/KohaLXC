@@ -43,4 +43,5 @@
 
   ## Roles
   roles:
+  - common
   - kohalxcs
