@@ -871,6 +871,14 @@ sub buildABarcode {
         $_[0]->separateItemAsVolatile("\buildABarcode(): No CountyNumber present for patron borrowernumber : $patronId", 1);
     }
 
+    # TODO: DEBUG
+    if ($CFG::CFG->{organization} eq 'kohalappi') {
+	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:countyNumber= '.$countyNumber.'.');
+	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:identifyingNumber= '.$identifyingNumber.'.');
+	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()}:barcode= '.$barcode.'.');
+	#my $break;
+    }
+
     return $barcode;
 }
 
