@@ -78,14 +78,14 @@
     - hostnode_kohagrp_name is defined
     - hostnode_kohagrp_id is defined
 
-- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset
 - debug: var=kohalxc_datadir,kohalxc_dataset
+- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
 ## Pull/extract any uploads of dataset dumps from datasrv/'koha'
-# [KohaLXC]:dataenv
+# [KohaLXC]:dataenv(control)
 # -from: srv:/home/koha/Works/KohaLappi/{{item}}
 # -to: local:{{ kohalxc_works }}/{{ kohalxc_organization }}/kohadata/"
-# -item: hostnode_dataebv_datasets: e.g. "dump4mmt-Axiell-20161019-Lappi_PallasPro"
-- name: dataenv - Pull (rsync) listed dataset dumps from server (to control host)
+# -item(hostnode_dataenv_datasets): "Axiell-20161019-Lappi_PallasPro"
+- name: dataenv(control) - Pull (rsync) listed dataset dumps from server
   synchronize: >
     mode="pull"
     src="/home/{{ hostnode_kohagrp_name | d('koha') }}/Works/{{ hostnode_kohalxc_organization }}/dump4mmt-{{ item }}"
@@ -101,41 +101,56 @@
     - hostnode_dataenv_dataset is defined
     - hostnode_dataenv_dataset != ""
 
-- debug: var=kohalxc_datadir,hostnode_dataenv_dataset
-## Ensure dataset extraction and conv sources have required subdirs (local/control host)
-# [KohaLXC]:dataenv(local)
-- name: dataenv - Set required dirs and perms for dataset extraction and conv sources (control host)
+- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
+## Ensure dataset extraction/conv sources have subdirs (in control host)
+# [KohaLXC]:dataenv(control)
+- name: dataenv(control) - Dirs/perms for dataset extraction/conversion sources
   file: >
-    path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/source/{{ item.1 }}"
+    path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/{{ hostnode_dataenv_datasrc | d('source') }}/{{ item.1 }}"
     state="directory"
     recurse="no"
     group="{{ hostnode_kohagrp_id }}"
     mode="u=rwx,g=rwxs,o-rwx"
   with_nested:
     - "{{ hostnode_dataenv_dataset | d({}) }}"
-    - [ 'TranslationTables', 'preprocessed', 'scripts', 'target' ]
+    - [ 'TranslationTables', 'preprocessed', 'scripts', 'target', 'logs' ]
   when:
     - kohalxc_datadir is defined
     - hostnode_dataenv_enabled
     - item.0 is defined
   delegate_to: localhost
 
-## Extract/uncompress listed dataset(s) from pulled archives, if any (local)
-# [KohaLXC]:dataenv(local)
+## Extract/uncompress listed dataset(s) from pulled archives, if any
+# [KohaLXC]:dataenv(control)
 # - must use local action/gunzip cause no Ansible module for "uncompress" exists
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
-- name: dataenv - Extract listed datasets/table data from pulled dumps (contol host)
-  local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
+- name: dataenv(control) - Extract listed datasets/table data from pulled dumps
+  local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/{{ hostnode_dataenv_datasrc | d('source') }} && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
   when:
     - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
 
+## TODO: Implement the dataset source fix scripts runs
+- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
+- name: dataenv(control) - Run given source data fixes for specified datasets
+  local_action: shell pwd && ls -l {{ kohalxc_datadir }} && echo "{{item.name}},{{item.src}},{{item.script}}" && {{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}}
+  with_items: "{{ hostnode_dataenv_fixsource | d({}) }}"
+  register: cmd_fixsource
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+    - item.name is defined and item.src is defined and item.script is defined
+
+- debug: var=cmd_fixsource.results
+
+- fail:
+
 - debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
 ## For 'liqlocde_translation.pm' (PP/MMT) extract source CSV from Google-docs/spreadsheet:
-# [KohaLXC]:dataenv(local),ppmtenv
+# [KohaLXC]:dataenv(control),ppmtenv
 # - 'File id' and 'Sheet id' required (seems to work also w/o the &gid-argument in the URL)
-- name: dataenv - Extract CSVs for PP/MMT-TranslationTables/licloqde_translation from Google-spreadsheet
+- name: dataenv(control) - Extract CSVs for PP/MMT-TranslationTables/licloqde_translation from Google-spreadsheet
   vars:
     org: "{{ hostnode_kohalxc_organization }}"
     gDocsUrl: "https://docs.google.com/spreadsheets/d"
@@ -169,8 +184,8 @@
     - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
 
-## Run locally (control host) the kohatools/ppmmtws/ConversionTools/makeliqlocde.sh
-# [KohaLXC]:dataenv(local),ppmtenv
+## Run in control host the kohatools/ppmmtws/ConversionTools/makeliqlocde.sh
+# [KohaLXC]:dataenv(control),ppmtenv
 # - to generate the liqlocde_translation map for $org_unitsLappi (TranslationTable)
 - name: dataenv - Generate '$org_Units' mapping for PP/MMT (TranslationTables/licloqde_translation.pm-map)
   vars:
@@ -190,8 +205,8 @@
     - hostnode_ppmmtenv_enabled
   delegate_to: localhost
   notify: Sync kohalxc
-## [TODO]: Instead of the 'synchronize' task below,
-# - forcefully notify here handler to sync KohaLXC-contents to server/devops
+## [TODO]: Instead of using any 'synchronize' task below:
+# - forcefully notifyhandler to sync KohaLXC-contents to server/devops
 # - e.g. KohaLXC-tools need to be in place for 'dataenv/mmtenv'-stuff later
 # - can use '--force-handler' to ensure handler is called (atleast in the end)
 - meta: flush_handlers
@@ -200,6 +215,8 @@
 # [KohaLXC]:dataenv(local),ppmtenv
 # - to generate a fixed source *.kirs for iterating PP/MMT-runs
 # - may need to forcefully run abobe 'Sync KohalXC' after this task..
+
+- fail:
 
 - debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
@@ -242,7 +259,7 @@
 - name: dataenv - Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
-    lxc_src: "/home/{{ kohalxc_operuser }}/kohadata/{{ hostnode_dataenv_datasrc }}"
+    lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/{{ hostnode_dataenv_datasrc }}"
     org: "{{ hostnode_kohalxc_organization }}"
   template: >-
     src="files/kohalxc_dataenv/config.xml.j2"
@@ -252,7 +269,7 @@
     backup="no"
   with_items:
     - { name: host_config, source: "{{ host_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
-    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 0, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 0, patrons_ssnindex: 120000, checkouts_run: 0, history_run: 0, serials_run: 0 }
+    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 0, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, patrons_ssnindex: 120000, checkouts_run: 0, history_run: 0, serials_run: 0 }
 #    - { name: configBiblios, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -1000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0 }
   when:
     - hostnode_dataenv_enabled

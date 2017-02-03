@@ -71,8 +71,11 @@ hostnode_dataenv_pckgs:
 hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
 # KohaLXC/dataenv: datasets name(s) for MMT-migration:
 hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
-# KohaLXC/dataenv: dataset source dir for MMT
-hostnode_dataenv_datasrc: source
+# KohaLXC/dataenv: dataset source dir(s) for MMT
+hostnode_dataenv_datasrc: "source"
+# KohaLXC/dataenv: default dataset with latest fix source dir(s) for MMT
+hostnode_dataenv_fixssource:
+  - { name: "default", src: "source" }
 
 ## KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
 # - by default enable here if dataenv_dataset(s) have been defined in the host
