@@ -131,21 +131,6 @@
     - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
 
-## TODO: Implement the dataset source fix scripts runs
-- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
-- name: dataenv(control) - Run given source data fixes for specified datasets
-  local_action: shell pwd && ls -l {{ kohalxc_datadir }} && echo "{{item.name}},{{item.src}},{{item.script}}" && {{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}}
-  with_items: "{{ hostnode_dataenv_fixsource | d({}) }}"
-  register: cmd_fixsource
-  when:
-    - hostnode_dataenv_enabled
-    - kohalxc_datadir is defined
-    - item.name is defined and item.src is defined and item.script is defined
-
-- debug: var=cmd_fixsource.results
-
-- fail:
-
 - debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
 ## For 'liqlocde_translation.pm' (PP/MMT) extract source CSV from Google-docs/spreadsheet:
 # [KohaLXC]:dataenv(control),ppmtenv
@@ -204,17 +189,42 @@
     - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
   delegate_to: localhost
-  notify: Sync kohalxc
+#  notify: Sync kohalxc
 ## [TODO]: Instead of using any 'synchronize' task below:
 # - forcefully notifyhandler to sync KohaLXC-contents to server/devops
 # - e.g. KohaLXC-tools need to be in place for 'dataenv/mmtenv'-stuff later
 # - can use '--force-handler' to ensure handler is called (atleast in the end)
-- meta: flush_handlers
+#- meta: flush_handlers
 
-## [TODO]:Run locally (in control host) the "{{ kohalxc_datadir }}/{{ hostnode_dataenv_dataset }}/source/scripts/fix_source.sh"
-# [KohaLXC]:dataenv(local),ppmtenv
-# - to generate a fixed source *.kirs for iterating PP/MMT-runs
-# - may need to forcefully run abobe 'Sync KohalXC' after this task..
+## Push possible dataset dump fixes to each source scripts forlder
+# [KohaLXC]:dataenv(control)
+- name: dataenv(control) - Push templetized dump/dataset fixes to source/scripts folder
+  template: >
+    src="files/kohalxc_dataenv/{{item.script}}.j2"
+    dest="{{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}}"
+    mode="u+rwx,g+rx,o-rwx"
+  with_items: "{{ hostnode_dataenv_fixsource | d({}) }}"
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+    - item.name is defined and item.script is defined
+  delegate_to: localhost
+
+- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
+## TODO: Implement the dataset source fix scripts runs
+# [KohaLXC]:dataenv(control)
+- name: dataenv(control) - Run existing dataset fixes for specified sources 
+  environment:
+    KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
+    KOHALXC_DATASET: "{{ item.name | d('default') }}"
+  local_action: shell pwd && echo "== " && ls -l {{ kohalxc_datadir }} && echo "== " && {{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}} {{item.src | d('source.fixed') }}
+  with_items: "{{ hostnode_dataenv_fixsource | d({}) }}"
+  register: cmd_fixsource
+  when:
+    - hostnode_dataenv_enabled
+    - kohalxc_datadir is defined
+    - item.name is defined and item.src is defined and item.script is defined
+- debug: var=cmd_fixsource.results
 
 - fail:
 
@@ -261,7 +271,7 @@
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
     lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/{{ hostnode_dataenv_datasrc }}"
     org: "{{ hostnode_kohalxc_organization }}"
-  template: >-
+  template: >
     src="files/kohalxc_dataenv/config.xml.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.name }}.xml"
     group="{{ hostnode_kohagrp_name }}"
@@ -280,7 +290,7 @@
 ## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
 # [KohaLXC]:dataenv,ppmmtenv
 - name: dataenv - Push/copy MMT-tools import.pl and TranslationTables to data/mmt-enabled targets
-  template: >-
+  template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
     group="{{ hostnode_kohagrp_name }}"
@@ -301,7 +311,7 @@
 ## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
 # [KohaLXC]:dataenv,ppmmtenv
 - name: dataenv - Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled targets
-  template: >-
+  template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
     group="{{ hostnode_kohagrp_name }}"
