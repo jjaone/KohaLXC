@@ -217,7 +217,7 @@
   environment:
     KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
     KOHALXC_DATASET: "{{ item.name | d('default') }}"
-  local_action: shell pwd && echo "== " && ls -l {{ kohalxc_datadir }} && echo "== " && {{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}} {{item.src | d('source.fixed') }}
+  local_action: shell pwd && echo "== " && ls -l {{ kohalxc_datadir }} && echo "== " && {{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}} {{item.src}}
   with_items: "{{ hostnode_dataenv_fixsource | d({}) }}"
   register: cmd_fixsource
   when:
@@ -226,9 +226,8 @@
     - item.name is defined and item.src is defined and item.script is defined
 - debug: var=cmd_fixsource.results
 
-- fail:
-
 - debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
+- fail:
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
 # [KohaLXC]:dataenv,mmtenv
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
@@ -333,4 +332,4 @@
     - hostnode_kohalxc_tooldir is defined
 
 ## Abort play here (for testing and development):
-#- fail:
+- fail:

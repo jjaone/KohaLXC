@@ -5,8 +5,8 @@
 {{ ansible_managed | comment }}
 
 ## Command line args
-# - Base name of ConversionTable to be generated, e.g. 'patrons_staffaccounts'
-DATASET_FIXSOURCE="${1:-source.fixed}"
+# - name/number of the dataset fix that we are running here (source.0 = this only)
+DATASET_FIXSOURCE="${1:-source.0}"
 [[ -z "$DATASET_FIXSOURCE" ]] && echo "== Error: no name for dataset fix given.. exiting." && echo && exit 2
 echo "== Name of the dataset source fix content to be generated: DATASET_FIXSOURCE='$DATASET_FIXSOURCE'"
 
@@ -81,6 +81,10 @@ echo "== Rename fix to 'licmarca.kir'.."
 echo "== Truncate licmarcb.kir to zero size (backup original).."
 [[ ! -e licmarcb.kir-orig ]] && [[ ! -L licmarcb.kir ]] && mv licmarcb.kir licmarcb.kir-orig
 truncate --size=0 licmarcb.kir
+
+## Make a symlink in in '../source.0' to this dir (unless it exists as dir)
+( cd .. && [[ ! -d "source.0" ]] &&
+	ln -s ${DATASET_FIXSOURCE} "source.0" && ls )
 
 ## Show what we got
 ls -lR
