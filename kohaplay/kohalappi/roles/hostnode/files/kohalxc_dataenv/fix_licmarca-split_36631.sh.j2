@@ -38,10 +38,9 @@ echo "== DATASET_DUMP=$DATASET_DUMP"
 ## Make sure directories exist for DATASET fixes/edits
 mkdir -vp $KOHALXC_DATADIR/$DATASET_DUMP/$DATASET_FIXSOURCE/{preprocessed,scripts,target,logs}
 
-################
-## Do the fix ##
-################
-
+###################
+## Start the fix ##
+##
 ## Sync/copy original source(s) to fixsource(s): any '*.kir' and '*.csv' files
 echo && cd $KOHALXC_DATADIR/$DATASET_DUMP/$DATASET_FIXSOURCE && pwd || exit 666
 echo && echo "== Sync/copy source *.kir and *.csv files to:`pwd`" 
@@ -81,13 +80,18 @@ echo "== Rename fix to 'licmarca.kir'.."
 echo "== Truncate licmarcb.kir to zero size (backup original).."
 [[ ! -e licmarcb.kir-orig ]] && [[ ! -L licmarcb.kir ]] && mv licmarcb.kir licmarcb.kir-orig
 truncate --size=0 licmarcb.kir
+##
+## End the fix ##
+#################
 
-## Make a symlink in in '../source.0' to this dir (unless it exists as dir)
-( cd .. && [[ ! -d "source.0" ]] &&
-	ln -s ${DATASET_FIXSOURCE} "source.0" && ls )
+## Make a symlink in '../source.0' to this dir (unless 'source.0' is a dir)
+( cd .. && [[ ! -d "source.0" ]] && rm -f "source.0" &&
+	ln -vs ${DATASET_FIXSOURCE} "source.0" && ls -ld )
 
 ## Show what we got
-ls -lR
+echo && echo "== Show what we got:"
+( cd .. && pwd && ls -ld source* )
+echo && pwd && ls -lR
 
 ## All done
 exit 0
