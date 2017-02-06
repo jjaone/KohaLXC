@@ -85,8 +85,8 @@ truncate --size=0 licmarcb.kir
 #################
 
 ## Make a symlink in '../source.0' to this dir (unless 'source.0' is a dir)
-( cd .. && [[ ! -d "source.0" ]] && rm -f "source.0" &&
-	ln -vs ${DATASET_FIXSOURCE} "source.0" && ls -ld )
+( cd .. && [[ ! -d "source.0" ]] && rm -f source.0 &&
+	ln -vs ${DATASET_FIXSOURCE} source.0 && ls -ld )
 
 ## Show what we got
 echo && echo "== Show what we got:"

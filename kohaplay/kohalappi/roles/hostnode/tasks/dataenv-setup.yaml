@@ -227,7 +227,6 @@
 - debug: var=cmd_fixsource.results
 
 - debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
-- fail:
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
 # [KohaLXC]:dataenv,mmtenv
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
@@ -239,8 +238,9 @@
     owner="no"
     group="yes"
     perms="yes"
+    links="yes"
     rsync_timeout="15"
-    rsync_opts="--include='**/' --include='/*/default/**' --include='/*/dump4mmt-default**' --include='/*/dump4mmt-*/source*/**' --exclude='*'"
+    rsync_opts="--include='**/' --include='/*/default/**' --include='/*/dump4mmt-default**' --include='/*/dump4mmt-*/**' --include='/*/dump4mmt-*/source*/**' --exclude='*'"
     recursive="yes"
     delete="no"
   with_items:
