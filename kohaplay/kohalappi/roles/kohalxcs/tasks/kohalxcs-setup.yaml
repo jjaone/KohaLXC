@@ -42,7 +42,6 @@
     - hostnode_environment != "localdev"
 
 - debug: var=kohalxcs_kohalxc_tooldir
-- fail: 
 ## Push/copy 'run_conversion' script to ConversionTools
 - name: dataenv - Push containerized conversion main script to ConversionTools
   #become: yes

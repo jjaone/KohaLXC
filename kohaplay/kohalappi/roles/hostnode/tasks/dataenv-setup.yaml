@@ -257,7 +257,7 @@
 # [KohaLXC]:dataenv,ppmmtenv
 # Parameters passed to {host,lxc}_config.xml
 # - name: name of the config file: {host_config,lxc_config}.xml
-# - source: source directory in dump4mmt-??? folder ('source')
+# - source: source directory in dump4mmt-xyz folder ('source.0' for fixed sources)
 # - organization: library that we are MMT-converting
 # - threadCount: number of threads MMT should use
 # - debugACL: "DEBUGAuthoritiesCountLimit"
@@ -267,8 +267,8 @@
 # - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
 - name: dataenv - Push/copy MMT-tools host/lxc_config.xml to mmt/data-enabled targets
   vars:
-    host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/{{ hostnode_dataenv_datasrc }}"
-    lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/{{ hostnode_dataenv_datasrc }}"
+    host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/source.0"
+    lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/source.0"
     org: "{{ hostnode_kohalxc_organization }}"
   template: >
     src="files/kohalxc_dataenv/config.xml.j2"
@@ -332,4 +332,4 @@
     - hostnode_kohalxc_tooldir is defined
 
 ## Abort play here (for testing and development):
-- fail:
+#- fail:

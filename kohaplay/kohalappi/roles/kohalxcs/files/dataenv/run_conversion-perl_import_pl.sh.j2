@@ -12,10 +12,11 @@
 [[ -z "$KOHALXC_DATADIR" ]] || [[ ! -e "$KOHALXC_DATADIR" ]] &&
     echo "== No KOHALXC_DATADIR set or dir does not exist ..exiting" && exit 1
 
-## Directories:
+## Directories: 
 PPMMT_DIR="${KOHALXC_TOOLDIR}/ppmmtws"
 #PPMMT_DIR="$HOME/kohatools/ppmmtws"
-DATA_DIR="${KOHALXC_DATADIR}/source"
+#: -'source.0' to use "fixed sources" as data
+DATA_DIR="${KOHALXC_DATADIR}/source.0"
 #DATA_DIR="$HOME/kohadata/source"
 LOGS_DIR="$DATA_DIR/logs"
 
@@ -42,20 +43,20 @@ echo "CONFIG_XML=$CONFIG_XML"
 STARTSTAMP=`date +%Y%m%d_%H%M`
 echo && echo "== conversion_run-perl_import.pl.sh: $STARTSTAMP"
 
-# Make required directories
-cd $PPMMT_DIR/PerlMMT
-mkdir -vp $LOGS_DIR
+# Make required directories (and empty run log directory)
+cd $PPMMT_DIR/PerlMMT && mkdir -vp logs && pwd && rm -f logs/*.log &&
+    mkdir -v logs/conversion-$STARTSTAMP
+mkdir -vp $LOGS_DIR && pwd && ls -la $LOGS_DIR
 
 # Run the PP/MMT
-perl import.pl ../$CONFIG_XML
+perl import.pl ../$CONFIG_XML 2>&1 | tee logs/conversion-$STARTSTAMP/import_all.log
+#perl import.pl ../$CONFIG_XML |& tee logs/conversion-$STARTSTAMP/import_all.log
 
 # Save logs
-cp -vpr logs $LOGS_DIR/PerlMMT-logs_$STARTSTAMP
+echo && cp -vpr logs/* $LOGS_DIR
+echo && ls -l $LOGS_DIR/conversion-$STARTSTAMP
 
 ENDSTAMP=`date +%Y%m%d_%H%M`
-
-ls -l $LOGS_DIR/PerlMMT-logs_$STARTSTAMP
-
 echo && echo "== conversion_run-perl_import.pl.sh: done on $ENDSTAMP"
 
 exit 0

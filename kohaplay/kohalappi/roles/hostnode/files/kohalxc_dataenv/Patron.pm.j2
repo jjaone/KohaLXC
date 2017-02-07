@@ -341,12 +341,24 @@ sub set_branchcode {
     my $libid;
     my $culocid = $_[2]->[0];
 
-    if(length $culocid == 5) { #If Eno is involved 
+    # TODO: DEBUG
+    #if ($CFG::CFG->{organization} eq 'kohalappi') {
+    #	$log->warning('DEBUG[Patron.pm.j2/set_branchcode()]:culocid='.$culocid.'.');
+    #	#my $break;
+    #}
+
+    if(length $culocid == 5) {
         $libid = substr $culocid, 0, 2;
     }
     else {
         $libid = substr $culocid, 0, 1;
     }
+
+    # TODO: DEBUG
+    #if ($CFG::CFG->{organization} eq 'kohalappi') {
+#	$log->warning('DEBUG[Patron.pm.j2/set_branchcode()]:libid='.$libid.', culocid='.$culocid.'.');
+    #    }
+
     my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $culocid }  );
     my $oldLocName = $licloqde->[0];
     my $branchcode = $licloqde->[1];
@@ -872,12 +884,10 @@ sub buildABarcode {
     }
 
     # TODO: DEBUG
-    if ($CFG::CFG->{organization} eq 'kohalappi') {
-	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:countyNumber= '.$countyNumber.'.');
-	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:identifyingNumber= '.$identifyingNumber.'.');
-	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()}:barcode= '.$barcode.'.');
-	#my $break;
-    }
+    #if ($CFG::CFG->{organization} eq 'kohalappi') {
+    #	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:countyNumber='.$countyNumber.', identifyingNumber='.$identifyingNumber.', barcode='.$barcode.'.');
+    #	#my $break;
+    #}
 
     return $barcode;
 }

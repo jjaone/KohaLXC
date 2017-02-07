@@ -22,12 +22,10 @@ use CheckOutsImportChain::Controller;
 use HistoryImportChain::Controller;
 
 ## Add STDOUT/STDERR logging to a file: logs/import.pl-run.log  
-open(STDOUT, "|tee -a ".Cwd::getcwd."/logs/import.pl-run.log");
-open(STDERR, "|tee -a ".Cwd::getcwd."/logs/import.pl-run.log");
-print "\n== 'New import.pl' run:[TODO:date/time here] ==\n";
-print "Initialized additional logging of STDOUD/STDERR to: logs/import.pl-run.log ..\n";
-
-print "Current working directory: ".Cwd::getcwd."\n";
+#open(STDOUT, "|tee ".Cwd::getcwd."/logs/import.pl-run_output.log");
+#open(STDERR, "|tee ".Cwd::getcwd."/logs/import.pl-run_errors.log");
+print "\n== import.pl:[TODO:date/time here] in ".Cwd::getcwd." ==\n";
+#print "== Additional logging of STDOUD/STDERR to: logs/import.pl-run_{output,errors}.log ..\n";
 
 #### Start the program flow control ####
 #print "One can reset all logs using\n   --resetlog\n";
@@ -145,5 +143,7 @@ HELPLAPPI
 }
 
 ## Close additional logging streams
-close(STDOUT);
-close(STDERR);
+#close(STDOUT);
+#close(STDERR);
+
+exit 0
