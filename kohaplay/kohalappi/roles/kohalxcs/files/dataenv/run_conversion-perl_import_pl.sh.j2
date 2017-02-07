@@ -43,19 +43,22 @@ echo "CONFIG_XML=$CONFIG_XML"
 STARTSTAMP=`date +%Y%m%d_%H%M`
 echo && echo "== conversion_run-perl_import.pl.sh: $STARTSTAMP"
 
-# Make required directories (and empty run log directory)
+## Make required directories (and empty run log directory)
 cd $PPMMT_DIR/PerlMMT && mkdir -vp logs && pwd && rm -f logs/*.log &&
     mkdir -v logs/conversion-$STARTSTAMP
 mkdir -vp $LOGS_DIR && pwd && ls -la $LOGS_DIR
 
-# Run the PP/MMT
+## Run the PP/MMT
 perl import.pl ../$CONFIG_XML 2>&1 | tee logs/conversion-$STARTSTAMP/import_all.log
 #perl import.pl ../$CONFIG_XML |& tee logs/conversion-$STARTSTAMP/import_all.log
 
-# Save logs
+## Save logs
 echo && cp -vpr logs/* $LOGS_DIR
-echo && ls -l $LOGS_DIR/conversion-$STARTSTAMP
 
+## Show what we got
+echo && ls -l $LOGS_DIR/conversion-$STARTSTAMP && head -20 $LOGS_DIR/conversion-$STARTSTAMP/import_all.log
+
+## Clean exit
 ENDSTAMP=`date +%Y%m%d_%H%M`
 echo && echo "== conversion_run-perl_import.pl.sh: done on $ENDSTAMP"
 
