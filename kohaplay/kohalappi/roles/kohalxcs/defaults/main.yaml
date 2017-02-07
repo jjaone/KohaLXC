@@ -99,6 +99,7 @@ kohalxcs_dataenv_pckgs:
 #hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
 # KohaLXC/mmtenv: PP/MMT-tool environment
 #hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
+kohalxcs_ppmmtenv_enabled: true
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 #hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 

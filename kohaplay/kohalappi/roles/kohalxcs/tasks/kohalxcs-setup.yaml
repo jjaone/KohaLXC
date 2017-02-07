@@ -54,7 +54,7 @@
     - kohalxcs_dataenv_enabled
 
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
-# [KohaLXC]:srvenv
+# [KohaLXC]:dataenv
 - name: dataenv - Symlink conversion main script in container HOME/bin
   file: >
     src="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
@@ -63,6 +63,39 @@
     force="yes"
   when:
     - kohalxcs_dataenv_enabled
+
+- debug: var=kohalxc_tooldir,kohalxc_datadir
+## Run the conversion: 'run_conversion'
+# [KohaLXC]:dataenv
+- name: dataenv/ppmmtenv - Run the PP/MMT-conversion script
+  environment:
+    KOHALXC_TOOLDIR: "{{ '/home/'~ansible_user~'/KohaLXC/kohatools' }}"
+    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
+  shell: |
+    ls -l ~/bin/run_conversion
+    echo && echo "== START OF PP/MMT CONVERSION.." && echo
+    $HOME/bin/run_conversion > /dev/null
+    head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
+    echo && echo "== ..CONVERTING.." && echo
+    tail -20 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
+    echo && echo "== END OF PP/MMT CONVERSION." && echo
+    (cd $KOHALXC_DATADIR/source.0/logs && pwd && ls -l && echo)
+    (cd $KOHALXC_DATADIR/source.0/target && pwd && ls -l && echo)
+  when:
+    - kohalxcs_dataenv_enabled
+    - kohalxcs_ppmmtenv_enabled
+
+## Run the conversion: build the 'xyz.migrateme' -files
+# [KohaLXC]:dataenv/ppmmtenv
+- name: dataenv/ppmmtenv - Build the 'migrateme' files to be inserted to Koha-database
+  environment:
+    KOHALXC_TOOLDIR: "{{ '/home/'~ansible_user~'/KohaLXC/kohatools' }}"
+    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
+  shell: |
+    (cd $KOHALXC_DATADIR/source.0/target/Patrons && cat 01_patrons* > patrons.migrateme && ls -l )
+  when:
+    - kohalxcs_dataenv_enabled
+    - kohalxcs_ppmmtenv_enabled
 
 
 ## !! For debug/dev FAIL here on purpose..!! ##
