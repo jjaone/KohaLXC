@@ -35,12 +35,26 @@
   #    prompt: "Input something?"
   #    tags: hostnode:prerole
 
+  ## Vars
+  vars:
+    lxcs_names: "{{ lookup('pipe', 'cd roles/hostnode/vars/lxcs; ls -1 | grep -oP \"(?<=lxc-)\\w+(?=.yaml)\" || exit 0') }}"
+#    lxcs_names: "{{ lookup('pipe', 'cd roles/hostnode/vars/lxcs; ls -1 | grep -oP \"lxc-\\K\\w+(?=.yaml)\" || echo -n') }}"
+    #local_lxcs: "{{ lookup('pipe', 'cd roles/hostnode/vars/lxcs; ls -1 lxc-*.yaml') }}"
+
   ## Pre-tasks
   pre_tasks:
     - raw: echo "hostnodes(pre_tasks/raw) 'play-hostnodes.yaml'"
     - debug: var=inventory_hostname,hostnode_environment,hostnode_operid,kohalxc_operuser
 
-    # List contents of read vars_files (if any)
+    # [debug]: List names of (localy defined) LXCs (if any)
+    - name: hostnode/pre_tasks - List names of defined LXCs (if any)
+      debug: var=lxcs_names,hostnode_lxcs,hostnode_environment
+      when:
+        - lxcs_names is defined
+        - lxcs_names != ""
+      tags: hostnode:prerole
+
+    # [debug]: List contents of read vars_files (if any)
     - name: hostnode/pre_tasks - List contents of preset vars (if any)
       debug: var=hostnode_var
       when:
@@ -58,19 +72,19 @@
   post_tasks:
     - raw: echo "In hostnodes(post_tasks/raw) 'play-hostnodes.yaml'"
 
-    # [debug]: List provisioned LXCs (if any)
+    # [verbose]: List provisioned LXCs (if any)
     - name: hostnode/post_tasks - List provisioned LXCs (if any)
-      debug: var=hostnode_lxcs,hostnode_environment
+      debug: var=lxcs_names,hostnode_lxcs,hostnode_environment
+      when:
+        - lxcs_names is defined or hostnode_lxcs is defined
+        - lxcs_names != "" or hostnode_lxcs != ""
       tags: hostnode:postrole
 
     # [debug]: Show some ssh/connection vars
-    - name: hostnode/post_tasks - Show some ssh/connection vars
-      debug: var=ansible_host,ansible_port,ansible_user,ansible_become_method,ansible_ssh_common_args,inventory_hostname
-      tags: hostnode:postrole
+    #- name: hostnode/post_tasks - Show some ssh/connection vars
+    #  debug: var=ansible_host,ansible_port,ansible_user,ansible_become_method,ansible_ssh_common_args,inventory_hostname
+    #  tags: hostnode:postrole
 
-    ## Abort play here (for testing and development):
-    #- fail:
-      
     # Add provisionable LXCs as new hosts (grouping them by their domain name) 
     - name: hostnode/post_tasks - Create LXC host for detailed setup/config
       #debug: var=item

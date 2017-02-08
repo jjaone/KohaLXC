@@ -54,7 +54,6 @@
     - kohalxcs_dataenv_enabled
 
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
-# [KohaLXC]:dataenv
 - name: dataenv - Symlink conversion main script in container HOME/bin
   file: >
     src="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
@@ -65,8 +64,7 @@
     - kohalxcs_dataenv_enabled
 
 - debug: var=kohalxc_tooldir,kohalxc_datadir
-## Run the conversion: 'run_conversion'
-# [KohaLXC]:dataenv
+## Run conversion: main script
 - name: dataenv/ppmmtenv - Run the PP/MMT-conversion script
   environment:
     KOHALXC_TOOLDIR: "{{ '/home/'~ansible_user~'/KohaLXC/kohatools' }}"
@@ -85,14 +83,19 @@
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
-## Run the conversion: build the 'xyz.migrateme' -files
-# [KohaLXC]:dataenv/ppmmtenv
-- name: dataenv/ppmmtenv - Build the 'migrateme' files to be inserted to Koha-database
+## Run conversion: build '{Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme' files
+- name: dataenv/ppmmtenv - Build '*.migrateme' files to be inserted to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ '/home/'~ansible_user~'/KohaLXC/kohatools' }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
   shell: |
-    (cd $KOHALXC_DATADIR/source.0/target/Patrons && cat 01_patrons* > patrons.migrateme && ls -l )
+    for d in Patrons Biblios Items Holds Checkouts Fines
+    do
+    (cd $KOHALXC_DATADIR/source.0/target/$d && pwd && cat 01_${d,,}* > ${d,,}.migrateme && ls -l && echo && echo -n "== Lines, words, characters: " && wc ${d,,}.migrateme) || echo;
+    done
+  args:
+    executable: /bin/bash
+  #ignore_errors: yes
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
