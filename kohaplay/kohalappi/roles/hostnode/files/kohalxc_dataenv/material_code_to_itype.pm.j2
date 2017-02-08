@@ -90,33 +90,37 @@ our $tablePielinen = {
 };
 
 our $tableLappi = {
-    'la' => ['AL', 1], #Aikakauslehti(lain.) => Aikakauslehti #We need isASerial to separate serials from items
-#    'at' => ['??'], #??
+    '?' => ['XX'], # Konversioaineistolaji. Pallaksesta löytyvä aineistolaji, ei tietoa mitä tyyppiä oikeasti on
+    '|' => ['XX'], # Konversioaineistolaji. Pallaksesta löytyvä aineistolaji, ei tietoa mitä tyyppiä oikeasti on
+    'at' => ['XX'], # Konversioaineistolaji. Pallaksesta löytyvä aineistolaji, ei tietoa mitä tyyppiä oikeasti on
     'br' => ['BR'], #Blu-ray
+    'c|' => ['CD'], #CD-Äänilevy
     'cd' => ['CD'], #CD-äänilevy
     'ce' => ['CE'], #Celian äänikirja (Celiaa ei ole nykyisin? Jääkö tyhjäksi)
+    'CE' => ['CE'], #Celia Äänikirja. Is set in MARC::Record->materialType(). This is just a passthrough.
     'cr' => ['CR'], #CD-ROM
-#    'c|' => ['CD'], #??,CD-Äänilevy
-#    'di' => ['??'], #??,Dia
+    'di' => ['DI'], #Dia
     'dr' => ['DR'], #DVD-ROM-levy
     'dv' => ['DV'], #DVD-Video
     'ek' => ['EK'], #e-kirja
     'es' => ['ES'], #Esine
+    'k|' => ['KI'], #Kirja
     'ka' => ['KA'], #C-kasetti
     'ki' => ['KI'], #Kirja
-#    'kj' => ['??'], #??
-#    'kk' => ['??'], #??,Kielikurssi? => Ääni ja teksti..
-    'kp' => ['KP'], #Konsolipeli, konsolipeliä ei ole, jääkö tyhjäksi?
+    'kj' => ['KI'], #Kirja
+    'kk' => ['XX'], #Konversioaineistolaji. Pallas kielikurssi
+    'kp' => ['KP'], #Konsolipeli
+    'KP' => ['XX'], # Konversioaineistolaji. Pallaksesta löytyvä aineistolaji, ei tietoa mitä tyyppiä oikeasti on
     'kr' => ['KR'], #Kartta
-    'kv' => ['KU'], #??,Kuva
-    'kä' => ['KI'], #käsikirjoitus , muutetaan kirjaksi
-    'kä' => ['KK'], #Käsikirjoitus
+    'kv' => ['XX'], #Konversioaineistolaji. Pallas kuva
+    'kä' => ['KA'], #Käsikirjoitus
+    'la' => ['AL', 1], #Aikakauslehti, We need isASerial to separate serials from items
     'lp' => ['LP'], #LP-levy
     'mf' => ['MF'], #Mikrofilmi
     'mk' => ['MK'], #Mikrokortti
-    'mp' => ['MP'], #MP3-CD, mp# ei ole, jääkö tyhjäksi?
-    'mu' => ['??'], #??
-    'mv' => ['MO'], #Moniviestin
+    'mp' => ['MP'], #MP3-CD
+    'mu' => ['XX'], #Konversioaineistolaji. Pallas muu
+    'mv' => ['MV'], #Moniviestin
     'nu' => ['NU'], #Nuotti
     'pa' => ['PA'], #Partituuri
     'si' => ['SI'], #Single
@@ -124,8 +128,8 @@ our $tableLappi = {
     'ty' => ['TY'], #Työpiirrustus
     'va' => ['VA'], #Verkkoaineisto
     'vv' => ['VI'], #Videokasetti
-    'äl' => ['AK'], #Äänikirja
-    'CE' => ['CE'], #Celia Äänikirja. Is set in MARC::Record->materialType(). This is just a passthrough.
+    'z2' => ['XX'], # Konversioaineistolaji. Pallaksesta löytyvä aineistolaji, ei tietoa mitä tyyppiä oikeasti on
+    'äk' => ['AK'], #Äänikirja
 };
 
 sub fetch {
