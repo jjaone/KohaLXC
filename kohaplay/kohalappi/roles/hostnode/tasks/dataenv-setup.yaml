@@ -278,7 +278,7 @@
     backup="no"
   with_items:
     - { name: host_config, source: "{{ host_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
-    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: 50, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, patrons_ssnindex: 120000, checkouts_run: 0, history_run: 0, serials_run: 0 }
+    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, patrons_ssnindex: 120000, checkouts_run: 0, history_run: 0, serials_run: 0 }
 #    - { name: configBiblios, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -1000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0 }
   when:
     - hostnode_dataenv_enabled

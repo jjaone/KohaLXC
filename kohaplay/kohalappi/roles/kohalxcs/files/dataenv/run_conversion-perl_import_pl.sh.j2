@@ -50,6 +50,10 @@ STARTSTAMP=`date +%Y%m%d_%H%M`
 
 ## Cleanup for traping kills/terminations of the script
 function onterminated() {
+    PGID=$(ps -o pgid= $$ | grep -o [0-9]*)
+    echo && echo "== $PROGNAME ($STARSTAMP): killing process group: $PGID.."
+    setsid kill -- -$PGID
+
     rm -f $LOGS_DIR/conversion-$STARTSTAMP/*
     rmdir $LOGS_DIR/conversion-$STARTSTAMP
     #rm -f $LOGS_DIR/conversion-last
@@ -60,9 +64,12 @@ function onterminated() {
 
 function cleanPreviousRun() {
    NOWSTAMP=`date +%Y%m%d_%H%M`
-   echo && echo "== $PROGNAME ($NOWSTAMP): cleaning previous run  process artifacts"
-   ps aux | grep $CONFIG_XML | grep run_conversion
-   pkill run_conversion
+   echo && echo "== $PROGNAME ($NOWSTAMP): clean previous run artifacts (if any).."
+   PID=$(ps axjf | grep -A2 "START OF PP/MMT CONVERSION" | grep -v grep | grep "perl import.pl" | grep -v grep | awk '{print $2}')
+   [[ -n "$PID" ]] && (
+       echo && echo "== $PROGNAME ($NOWSTAMP): killing 'perl import.pl ($PID)'.."
+       kill $PID
+   )
 }
 
 ## Trap for cleanup if we are terminated in the middle of conversion
@@ -70,6 +77,10 @@ trap onterminated SIGHUP SIGINT SIGTERM
 
 ## Indicate that we are starting up
 echo && echo "== $PROGNAME ($STARTSTAMP) for:$IMPORTCHAINS"
+
+## Clean previous run process artifacts..
+# - kill 'perl import.pl' and the trap should handle the rest
+cleanPreviousRun;
 
 ## Make required directories (and empty run log directory)
 cd $PPMMT_DIR/PerlMMT && mkdir -vp logs && pwd && rm -f -r logs/*

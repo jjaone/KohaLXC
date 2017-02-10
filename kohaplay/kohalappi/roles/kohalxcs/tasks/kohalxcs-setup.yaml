@@ -86,7 +86,7 @@
     - kohalxcs_ppmmtenv_enabled
 
 ## Run conversion: check whether we are finished
-- name: dataenv/ppmmtenv - Check whether PP/MMT-conversion run is finisihed..
+- name: dataenv/ppmmtenv - Check whether PP/MMT-conversion run has finisihed..
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
@@ -103,7 +103,7 @@
     KOHALXC_TOOLDIR: "{{ '/home/'~ansible_user~'/KohaLXC/kohatools' }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
   shell: |
-    tail -20 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
+    tail -30 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
     echo && echo "== END OF PP/MMT CONVERSION." && echo
     (cd $KOHALXC_DATADIR/source.0/logs && pwd && ls -l && echo)
     (cd $KOHALXC_DATADIR/source.0/target && pwd && ls -Csh && echo)
