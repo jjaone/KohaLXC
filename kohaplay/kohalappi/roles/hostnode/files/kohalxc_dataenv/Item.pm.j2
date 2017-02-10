@@ -462,6 +462,7 @@ sub set_itype {
 
     my $bibliosMaterialCode = $reader->{'licauthmarc'}->fetch(  $_[0]->get_biblionumber(), 'pallasMaterialCode'  );
 
+    ## DEGUG/TODO: kohalappi: below elseif-code fails with undefined $bibliosMaterialCode
     if (not(defined $bibliosMaterialCode) && $_[0]->get_barcode() =~ /_HANK/) {
         $log->warning('Item '.$_[0]->get_barcode().': Parent Biblio '.$_[0]->get_biblionumber().' has no pallas material type!');
     }

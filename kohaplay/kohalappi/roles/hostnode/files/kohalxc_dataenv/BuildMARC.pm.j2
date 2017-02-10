@@ -425,8 +425,8 @@ sub buildRecordLeader {
     my $signum = $r->signum(); # DEBUG
     #We need to build the component parts leader field based on the mother biblios repositories, since component children have a new DocId
     if ($r->isComponentPart()) {
-	# TODO/DEBUG: kohalappi-conversion, 2016-12
-        $log->warning("DEBUG/kohalappi(buildRecordLeader): org=".$CFG::CFG->{organization}.", r->docId()=".$r->docId().", r->pallasLabel()=".$pallasLabel.", r->signum()=".$r->signum().", r->childId()=".$r->childId());
+	# TODO/DEBUG: kohalappi-conversion, 2016-12, howto fix this? (commented out now)
+        #$log->warning("DEBUG/kohalappi(buildRecordLeader): org=".$CFG::CFG->{organization}.", r->docId()=".$r->docId().", r->pallasLabel()=".$pallasLabel.", r->signum()=".$r->signum().", r->childId()=".$r->childId());
 	# TODO/DEBUG: very verbose debug of all the fields/contents of the record below
 	#foreach my $df ( @{$r->getAllFields("sorted")} ) {
 	#    my $fc = $df->code();

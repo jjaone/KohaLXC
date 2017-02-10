@@ -4,6 +4,9 @@
 # file: $KOHALXC_TOOLDIR/ppmmtws/ConversionTools/run_conversion-perl_import.pl.sh
 {{ ansible_managed | comment }}
 
+## Script name
+PROGNAME="run_conversion"
+
 ## KOHALXC environment
 # - Check that KOHALXC_TOOLDIR is set and directory exists..
 [[ -z "$KOHALXC_TOOLDIR" ]] || [[ ! -e "$KOHALXC_TOOLDIR" ]] &&
@@ -27,39 +30,72 @@ LXC_CONFIG="lxc_config.xml"
 # Which config.xml to use: LXC_CONFIG (default)
 CONFIG_XML="$LXC_CONFIG"
 [[ -n "$1" ]] && CONFIG_XML=$1
+# Which ImportChains to run: "all" (default)
+IMPORTCHAINS="all"
+[[ -n "$2" ]] && IMPORTCHAINS="$2"
 
 ## Show configuration: verbose
 echo "PPMMT_DIR=$PPMMT_DIR"
 echo "DATA_DIR=$DATA_DIR"
 echo "LOGS_DIR=$LOGS_DIR"
 echo "CONFIG_XML=$CONFIG_XML"
+echo "IMPORTCHAINS=$IMPORTCHAINS"
 
 # Check that PP/MMT main config exists..
 [[ ! -e "${PPMMT_DIR}/${CONFIG_XML}" ]] && 
-	echo "== No config file found..exiting" && exit 1
+    echo "== No config file found..exiting" && exit 1
 
 ## Do the stuff ##
-
 STARTSTAMP=`date +%Y%m%d_%H%M`
-echo && echo "== conversion_run-perl_import.pl.sh: $STARTSTAMP"
+
+## Cleanup for traping kills/terminations of the script
+function onterminated() {
+    rm -f $LOGS_DIR/conversion-$STARTSTAMP/*
+    rmdir $LOGS_DIR/conversion-$STARTSTAMP
+    #rm -f $LOGS_DIR/conversion-last
+    TERMSTAMP=`date +%Y%m%d_%H%M`
+    echo && echo "== $PROGNAME ($STARTSTAMP): terminated on $TERMSTAMP"
+    exit
+}
+
+function cleanPreviousRun() {
+   NOWSTAMP=`date +%Y%m%d_%H%M`
+   echo && echo "== $PROGNAME ($NOWSTAMP): cleaning previous run  process artifacts"
+   ps aux | grep $CONFIG_XML | grep run_conversion
+   pkill run_conversion
+}
+
+## Trap for cleanup if we are terminated in the middle of conversion
+trap onterminated SIGHUP SIGINT SIGTERM
+
+## Indicate that we are starting up
+echo && echo "== $PROGNAME ($STARTSTAMP) for:$IMPORTCHAINS"
 
 ## Make required directories (and empty run log directory)
 cd $PPMMT_DIR/PerlMMT && mkdir -vp logs && pwd && rm -f -r logs/*
 #cd $PPMMT_DIR/PerlMMT && mkdir -vp logs && pwd && rm -f logs/*.log && mkdir -v logs/conversion-$STARTSTAMP
-mkdir -vp $LOGS_DIR/conversion-$STARTSTAMP && pwd && ls -la $LOGS_DIR
+mkdir -vp $LOGS_DIR/conversion-$STARTSTAMP && pwd && ls -l
 
 ## Run the PP/MMT
-perl import.pl ../$CONFIG_XML 2>&1 | tee logs/import_all.log
+cx=$CONFIG_XML
+ic=$IMPORTCHAINS
+perl import.pl ../${cx:-lxc_config.xml} 2>&1 | tee logs/import_${ic:-all}.log
 #perl import.pl ../$CONFIG_XML |& tee logs/conversion-$STARTSTAMP/import_all.log
 
 ## Save logs
 echo && cp -vpr logs/* $LOGS_DIR/conversion-$STARTSTAMP/.
 
+## Make a symlink to last finsihed conversion in LOGS_DIR
+(cd $LOGS_DIR && ln -s -f -T conversion-$STARTSTAMP conversion-last && ls -l)
+
 ## Show what we got
 echo && ls -l $LOGS_DIR/conversion-$STARTSTAMP && head -15 $LOGS_DIR/conversion-$STARTSTAMP/import_all.log
 
+## Check  whhich chains were actually succesfully run?
+#IMPORTCHAINS="Patrons Biblios Items"
+
 ## Clean exit
 ENDSTAMP=`date +%Y%m%d_%H%M`
-echo && echo "== conversion_run-perl_import.pl.sh: done on $ENDSTAMP"
+echo && echo "== $PROGNAME ($ENDSTAMP) done for:${IMPORTCHAINS:-all}"
 
 exit 0

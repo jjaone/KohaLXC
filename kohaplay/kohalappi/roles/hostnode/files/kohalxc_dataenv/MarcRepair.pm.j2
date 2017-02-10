@@ -18,7 +18,7 @@ use BibliosImportChain::MarcRepair::MaterialTypeRepair;
 my $log;
 my $statistics;
 
-## TODO/DEBUG: kohalappi-conversion, 2016/12: fixing 003-issues like in 'OUTI' conversion?
+## TODO/DEBUG:kohalappi; 2016/12: fixing 003-issues like in 'OUTI' conversion?
 # - this should be the 'default' used in all conversions (what is the correct value here?)
 our $organization003Identifier = 'KONVERSIO';
 # - why is this set here, is this used at all?
@@ -34,9 +34,8 @@ sub init {
         $organization003Identifier = 'JOKUNEN';
         $municipalArchives003Identifier = 'KOIVI';
     }
-    # TODO/DEBUG: 'kohalappi'-conversion, 2016-12/2017-01 ..
-    # - Do we need this for 'kohalappi'?
-    # - See also: https://tiketti.koha-suomi.fi:83/issues/1647
+    # TODO/DEBUG:kohalappi; Do we need this?
+    # - 2016-12/2017-01: See also: https://tiketti.koha-suomi.fi:83/issues/1647
     elsif ($CFG::CFG->{organization} eq 'kohalappi') {
         $organization003Identifier = 'FI-Rm';
         $municipalArchives003Identifier = 'LAPPIARKISTO';
@@ -97,7 +96,8 @@ sub run {
             next();
         }
 
-        ## TODO/DEBUG/FIX: Do we need this for 'kohalappi'-conversion?
+        ## TODO/DEBUG:kohalappi Do we need this in our conversion?
+	# - 2017-02-10: not handling this yet, gotta return to this later
         if ( $CFG::CFG->{organization} eq 'pielinen' && $CFG::CFG->{DEBUGAuthoritiesCountLimit} < 0 ) { #The Biblio actually might have Items, but if you debug with partial repositories loaded, then the Item might not be found from the partial repository, marking this Biblio deleted unnecessarily
             ##DESTROY the Biblio if it has no Items.
             unless (my $availableItems = $t->{liccopy}->fetch( $r->docId() )) {
@@ -128,12 +128,16 @@ sub run {
 
         #># EGDATA-151 Block obsolete fields
         my @obsoleteFields;
-	# TODO/DEBUG/FIX?: Do we need this handled in 'kohalappi'-conversion?
+	# TODO/DEBUG:kohalappi; Do we need this handled in our conversion?
+	# - 2017-02-10: Added few fields to obsolete list by Leena
         if ($CFG::CFG->{organization} eq 'pielinen') {
             @obsoleteFields = ('872','889','986','987','988','989','980','990','991','992');
         }
         elsif ($CFG::CFG->{organization} eq 'jokunen') {
             @obsoleteFields = ("097","090","085","081","080","064","060","058","057","053",'872','889','986','987','988','989','980','990','991','992');
+        }
+        elsif ($CFG::CFG->{organization} eq 'kohalappi') {
+            @obsoleteFields = ('587','965','962' );
         }
         foreach (@obsoleteFields) {
             if ($r->fields($_)) {
@@ -162,42 +166,46 @@ sub run {
         }
         #<#
 
-        #>#  EGDATA-50  &&  EGDATA-146  &&  EGDATA-154
-        if (my $fia = $r->fields('856')) {
-            foreach my $fi (@$fia) {
-                #># EGDATA-50 : Making electronic material visible in EG, by adding 856$9 = JOKUNEN where 856$u exists  ###
-                #># EGDATA-154
-                if ( (my $sfu = $fi->getUnrepeatableSubfield('u')) ) {
-                    if (  $sfu->content() =~ /kirjavalitys.fi/  ) {
-                        $r->deleteField( $fi );
-                        $statistics->{kirjavalitusDoubleURL}++;
-                        next;
-                    }
-                }
-                #<#
-                if (my $sia = $fi->subfields('u') ) {
-                    foreach my $si (@$sia) {
-                        if (my $sf9 = $fi->getUnrepeatableSubfield('9') ) {
-                            $sf9->content('PIELINEN');
-                        }
-                        else {
-                            $fi->addSubfield('9','PIELINEN');
-                        }
-                        $statistics->{electronicMaterialMadeVisible}++;
-                    }
-                }
-                #<#
-                #># EGDATA-146
-                if ( (my $sfz = $fi->getUnrepeatableSubfield('z')) &&
-                     (my $sfy = $fi->getUnrepeatableSubfield('y')) ) {
-                    
-                    if (  $sfz->content() eq $sfy->content()  ) {
-                        $fi->deleteSubfield( $sfz );
-                        $statistics->{dedup856yz}++;
-                    }
-                }
-                #<#
-            }
+	# TODO/BEBUG:kohalappi; Is this needed in our conversion?
+	# - 2017-02-10: No, skip all this, 856 should be handled ok w/ our fi2ma.rul
+	if ($CFG::CFG->{organization} ne 'kohalappi') {
+
+	    #>#  EGDATA-50  &&  EGDATA-146  &&  EGDATA-154
+	    if (my $fia = $r->fields('856')) {
+		foreach my $fi (@$fia) {
+		    #># EGDATA-50 : Making electronic material visible in EG, by adding 856$9 = JOKUNEN where 856$u exists  ###
+		    #># EGDATA-154
+		    if ( (my $sfu = $fi->getUnrepeatableSubfield('u')) ) {
+			if (  $sfu->content() =~ /kirjavalitys.fi/  ) {
+			    $r->deleteField( $fi );
+			    $statistics->{kirjavalitusDoubleURL}++;
+			    next;
+			}
+		    }
+		    #<#
+		    if (my $sia = $fi->subfields('u') ) {
+			foreach my $si (@$sia) {
+			    if (my $sf9 = $fi->getUnrepeatableSubfield('9') ) {
+				$sf9->content('PIELINEN');
+			    }
+			    else {
+				$fi->addSubfield('9','PIELINEN');
+			    }
+			    $statistics->{electronicMaterialMadeVisible}++;
+			}
+		    }
+		    #<#
+		    #># EGDATA-146
+		    if ( (my $sfz = $fi->getUnrepeatableSubfield('z')) &&
+			 (my $sfy = $fi->getUnrepeatableSubfield('y')) ) {
+			if (  $sfz->content() eq $sfy->content()  ) {
+			    $fi->deleteSubfield( $sfz );
+			    $statistics->{dedup856yz}++;
+			}
+		    }
+		    #<#
+		}
+	    }
         }
         #<#
 
@@ -370,7 +378,7 @@ sub run {
         #    0-79 && 86-99 call numbers stand for non-fiction.
         if ((! ($r->isComponentPart())) && (my $f008a = $r->getUnrepeatableSubfield('008','a')) &&  (!($r->isASerial()))  ) {
             if (length $f008a->content() < 40) {
-                $log->error("Controlfield 008 '".$f008a->content()."' is too short for docId:".$r->docId());	
+                $log->error("Controlfield 008a '".$f008a->content()."' is too short for docId:".$r->docId());
             }
             else {
                 my $f008c33 = substr($f008a->content(), 33, 1);
@@ -463,9 +471,16 @@ sub run {
         #<#
         
         verifySerialMotherness($r);
-        
-        forceTranscribingAgencyTo040c($r);
-        
+
+	# TODO/DEBUG:kohalappi; Do we need this?
+	# -2016-02-10: No, we do not need to forcefully add 040c, skip this
+	if ($CFG::CFG->{organization} eq 'kohalappi') {
+	    ;
+	}
+	else {
+	    forceTranscribingAgencyTo040c($r);
+	}
+
         enforceF003($r, $t);
         
         
@@ -595,7 +610,7 @@ sub repairPublicationYearFrom260c {
             }
         }
         else {
-            $log->warning( "Component part docId ".$r->docId()." doesn't have a parent with docId $parentDocid!\n" );
+            $log->warning( "Component part docId ".$r->docId()." doesn't have a parent with docId $parentDocid!" );
         }
         return 0; #Even the parent doesn't have a proper publication date wtf?
     }
@@ -643,8 +658,9 @@ sub repairPublicationYearFrom260c {
                 }
 
                 my $cpText = ($r->isComponentPart() ? '(Component Part)': '');
-		# TODO/DEBUG: kohalappi-conversion, 2016-12
-		# - commenting out this useless warning, publication dates to be checked in testing 
+		# TODO/DEBUG:kohalappi-conversion?? 
+		# 2016-12: commenting out this useless warning, 
+		#          publication dates to be checked in testing 
                 #$log->warning('Docid '.$r->docId().$cpText.' has no publication date in field 008 and no 260c to pull it from! Using 1899.');
                 repair008('1899', $sf008, $r);
             }
@@ -676,6 +692,8 @@ sub removeTitlelessRecords {
 }
 ##EO EGDATA-121
 
+# TODO/DBEUG:kohalappi: Fixed: 
+# - 2017-02-10: We are skipping this altogether in the lines 472-480 above!!
 sub forceTranscribingAgencyTo040c {
     my $r = shift;
     
@@ -683,7 +701,7 @@ sub forceTranscribingAgencyTo040c {
         ;
     }
     else {
-        $r->addUnrepeatableSubfield('040','c','PIELINEN');
+	$r->addUnrepeatableSubfield('040','c','PIELINEN');
     }
 }
 
@@ -723,8 +741,6 @@ sub spacify044cAgeLimits {
             else {
                 $log->warning('Record docid '.$r->docId().' subfield 044c containing "'.$content.'" is mumbojumbo. Should be like K15.');
             }
-            
-            
         }
         else {
             $log->warning('Record docid '.$r->docId().' has field 044c but no content in it?');

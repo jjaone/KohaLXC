@@ -49,9 +49,10 @@
     src="files/dataenv/run_conversion-perl_import_pl.sh.j2"
     dest="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
     mode="u+rwx,g+rx,o-rwx"
-    backup="yes"
+    backup="no"
   when:
     - kohalxcs_dataenv_enabled
+    - kohalxcs_ppmmtenv_enabled
 
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
 - name: dataenv - Symlink conversion main script in container HOME/bin
@@ -62,23 +63,50 @@
     force="yes"
   when:
     - kohalxcs_dataenv_enabled
+    - kohalxcs_ppmmtenv_enabled
 
 - debug: var=kohalxc_tooldir,kohalxc_datadir
 ## Run conversion: main script
-- name: dataenv/ppmmtenv - Run the PP/MMT-conversion script
+# - script might run very long time, poll every half a minute, timeout in seconds
+- name: dataenv/ppmmtenv - Start running the PP/MMT-conversion script in 'lxc_config' for {{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}} (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
   environment:
     KOHALXC_TOOLDIR: "{{ '/home/'~ansible_user~'/KohaLXC/kohatools' }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
   shell: |
-    ls -l ~/bin/run_conversion
-    echo && echo "== START OF PP/MMT CONVERSION.." && echo
-    $HOME/bin/run_conversion > /dev/null
-    head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
-    echo && echo "== ..CONVERTING.." && echo
+    ls -l ~/bin/run_conversion;
+    echo && echo "== START OF PP/MMT CONVERSION.." && echo;
+    $HOME/bin/run_conversion lxc_config.xml {{ kohalxcs_ppmmtenv_runconv_importchains | d() }} > /dev/null;
+    head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log;
+    echo && echo "== ..CONVERTING.." && echo;
+  async: "{{ kohalxcs_ppmmtenv_runconv_timeout | d(3600) }}"
+  poll: "{{ kohalxcs_ppmmtenv_runconv_polling | d(0) }}"
+  register: job_runconversion
+  when:
+    - kohalxcs_dataenv_enabled
+    - kohalxcs_ppmmtenv_enabled
+
+## Run conversion: check whether we are finished
+- name: dataenv/ppmmtenv - Check whether PP/MMT-conversion run is finisihed..
+  async_status: jid={{ job_runconversion.ansible_job_id }}
+  register: cmd_runconversion_result
+  until: cmd_runconversion_result.finished
+  retries: "{{ kohalxcs_ppmmtenv_runconv_checkfinished | d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_runconv_checkdelay | d(5) }}"
+  when:
+    - kohalxcs_dataenv_enabled
+    - kohalxcs_ppmmtenv_enabled
+
+- debug: var=cmd_runconversion_result
+## Run conversion: finish the run, split log per ImportChain(s)
+- name: dataenv/ppmmtenv - Finish PP/MMT-run (split/show log by import-chains)
+  environment:
+    KOHALXC_TOOLDIR: "{{ '/home/'~ansible_user~'/KohaLXC/kohatools' }}"
+    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
+  shell: |
     tail -20 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
     echo && echo "== END OF PP/MMT CONVERSION." && echo
     (cd $KOHALXC_DATADIR/source.0/logs && pwd && ls -l && echo)
-    (cd $KOHALXC_DATADIR/source.0/target && pwd && ls -l && echo)
+    (cd $KOHALXC_DATADIR/source.0/target && pwd && ls -Csh && echo)
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
@@ -91,7 +119,7 @@
   shell: |
     for d in Patrons Biblios Items Holds Checkouts Fines
     do
-    (cd $KOHALXC_DATADIR/source.0/target/$d && pwd && cat 01_${d,,}* > ${d,,}.migrateme && ls -l && echo && echo -n "== Lines, words, characters: " && wc ${d,,}.migrateme) || echo;
+    (cd $KOHALXC_DATADIR/source.0/target/$d && pwd && cat 01_${d,,}* > ${d,,}.migrateme && ls -Csh --format=horizontal && echo && echo -n "== Lines,words,chars: " && wc ${d,,}.migrateme) || echo;
     done
   args:
     executable: /bin/bash

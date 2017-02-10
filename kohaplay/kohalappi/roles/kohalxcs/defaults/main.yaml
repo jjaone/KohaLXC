@@ -100,6 +100,18 @@ kohalxcs_dataenv_pckgs:
 # KohaLXC/mmtenv: PP/MMT-tool environment
 #hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
 kohalxcs_ppmmtenv_enabled: true
+## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
+# - which import chains should we run (empty means 'all')
+kohalxcs_ppmmtenv_runconv_importchains:
+# - run timeout (default): 1.5 hrs = 1.5 * 3600 s
+kohalxcs_ppmmtenv_runconv_timeout: 5400
+# - run poll frequency: 30 seconds
+kohalxcs_ppmmtenv_runconv_polling: 30
+# - how many times to check whether conversion has finished (default: 60):
+# - 90 * 60 s = 1.5 hours
+kohalxcs_ppmmtenv_runconv_checkfinished: 90
+# - the delay between checks of whether conversion has finished (default: 5)
+kohalxcs_ppmmtenv_runconv_checkdelay: 60
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 #hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 
