@@ -17,7 +17,7 @@
 
 ## Bootstrap python 2 (for Ubuntu 16.04/Xenial and 14.04/Trusty hosts)
 # - seems 'gather_facts' must be 'False' in main playbooks for this to work!
-- name: common - Test/ensure Python 2 is installed to support Ansible plays
+- name: bootstrap - Test/ensure Python 2 is installed to support Ansible plays
   become: yes
   raw: test ! -e {{ ansible_python_interpreter | default('/usr/bin/python') }} && echo "Target system needs to be bootstrapped for Python 2" || echo "Python 2 ok, target system has '{{ ansible_python_interpreter }}'"
 #  raw: test ! -e {{ ansible_python_interpreter | default('/usr/bin/python') }} && apt-get autoremove && apt install -y python2.7-minimal || echo -n "Bootstrapped for Python '{{ ansible_python_interpreter }}'"
@@ -32,26 +32,23 @@
   command: logger -t Ansible-play "kohalappi/{{ role_path | basename}}" in [{{ inventory_dir | basename }}]; inventory_hostname={{ inventory_hostname }}, ansible_host={{ ansible_host }}, ansible_port={{ ansible_port | d('22') }}, ansible_connection={{ ansible_connection }}, ansible_user={{ ansible_user }}, ansible_distribution={{ ansible_distribution }}, ansible_distribution_release={{ ansible_distribution_release }}, ansible_default_ipv4.interface={{ ansible_default_ipv4.interface }}
   tags: common:status
 
-## Configure and setup timezone
-# - [requires]: Ansible 2.2.0+
-- name: common - Setup timezone - use by default 'Europe/Helsinki'
+## Configure and setup timezone (requires: Ansible 2.2.0+)
+- name: setup - Setup timezone (default='Europe/Helsinki')
   timezone: name=Europe/Helsinki
   tags: common:setup
 
 ## Show common KohaLXC-related settings (for all roles)
-# - [debug]:
-- name: common - Show common (KohaLXC-related) environment settings
+- name: debug - Show common (KohaLXC-) environment settings
   debug: var=local_home,kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_rootdir,kohalxc_tooldir,kohalxc_organization,kohalxc_setupdir,kohalxc_datadir,kohalxc_dataset,kohalxc_devenv,kohalxc_srvenv,kohalxc_mdbenv,kohalxc_webenv
   tags: common:debug
 
-## Show Ansible-related vars
-# - [debug]:
-- name: common - Show management-host and Ansibe-related vars..
+## Show Ansible-related settings
+- name: debug - Show control-host and Ansibe-related settings
   debug: var=gather_facts,hostnode_operuser,ansible_python_interpreter,ansible_connecion,ansible_port,ansible_become_method,ansible_user
   tags: common:debug
 
 ## Show KohaLXC-environment in the host, if any 
-- name: common - Show KohaLXC_ environment for '{{ hostnode_operuser }}'
+- name: status - Show KohaLXC_ environment for '{{ hostnode_operuser }}'
   become: yes
   become_user: "{{ ansible_user | d(hostnode_operuser) }}"
   shell: whoami && [[ -f /etc/profile.d/kohalxc-devenv.sh ]] && source /etc/profile.d/kohalxc-devenv.sh || source ~/.kohalxc.rc  && env | grep -s "^KOHALXC_"
@@ -60,10 +57,27 @@
   register: cmd
   changed_when: cmd.rc == 0
   failed_when: cmd.stderr != ""
-  tags: common:debug
+  tags: common:status
+
+## Comment out overlapping settings (alias, HIST, ect) in user HOME profile
+- name: setup - Comment out settings in user HOME (.bashrc) that overlap w/ devenv
+  lineinfile:
+    dest: /home/{{ ansible_user }}/.bashrc
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backrefs: yes
+    #backup: yes
+  with_items:
+    - { regexp: '^(HISTSIZE=)(.*)', line: '#\1\2' }
+    - { regexp: '^(HISTFILESIZE=)(.*)', line: '#\1\2' }
+    - { regexp: '^(HISTTIMEFORMAT=)(.*)', line: '#\1\2' }
+    - { regexp: '^(alias l=)(.*)', line: '#\1\2' }
+  when:
+    - hostnode_devenv_enabled
+  tags: common:setup
 
 ## Show the status of existing LXCs..
-- name: common - List status of running/stopped LXCs..
+- name: status - List status of running/stopped LXCs..
   become: yes
   shell: lxc-ls -f
   tags: common:status

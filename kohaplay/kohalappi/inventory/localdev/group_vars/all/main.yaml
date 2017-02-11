@@ -19,14 +19,17 @@ hostnode_environment: "{{ inventory_dir | basename }}"
 # Just to test/debug the inheritance in ansible playbooks..
 hostnode_testvar: inventory_localdev_group_vars_all_main
 
-# ## Facts & Handlers
-# - facts gathering:
+## ##########################
+## General: facts & hHandlers
+## ##########################
+# Facts gathering:
 #gather_facts: False
-# - force all handlers always (also in case play fails..)
+# Force all handlers always (also in case play fails..)
 #force_handlers: False
 
-## Ansible-related: user, hosts/connections, ports:
-# - set here unless overriden in playbook-level 'group_vars/all'
+## ########################
+## General: Ansible-related
+## ########################
 #ansible_python_interpreter
 #ansible_connection
 #ansible_port
@@ -34,7 +37,10 @@ hostnode_testvar: inventory_localdev_group_vars_all_main
 #ansible_become_method
 #ansible_become_pass
 
-## Provide below 'hostnode' group_vars in ./'vault.yaml':
+## ##########################
+## Server: connectivity/users
+## ##########################
+## Provide below 'hostnode'-vars in ./vault.yaml:
 # - ssh_port:
 #hostnode_sshport: 22
 # - oper user id

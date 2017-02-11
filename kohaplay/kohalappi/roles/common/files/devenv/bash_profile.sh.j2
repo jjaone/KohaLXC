@@ -41,13 +41,21 @@ export KOHALXC_AUTHOR="{{ kohalxc_author }}"
 ############################
 ## Shell/bash environment ##
 ############################
-# Shell history settins
+# Shell history settings:
 #export HISTCONTROL=ignoreboth
+# - history file size: infinite
 export HISTFILESIZE=-1
+# - history size: infinite
 export HISTSIZE=-1
+# - history time format: yyyy-mm-dd_hh:mm:ss
 export HISTTIMEFORMAT='%F_%T '
 
-# LESS
+# Ensure history mode is append
+shopt -s histappend
+# Ensure history is appended after every commmand
+PROMPT_COMMAND='history -a; history -n'
+
+# LESS with color support and nor clearing the screen after q
 export LESS=-XR
 
 # locale

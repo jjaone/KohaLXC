@@ -9,38 +9,33 @@
 # Description:
 # Local development inventory of koha-servers/apps for host/lxc provision
 # - 'hostnodes' for LXC hosts servers
-# - 'weblxc' and 'mdblxc" for application containers (per host domains)
 # - file: "inventory/localdev/group_vars/all" defines common vars like:
 #   'ansible_become_pass', 'ansible_user', 'ansible_port', ..  
-# - see also (for networking setup in target hosts): /etc/lxc/dnsmasq.conf
 # #############################################################################
 
-# Local-dev inventory of (koha) server hostnodes:
+## Local/dev inventory of (koha) server hostnodes:
 [localdev-hostnodes]
 localhost ansible_connection=local ansible_become=yes ansible_become_method=sudo ansible_become_pass="{{ localdev_operpass }}" hostnode_operuser="{{ localdev_operuser }}" hostnode_operid="{{ localdev_operid }}"
 
-# Local-dev of (static/manual networking)) LXC'd web-application(s):
+## Local/dev of (static/manual networking)) LXCs Koha/other webapps
 [localdev-weblxc]
-
-# Local-dev of (static/manual networking) LXD'd Mariadb/Mysql databases:
+## Local/dev of (static/manual networking) LXDs: Mariadb/Mysql DBs
 [localdev-mdblxc]
 
-# #############################################################################
-# All local-dev koha host servers: "hostnodes" (HOST)
+
+## All local/dev koha-host servers: "hostnodes" (HOST)
 [hostnodes:children]
 localdev-hostnodes
 
-# All local-dev koha-related web/application guests: "weblxc" (LXC)
+## Local/dev containers of koha-related web-application LXC-guests
 [weblxc:children]
 localdev-weblxc
-
-# All local-dev koha-related) database (mysql/mariadb) guests: "mdblxc" (LXC)
+## Local/dev containers of kohae-related DB (mysql/mariadb) guests
 [mdblxc:children]
 localdev-mdblxc
 
-# All local-dev koha-related guests: "kohalxcs (or lxcs)" (LXCs)
-# [TODO]: Do we need this group at all?
+## All local-dev containers of koha-related guests: "kohalxcs' (LXCs)
+# - [TODO]: Do we need this group at all?
 [kohalxcs:children]
 localdev-weblxc 
 localdev-mdblxc
-# #############################################################################

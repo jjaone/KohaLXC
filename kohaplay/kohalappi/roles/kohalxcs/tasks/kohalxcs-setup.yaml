@@ -78,6 +78,9 @@
     $HOME/bin/run_conversion lxc_config.xml {{ kohalxcs_ppmmtenv_runconv_importchains | d() }} > /dev/null;
     head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log;
     echo && echo "== ..CONVERTING.." && echo;
+  args:
+    chdir: "{{ '/home/'~ansible_user' }}"
+    creates: ~/bin/.run_conversion.finished
   async: "{{ kohalxcs_ppmmtenv_runconv_timeout | d(3600) }}"
   poll: "{{ kohalxcs_ppmmtenv_runconv_polling | d(0) }}"
   register: job_runconversion
