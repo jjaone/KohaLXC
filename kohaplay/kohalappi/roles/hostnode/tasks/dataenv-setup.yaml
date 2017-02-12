@@ -132,23 +132,27 @@
     - kohalxc_datadir is defined
 
 - debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
-## For 'liqlocde_translation.pm' (PP/MMT) extract source CSV from Google-docs/spreadsheet:
+## Extract source CSV from Google-docs/spreadsheet:
 # [KohaLXC]:dataenv(control),ppmtenv
-# - 'File id' and 'Sheet id' required (seems to work also w/o the &gid-argument in the URL)
-- name: dataenv(control) - Extract CSVs for PP/MMT-TranslationTables/licloqde_translation from Google-spreadsheet
+# - liqlocde_translation.csv  for 'liqlocde_translation.pm' (PP/MMT)
+# - staffaccounts.csv for 'makeStaffAccounts' (PP/MMT)
+# - 'File id' and 'Sheet id (gid)' equired
+- name: dataenv(control),ppmmtenv - Extract CSVs for TranslationTables/{liqlocde_translation,staffaccounts} from G-spreadsheet(s)
   vars:
     org: "{{ hostnode_kohalxc_organization }}"
     gDocsUrl: "https://docs.google.com/spreadsheets/d"
     gFileId: "{{ kohalxc_dataenv_gfileid }}"
-    gSheetId: "{{ kohalxc_dataenv_gsheetid }}"
     gExportFormat: "csv"
-    srcName: liqlocde_translation
   uri:
-    url: "{{ gDocsUrl }}/{{ gFileId }}/export?exportFormat={{ gExportFormat }}&gid={{ gSheetId }}"
-    dest: "{{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables/{{ srcName }}.csv"
+    url: "{{ gDocsUrl }}/{{ gFileId }}/export?exportFormat={{ gExportFormat }}&gid={{ item.1.gid }}"
+    dest: "{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/{{ hostnode_dataenv_datasrc }}/TranslationTables/{{ item.1.name }}.csv"
     body_format: raw
     return_content: yes
-  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  with_nested:
+    - "{{ hostnode_dataenv_dataset | d({}) }}"
+    - [ { name: 'liqlocde_translation', gid: "{{ kohalxc_dataenv_liqlocde_gid }}" },
+        { name: 'staffaccounts', gid: "{{ kohalxc_dataenv_staffaccounts_gid }}" }
+      ]
   when:
     - kohalxc_dataenv_gfileid is defined
     - hostnode_dataenv_enabled
@@ -288,19 +292,19 @@
 
 ## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv - Push/copy MMT-tools import.pl and TranslationTables to data/mmt-enabled targets
+- name: dataenv - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
-    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
+    dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.dir }}/{{ item.name }}"
     group="{{ hostnode_kohagrp_name }}"
     mode="g+w"
     backup="no"
   with_items:
-    - { name: import.pl, dir: .}
-    - { name: cutype_to_borrower_categorycode.pm, dir: TranslationTables }
-    - { name: isil_translation.pm, dir: TranslationTables }
-    - { name: liqlocde_translation.pm, dir: TranslationTables }
-    - { name: material_code_to_itype.pm, dir: TranslationTables }
+    - { name: makeStaffAccounts.sh, dir: ConversionTools }
+    - { name: cutype_to_borrower_categorycode.pm, dir: PerlMMT/TranslationTables }
+    - { name: isil_translation.pm, dir: PerlMMT/TranslationTables }
+    - { name: liqlocde_translation.pm, dir: PerlMMT/TranslationTables }
+    - { name: material_code_to_itype.pm, dir: PerlMMT/TranslationTables }
   when:
     - hostnode_dataenv_enabled
     - hostnode_dataenv_datadir is defined
@@ -309,7 +313,7 @@
   
 ## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv - Push/copy MMT-tools 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled targets
+- name: dataenv - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -317,11 +321,12 @@
     mode="g+w"
     backup="no"
   with_items:
-    - { name: BuildMARC.pm, dir: BibliosImportChain/FinMARC_Builder }
+    - { name: import.pl, dir: . }
     - { name: Item.pm, dir: lib }
-    - { name: MarcRepair.pm, dir: BibliosImportChain }
-    - { name: Patron.pm, dir: lib }
     - { name: Record.pm, dir: lib/MARC }
+    - { name: Patron.pm, dir: lib }
+    - { name: MarcRepair.pm, dir: BibliosImportChain }
+    - { name: BuildMARC.pm, dir: BibliosImportChain/FinMARC_Builder }
     - { name: SharedDocidRecordsHandler.pm, dir: BibliosImportChain/FinMARC_Builder }
     - { name: fi2ma.rul, dir: BibliosImportChain/Usemarcon/fi2ma }
     - { name: Instructions.pm, dir: PatronsImportChain }

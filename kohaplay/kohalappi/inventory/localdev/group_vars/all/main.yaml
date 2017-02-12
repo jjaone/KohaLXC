@@ -49,3 +49,15 @@ hostnode_testvar: inventory_localdev_group_vars_all_main
 #hostnode_operuser:
 # - oper user pass
 #hostnode_operpass:
+
+## ##########################
+## Server updates/reboots/nic
+## ##########################
+# Rebootable server:
+#hostnode_reboot_enabled: False
+# Upgradable server:
+hostnode_upgrade_enabled: True
+# List of packages to be ignored from upgrades
+#hostnode_upgrade_pckgsignore: "bacula-"
+# Network interface:
+hostnode_network_interface: eth0
