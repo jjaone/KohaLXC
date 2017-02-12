@@ -12,7 +12,7 @@ for Koha/ILS-development, deployment & database conversion/migration._
 **Organization**: Rovaniemi City Library, Lapland (2016/06 - 2017/05)<br/>
 **License**: GNU General Public License (GPL) version 3
 
-### Usage: directly from the command line shell in target host
+### Usage: directly from the command line shell in target host:
 ```
 $ cd $KOHALXC_TOOLDIR/ppmmtws/PerlMMT
 $ perl import.pl ../config.xml
@@ -23,14 +23,16 @@ $ perl import.pl ../config.xml
 * conversion step is run iff `hostnode_ppmmtenv_enabled` has been set(up)
 * dedicated LXC-container created to mount setup/dumps and to run conversion
 * setting `kohalxcs_ppmmtenv_runconv_polling=0` makes conversion run asynchronous
-#### Options
+
+#### Options used:
 * -i = inventory in which to setup and run the conversion Ansible play
 * -t = comma separetd list of roles:task's that are to be run
 * -e = additional play vars that to change the behaviour
+
+#### Commands:
 ```
 $ cd $KOHALXC_ROOTDIR/kohaplay/kohalappi
 $ kohalxc -i inventory/development ansible\
  -t hostnode:srvenv-setup,hostnode:dataenv-setup,hostnode:lxcenv-setup,\
-  hostnode:postrole,kohalxcs:setup\
- -e "kohalxcs_ppmmtenv_runconv_polling=0"
+  hostnode:postrole,kohalxcs:setup -e "kohalxcs_ppmmtenv_runconv_polling=0"
 ```
