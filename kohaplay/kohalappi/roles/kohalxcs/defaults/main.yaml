@@ -86,6 +86,10 @@ kohalxcs_dataenv_pckgs:
   - libcarp-always-perl
   - libmodern-perl-perl
   - libdatetime-perl
+  - ghostscript
+  - groff
+  - apg
+  - rng-tools
 #hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
 # KohaLXC/dataenv: datadir
 #hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"

@@ -266,8 +266,8 @@ hostnode_lxc_container_command: |
   cat /etc/network/interfaces | tee -a {{ hostnode_lxcenv_logfile }}
   ifconfig -a | tee -a {{ hostnode_lxcenv_logfile }}
 
-# - container command: kohalxc/mdbenv pckgs installation
-# MariaDB-5.5/Mysql-5.5 non-interactive installation (debconf/apt-get)
+# LXC: container command: kohalxc/mdbenv pckgs installation
+# - MariaDB-5.5/Mysql-5.5 non-interactive installation (debconf/apt-get)
 hostnode_mdbenv_pckginstall: |
   echo "== kohalxc [ansible:mdbenv]: Debconf for non-interactive install of database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
   debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password password"
@@ -275,6 +275,12 @@ hostnode_mdbenv_pckginstall: |
   echo "== kohalxc [ansible:mdbenv]: Installing database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
   DEBIAN_FRONTEND=noninteractive apt-get -q -y install mariadb-server-5.5
   mysqladmin ping status -u root | tee -a {{ hostnode_lxcenv_logfile }}
+
+# LXC: container command: kohalxc/kohaenv pckgs installation
+# - Koha non-interactive (dev)-installation (debconf/apt-get)
+hostnode_kohaenv_setup: |
+  echo "== kohalxc [ansible:kohaenvenv]: Installation of Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a {{ hostnode_lxcenv_logfile }};
+  pwd && ls -la
 
 ## LXC: template
 # - template (distro): Ubuntu

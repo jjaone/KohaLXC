@@ -31,31 +31,38 @@ SRC_NAME="${1:-staffaccounts}"
 echo && echo "== Name of the Translation/ConversionTable to be generated SRC_NAME='$SRC_NAME'"
 KOHALXC_TOOLDIR="${KOHALXC_TOOLDIR:=$KOHALXC_WORKS/KohaLXC/kohatools}"
 echo && echo "== KOHALXC_TOOLDIR=$KOHALXC_TOOLDIR"
-
 KOHALXC_DATADIR="${KOHALXC_DATADIR:=$KOHALXC_WORKS/$KOHALXC_ORGANIZATION/kohadata}"
 echo && echo "== KOHALXC_DATADIR=$KOHALXC_DATADIR"
-
-KOHALXC_DATAST="${KOHALXC_DATASET:=default}"
+#KOHALXC_DATASET="${KOHALXC_DATASET:=default}"
 echo "== KOHALXC_DATASET=$KOHALXC_DATASET"
+KOHALXC_DATASET_SOURCE="${KOHALXC_DATASET_SOURCE:=source.0}"
 
-KOHALXC_DATASET_DUMPPREFIX=dump4mmt
-KOHALXC_DATASET_DUMP=$KOHALXC_DATASET_DUMPPREFIX-$KOHALXC_DATASET
-echo && echo "== KOHALXC_DATASET_DUMPPREFIX=$KOHALXC_DATASET_DUMPPREFIX"
-echo "== KOHALXC_DATASET_DUMP=$KOHALXC_DATASET_DUMP"
+## If we are passed with dataset from the environment..
+if [[ -n "$KOHALXC_DATASET" ]]; then
+    KOHALXC_DATASET_DUMPPREFIX=dump4mmt
+    KOHALXC_DATASET_DUMP=$KOHALXC_DATASET_DUMPPREFIX-$KOHALXC_DATASET
+    echo && echo "== KOHALXC_DATASET_DUMPPREFIX=$KOHALXC_DATASET_DUMPPREFIX"
+    echo "== KOHALXC_DATASET_DUMP=$KOHALXC_DATASET_DUMP"
+    KOHALXC_DATASET_SOURCE=$KOHALXC_DATASET_DUMP/$KOHALXC_DATASET_SOURCE
+fi
 
-## Check that we have proper dataenv for building files..
-[[ -z "$KOHALXC_DATASET" ]] && echo "== Error: no KOHALXC_DATASET defined.. exiting." && echo && exit 2
-[[ ! -d "$KOHALXC_DATADIR/$KOHALXC_DATASET_DUMP" ]] && echo "== Error: $KOHALXC_DATADIR/KOHALXC_DATASET_DUMP not found.. exiting." && echo && exit 2
+echo "== KOHALXC_DATASET_SOURCE=$KOHALXC_DATASET_SOURCE"
+
+## Check that we have proper dataenv source dir for fixes and building files..
+[[ ! -d "$KOHALXC_DATADIR/$KOHALXC_DATASET_SOURCE" ]] && echo "== Warm: $KOHALXC_DATADIR/$KOHALXC_DATASET_SOURCE not found.." && echo && exit 2
 
 ## Just for verbosity 
 #(echo && cd $KOHALXC_DATADIR/$KOHALXC_DATASET_DUMP &&  pwd && ls -l)
 
 ## Make sure directories exist for these DATASET fixes/edits
-mkdir -vp $KOHALXC_DATADIR/$KOHALXC_DATASET_DUMP/source/{TranslationTables,preprocessed,scripts,target}
+mkdir -vp $KOHALXC_DATADIR/$KOHALXC_DATASET_SOURCE/{TranslationTables,logs,preprocessed,scripts,target}
 
 echo
-SOURCES_DIR="${KOHALXC_DATADIR}/${KOHALXC_DATASET_DUMP}/source/TranslationTables"
-pwd && (cd $SOURCES_DIR && pwd && ls -l)
+SOURCES_DIR="${KOHALXC_DATADIR}/${KOHALXC_DATASET_SOURCE}/TranslationTables"
+TARGET_DIR="${KOHALXC_DATADIR}/${KOHALXC_DATASET_SOURCE}/target/Patrons"
+mkdir -vp $TARGET_DIR/${SRC_NAME}/letters && echo || exit 2
+(cd ${TARGET_DIR}/${SRC_NAME} && rm -f letters/*)
+echo "== Script dir:$(pwd)" && (cd $SOURCES_DIR && echo "== Datasources dir:$(pwd)" && ls -l ${SRC_NAME}.csv) && (cd $TARGET_DIR && echo "== Target dir:$(pwd)" && ls -l)
 
 ##################
 ## Do the stuff ##
@@ -120,12 +127,12 @@ IFS='
 '
 #for file in $(find "$1" -name '*.xlsx'); do
 #for file in ${SRC_DIR}/*.xlsx; do
-    file=$SOURCES_DIR/$SRC_NAME
-    echo "== makeStaffAccounts.sh; processing '$file':"
+   file=$SOURCES_DIR/$SRC_NAME
+   echo "== makeStaffAccounts.sh; processing '$file':"
 #    # You need to "apt-get install xlsx2csv" for this
 #    xlsx2csv -d ';' -i "$file" > "/tmp/create_accounts.csv"
 #    
-    for patron in $(cat $file.csv | sed '1,17d'); do
+   for patron in $(cat $file.csv | sed '1,17d'); do
 
       borrowernumber=$((borrowernumber + 1))
       surname="$(getfield 1 $patron)"
@@ -162,15 +169,15 @@ IFS='
       givenusernames="$givenusernames$username:"
 
       # Slow method to create memorable passwords (need "apg" for this)
-      #passwordgen="$(apg -n 1 -m 10 -x 10 -M CN -t)"
+      passwordgen="$(apg -n 1 -m 10 -x 10 -M CN -t)"
       # Fast method to create random passwords
-      passwordgen="$(< /dev/urandom tr -cd '[:alnum:]' | head -c 10)" && passwordgen="$passwordgen ($passwordgen)"
+      #passwordgen="$(< /dev/urandom tr -cd '[:alnum:]' | head -c 10)" && passwordgen="$passwordgen ($passwordgen)"
       password="$(echo $passwordgen | cut -f 1 -d ' ')"
       passwordpronounce="$(echo $passwordgen | cut -f 2 -d ' ')"
       passwordpronounce="$(converttonumber $passwordpronounce)"
       passwordpronounce="$(echo $passwordpronounce | sed 's/(//g;s/)//g;')"
       
-      echo -n "== Adding patron:$firstname $surname ($username) "
+      echo -n "== Adding patron: $firstname $surname ($username) "
       
       # Address information
       address="$(getfield 4 $patron)"
@@ -220,7 +227,7 @@ IFS='
       dateexpiry="2022-05-30 23:59:59+02"
        
       # Couln't make sense of the scribblings in Excel, use the default expiry date
-      test $(expr length $dateexpiry) -ne 22 && dateexpiry="2015-12-31 23:59:59+02" 
+      test $(expr length $dateexpiry) -ne 22 && dateexpiry="2012-05-30 23:59:59+02" 
       
       echo -n "[$dateexpiry]"
 
@@ -242,46 +249,46 @@ IFS='
 
       echo # This will cr/lf when the patron has been added, hands off!
 
-      # Perl-hash for import
-      mkdir -p kohamigration
+      # Build the Perl-hash for bulkImporting Patrons..
       #echo "\$VAR1 = bless( {'active' => 't','address' => '$address','borrowernumber' => '$borrowernumber','branchcode' => '$branchcode','cardnumber' => '$username','categorycode' => '$categorycode','city' => '$city','country' => 'Suomi','dateenrolled' => '2015-10-19 0:0:0+02','dateexpiry' => '$dateexpiry','dateofbirth' => '$dateofbirth','email' => '','extendedAttributes' => '','firstname' => '$firstname','mobile' => '','password' => '$password','phone' => '','privacy' => '1','sex' => '','smsalertnumber' => '','standing_penalties' => '','state' => 'Pohjois-Suomi','surname' => '$surname','userid' => '$username','zipcode' => '$zipcode'}, 'Item' );" >> kohamigration/${file%.xlsx}.migrateme
-      echo "\$VAR1 = bless( {'active' => 't','address' => '$address','borrowernumber' => '$borrowernumber','branchcode' => '$branchcode','cardnumber' => '$username','categorycode' => '$categorycode','city' => '$city','country' => 'Suomi','dateenrolled' => '2016-01-27 0:0:0+02','dateexpiry' => '$dateexpiry','dateofbirth' => '$dateofbirth','email' => '','extendedAttributes' => '','firstname' => '$firstname','mobile' => '','password' => '$password','phone' => '','privacy' => '1','sex' => '','smsalertnumber' => '','standing_penalties' => '','state' => 'Lappi','surname' => '$surname','userid' => '$username','zipcode' => '$zipcode'}, 'Item' );" >> kohamigration/$(basename $file).migrateme
-      #exit 123
-      mkdir -p letters
-      
-      # Generate letter to account owner
+      echo "\$VAR1 = bless( {'active' => 't','address' => '$address','borrowernumber' => '$borrowernumber','branchcode' => '$branchcode','cardnumber' => '$username','categorycode' => '$categorycode','city' => '$city','country' => 'Suomi','dateenrolled' => '2016-01-27 0:0:0+02','dateexpiry' => '$dateexpiry','dateofbirth' => '$dateofbirth','email' => '','extendedAttributes' => '','firstname' => '$firstname','mobile' => '','password' => '$password','phone' => '','privacy' => '1','sex' => '','smsalertnumber' => '','standing_penalties' => '','state' => 'Lappi','surname' => '$surname','userid' => '$username','zipcode' => '$zipcode'}, 'Item' );" >> ${TARGET_DIR}/${SRC_NAME}/$(basename $file).migrateme
 
-cat << EOF > /tmp/create_accounts.txt
+      ##  Generate letter to account owner
+      mkdir -p ${TARGET_DIR}/${SRC_NAME}/letters
+      #echo "== Generate letter to user:'$firstname $surname' in ${TARGET_DIR}/${SRC_NAME}/letters"
+
+      #for line in $(seq 65); do
+      #   < /dev/urandom tr -cd '[:alnum:]' | head -c 120 >> /tmp/${SRC_NAME}.txt
+      # echo >> /tmp/${SRC_NAME}.removeme
+      #done
+
+cat << EOF > /tmp/${SRC_NAME}.txt
 
 Koha-Lappi
 
-EOF
-
- for line in $(seq 65); do
-    < /dev/urandom tr -cd '[:alnum:]' | head -c 120 >> /tmp/create_accounts.txt
-    echo >> /tmp/create_accounts.txt
- done
-cat << EOF >> /tmp/create_accounts.txt
-
-.ad l
 Hei $firstname $surname!
 
-Käyttäjätunnuksesi Koha-järjestelmään on $usernameorder${username}. Salasanasi on 10 merkkiä pitkä: ${password}. Muistamisen helpottamiseksi voit painaa mieleesi ${passwordpronounce}.
+Käyttäjätunnuksesi Koha-järjestelmään on $usernameorder${username}. 
+Salasanasi on 10 merkkiä pitkä: ${password}. 
+Muistamisen helpottamiseksi voit painaa mieleesi ${passwordpronounce}.
 
-Käyttäjätunnuksesi ja salasanasi ovat henkilökohtaisia, ethän jaa niitä kenenkään toisen kanssa. Tunnuksen haltijana olet vastuussa kaikesta mitä tunnuksella järjestelmässä tehdään. Tunnuksesi on voimassa $expirydateletter asti.
+Käyttäjätunnuksesi ja salasanasi ovat henkilökohtaisia, ethän jaa niitä muiden kanssa.
+Tunnuksen haltijana olet vastuussa kaikesta mitä tunnuksella järjestelmässä tehdään. 
+Tunnuksesi on voimassa $expirydateletter asti.
 
 Terveisin Koha-Lappi
 EOF
 
-   iconv -f utf-8 -t iso-8859-1 /tmp/create_accounts.txt | groff -Tps - > /tmp/create_accounts.ps 2> /dev/null
-   # TODO:kohalappi, for PDF need to have this package in host/lxc
-   #ps2pdf /tmp/create_accounts.ps "./letters/${firstname} ${surname}.pdf"
+      # For PS generattion need to have 'groff' package in host/lxc
+      iconv -f utf-8 -t iso-8859-1 /tmp/${SRC_NAME}.txt | groff -Tps - > /tmp/${SRC_NAME}.ps 2> /dev/null
+      # For PDF generattion need to have 'ghostscript' package in host/lxc
+      ps2pdf /tmp/${SRC_NAME}.ps "${TARGET_DIR}/${SRC_NAME}/letters/${surname}_${firstname}.pdf"
 
    done
 #
 #done
 
 unset IFS
-echo "$givenusernames" > givenusernames.txt
+echo "$givenusernames" > ${TARGET_DIR}/${SRC_NAME}/givenusernames.txt
 
 exit 0
