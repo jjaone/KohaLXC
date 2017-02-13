@@ -136,7 +136,7 @@
 ## Run conversion: build '{Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme' files
 - name: dataenv/ppmmtenv - Build '*.migrateme' files for insertation to Koha
   environment:
-    KOHALXC_TOOLDIR: "{{ 'kohalxcs_kohalxc_tooldir }}"
+    KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
   shell: |
     ls -1sh && for d in Patrons Biblios Items Holds Checkouts Fines
