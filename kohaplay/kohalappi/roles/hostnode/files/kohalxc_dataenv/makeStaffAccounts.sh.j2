@@ -61,7 +61,7 @@ echo
 SOURCES_DIR="${KOHALXC_DATADIR}/${KOHALXC_DATASET_SOURCE}/TranslationTables"
 TARGET_DIR="${KOHALXC_DATADIR}/${KOHALXC_DATASET_SOURCE}/target/Patrons"
 mkdir -vp $TARGET_DIR/${SRC_NAME}/letters && echo || exit 2
-(cd ${TARGET_DIR}/${SRC_NAME} && rm -f letters/*)
+(cd ${TARGET_DIR}/${SRC_NAME} && truncate --size=0 ${SRC_NAME}.migrateme && rm -f letters/*)
 echo "== Script dir:$(pwd)" && (cd $SOURCES_DIR && echo "== Datasources dir:$(pwd)" && ls -l ${SRC_NAME}.csv) && (cd $TARGET_DIR && echo "== Target dir:$(pwd)" && ls -l)
 
 ##################
@@ -146,17 +146,17 @@ IFS='
 
       # And then we make the username if there were no overrides
       if test -z "$username"; then
-        usernameorder="muodostettu etunimestäsi ja sukunimestäsi: "
+        usernameorder="muodostettu etu- ja sukunimestäsi: "
         username="$(makeusername $firstname $surname)"
       fi
       
       if echo "$givenusernames" | grep -q ":$username:"; then
-        usernameorder="muodostettu sukunimestäsi ja etunimestäsi: "
+        usernameorder="muodostettu suku- ja etunimestäsi: "
         username="$(makeusername $surname $firstname)"
       fi
 
       if echo "$givenusernames" | grep -q ":$username:"; then
-        usernameorder="etunimestäsi ja sukunimestäsi + yksilöivästä tunnistenumerosta "
+        usernameorder="etu- ja sukunimestäsi + yksilöivästä tunnistenumerosta "
         username="$(makeusername $firstname $surname)$(($borrowernumber - 186000))"
       fi
       # Kohalappi: username is generated as: kuntatunnus(3)+surname(3)+firstname(3)
@@ -251,7 +251,7 @@ IFS='
 
       # Build the Perl-hash for bulkImporting Patrons..
       #echo "\$VAR1 = bless( {'active' => 't','address' => '$address','borrowernumber' => '$borrowernumber','branchcode' => '$branchcode','cardnumber' => '$username','categorycode' => '$categorycode','city' => '$city','country' => 'Suomi','dateenrolled' => '2015-10-19 0:0:0+02','dateexpiry' => '$dateexpiry','dateofbirth' => '$dateofbirth','email' => '','extendedAttributes' => '','firstname' => '$firstname','mobile' => '','password' => '$password','phone' => '','privacy' => '1','sex' => '','smsalertnumber' => '','standing_penalties' => '','state' => 'Pohjois-Suomi','surname' => '$surname','userid' => '$username','zipcode' => '$zipcode'}, 'Item' );" >> kohamigration/${file%.xlsx}.migrateme
-      echo "\$VAR1 = bless( {'active' => 't','address' => '$address','borrowernumber' => '$borrowernumber','branchcode' => '$branchcode','cardnumber' => '$username','categorycode' => '$categorycode','city' => '$city','country' => 'Suomi','dateenrolled' => '2016-01-27 0:0:0+02','dateexpiry' => '$dateexpiry','dateofbirth' => '$dateofbirth','email' => '','extendedAttributes' => '','firstname' => '$firstname','mobile' => '','password' => '$password','phone' => '','privacy' => '1','sex' => '','smsalertnumber' => '','standing_penalties' => '','state' => 'Lappi','surname' => '$surname','userid' => '$username','zipcode' => '$zipcode'}, 'Item' );" >> ${TARGET_DIR}/${SRC_NAME}/$(basename $file).migrateme
+      echo "\$VAR1 = bless( {'active' => 't','address' => '$address','borrowernumber' => '$borrowernumber','branchcode' => '$branchcode','cardnumber' => '$username','categorycode' => '$categorycode','city' => '$city','country' => 'Suomi','dateenrolled' => '2016-01-27 0:0:0+02','dateexpiry' => '$dateexpiry','dateofbirth' => '$dateofbirth','email' => '','extendedAttributes' => '','firstname' => '$firstname','mobile' => '','password' => '$password','phone' => '','privacy' => '1','sex' => '','smsalertnumber' => '','standing_penalties' => '','state' => '','surname' => '$surname','userid' => '$username','zipcode' => '$zipcode'}, 'Item' );" >> ${TARGET_DIR}/${SRC_NAME}/$(basename $file).migrateme
 
       ##  Generate letter to account owner
       mkdir -p ${TARGET_DIR}/${SRC_NAME}/letters
@@ -263,20 +263,31 @@ IFS='
       #done
 
 cat << EOF > /tmp/${SRC_NAME}.txt
-
+.ps 15
+.sp 6
 Koha-Lappi
+.sp 6
 
+.ps 13
 Hei $firstname $surname!
+.sp 3
 
-Käyttäjätunnuksesi Koha-järjestelmään on $usernameorder${username}. 
-Salasanasi on 10 merkkiä pitkä: ${password}. 
+Tunnuksesi Koha-järjestelmässä on $usernameorder${username}.
+.br
+Salasanasi on 10 merkkiä pitkä: ${password}.
+.br
 Muistamisen helpottamiseksi voit painaa mieleesi ${passwordpronounce}.
+.sp 1
 
 Käyttäjätunnuksesi ja salasanasi ovat henkilökohtaisia, ethän jaa niitä muiden kanssa.
-Tunnuksen haltijana olet vastuussa kaikesta mitä tunnuksella järjestelmässä tehdään. 
+.br
+Tunnuksen haltijana olet vastuussa kaikesta mitä tunnuksella järjestelmässä tehdään.
+.br
 Tunnuksesi on voimassa $expirydateletter asti.
+.sp3
 
 Terveisin Koha-Lappi
+.br
 EOF
 
       # For PS generattion need to have 'groff' package in host/lxc

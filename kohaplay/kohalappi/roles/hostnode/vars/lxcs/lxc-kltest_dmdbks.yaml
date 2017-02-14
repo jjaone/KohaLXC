@@ -33,7 +33,8 @@ lxc:
     - "{{ hostnode_lxc_mount_kohadata }}"
     # lxc/group
     - lxc.group = "{{ hostnode_environment | d('local') }}"
-    - lxc.group = mdblxc
+    #- lxc.group = mdblxc
+    - lxc.group = dataenv
     - lxc.group = mdbenv
     - lxc.group = kohaenv
     # lxc/start
