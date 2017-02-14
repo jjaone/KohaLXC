@@ -11,37 +11,37 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
 
     <openilsDirectory>/openils/</openilsDirectory>
     <!--How many extra processes are launched? 0 disables multithreading -->
-    <threadCount>{{ item.threadCount | d(0) }}</threadCount> <!-- PatronImportChain throws segmentation fault, so keep this disabled -->
-    <organization>{{ item.organization | d('lappi') | lower }}</organization>
+    <threadCount>{{ threadCount | d(0) }}</threadCount> <!-- PatronImportChain throws segmentation fault, so keep this disabled -->
+    <organization>{{ org | d('default') | lower }}</organization>
     <!-- We are migrating '(koha)lappi' now -->
 
     <!-- Debug related parameters, set to -1 if no debugging required -->
-    <DEBUGAuthoritiesCountLimit>{{ item.debugACL | d(-7000) }}</DEBUGAuthoritiesCountLimit>
+    <DEBUGAuthoritiesCountLimit>{{ debugACL | d(-7000) }}</DEBUGAuthoritiesCountLimit>
 
     <!-- Do we separate volatile objects to a volatile-file, or push them to Evergreen database, org_unit "KONVERSIO"? -->
     <MigrateVolatile>1</MigrateVolatile> <!--  valid settings are [ 0 , 1 ] -->
 
     <!-- Batch management -->
-    <ChunkSize>{{ item.chunkSize | d(5000) }}</ChunkSize>   <!-- How many records does each licmarca-chunk contain? Maximum chunks/sourceFile = 10000 -->
-    <StartingChunk>{{ item.startingChunk | d(0) }}</StartingChunk>    <!-- From which chunk to start? -->
-    <EndingChunk>{{ item.endingChunk | d(-1) }}</EndingChunk>     <!-- To which chunk to end, exclusive! Chunk you set won"t get processed. -1 to process all. -->
+    <ChunkSize>{{ chunkSize | d(5000) }}</ChunkSize>   <!-- How many records does each licmarca-chunk contain? Maximum chunks/sourceFile = 10000 -->
+    <StartingChunk>{{ item.startChunk | d(0) }}</StartingChunk>    <!-- From which chunk to start? -->
+    <EndingChunk>{{ item.endChunk | d(-1) }}</EndingChunk>     <!-- To which chunk to end, exclusive! Chunk you set won"t get processed. -1 to process all. -->
     <!-- Component parts will claim their docId"s starting  from this value, so it must be one higher than the highest docId in importable licmarca.kir -->
     <!-- If set to 0, MasterMigrationTool will find the biggest docId from the sorted-by-docid licmarca.kir. -->
 
     <!-- Should we read external repositories such as ONKI, YSA, KAUNOKKI etc. -->
-    <LoadExternalRepositories>{{ item.loadExternalRepos | d(0) }}</LoadExternalRepositories>
+    <LoadExternalRepositories>{{ loadExtRepos | d(0) }}</LoadExternalRepositories>
     
     <BibliosImportChain>
 
         <!-- Program phase control variables -->
         <!-- Processing datasets for database INSERTion -->
-        <doRun>{{ item.biblios_run | d(1) }}</doRun>
-        <PreProcess>{{ item.preprocess }}</PreProcess>
+        <doRun>{{ biblios | d(1) }}</doRun>
+        <PreProcess>{{ preprocess | d(1) }}</PreProcess>
         <BuildMARC>1</BuildMARC>
         <RunUSEMARCON>1</RunUSEMARCON>
 
         <NextFreeDocId>1</NextFreeDocId>
-        <MaxWordLength>750</MaxWordLength> <!-- Subfields longer than this are truncated to this length. -->
+        <MaxWordLength>750</MaxWordLength> <!-- Longer subfields will be  truncated -->
         <MaxRecordLength>75000</MaxRecordLength>
 
         <UsemarconLog>logs/usemarcon.log</UsemarconLog>
@@ -49,27 +49,27 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
 
     <ItemsImportChain>
         <!-- Processing datasets for database INSERTion -->
-        <doRun>{{ item.items_run | d(1) }}</doRun>
-        <PreProcess>1</PreProcess>
+        <doRun>{{ items | d(1) }}</doRun>
+        <PreProcess> {{ preprocess | d(1) }}</PreProcess>
         <BuildItems>1</BuildItems>
     </ItemsImportChain>
 
     <HoldsImportChain>
-        <doRun>{{ item.holds_run | d(1) }}</doRun>
-        <PreProcess>1</PreProcess>
+        <doRun>{{ holds | d(1) }}</doRun>
+        <PreProcess> {{ preprocess | d(1) }}</PreProcess>
         <BuildHolds>1</BuildHolds>
     </HoldsImportChain>
 
     <FinesImportChain>
-        <doRun>{{ item.fines_run | d(1) }}</doRun>
-        <PreProcess>1</PreProcess>
+        <doRun>{{ fines | d(1) }}</doRun>
+        <PreProcess> {{ preprocess | d(1) }}</PreProcess>
         <Build>1</Build>
     </FinesImportChain>
 
     <PatronsImportChain>
         <!-- Processing datasets for database INSERTion -->
-        <doRun>{{ item.patrons_run | d(1) }}</doRun>
-        <PreProcess>1</PreProcess>
+        <doRun>{{ patrons | d(1) }}</doRun>
+        <PreProcess> {{ preprocess | d(1) }}</PreProcess>
         <BuildPatrons>1</BuildPatrons>
         <!-- Should we censor the data or not? Used by the Patron-object . -->
         <Censor>0</Censor>
@@ -78,15 +78,15 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
 
     <CheckOutsImportChain>
         <!-- Processing datasets for database INSERTion -->
-        <doRun>{{ item.checkouts_run | d(1) }}</doRun>
-        <PreProcess>1</PreProcess>
+        <doRun>{{ checkouts | d(1) }}</doRun>
+        <PreProcess> {{ preprocess | d(1) }}</PreProcess>
         <BuildCheckOuts>1</BuildCheckOuts>
     </CheckOutsImportChain>
 
     <HistoryImportChain>
         <!-- Processing datasets for database INSERTion -->
-        <doRun>{{ item.history_run | d(1) }}</doRun>
-        <PreProcess>1</PreProcess>
+        <doRun>{{ history | d(0) }}</doRun>
+        <PreProcess> {{ preproc | d(1) }}</PreProcess>
         <BuildHistory>1</BuildHistory>
     </HistoryImportChain>
 
@@ -103,7 +103,7 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
     </PreProcess>
 
     <SerialsImportChain>
-        <doRun>{{ item.serials_run | d(0) }}</doRun>
+        <doRun>{{ serials | d(0) }}</doRun>
         <!-- <PreProcess>1</PreProcess> PreProcessing is performed in BibliosImportChain-->
         <serialMotherFolder>Serials/</serialMotherFolder>
         <serialMotherFile>serialmothers.marc</serialMotherFile>

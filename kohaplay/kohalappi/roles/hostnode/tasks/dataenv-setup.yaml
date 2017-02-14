@@ -273,7 +273,21 @@
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/source.0"
     lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/source.0"
+    threadCount: 0
+    chunkSize: 5000
     org: "{{ hostnode_kohalxc_organization }}"
+    ics: "{{ hostnode_ppmmtenv_importchains | d() }}"
+    preprocess: "{{ (ics == '' or 'Preprocess' in ics)   | ternary(1,0) }}"
+    patrons:    "{{ (ics == '' or 'Patrons' in ics)      | ternary(1,0) }}"
+    biblios:    "{{ (ics == '' or 'Biblios' in ics)      | ternary(1,0) }}"
+    items:      "{{ (ics == '' or 'Items' in ics)        | ternary(1,0) }}"
+    checkuts:   "{{ (ics == '' or 'Checkouts' in ics)    | ternary(1,0) }}"
+    holds:      "{{ (ics == '' or 'Holds' in ics)        | ternary(1,0) }}"
+    fines:      "{{ (ics == '' or 'Fines' in ics)        | ternary(1,0) }}"
+    serials: 0
+    patrons_ssnindex: 120000
+    loadExtRepos: 0
+    debugACL: -7000
   template: >
     src="files/kohalxc_dataenv/config.xml.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.name }}.xml"
@@ -281,9 +295,8 @@
     mode="g+w"
     backup="no"
   with_items:
-    - { name: lxc_config, source: "{{ lxc_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 0, items_run: 0, holds_run: 0, fines_run: 0, patrons_run: 1, patrons_ssnindex: 120000, checkouts_run: 0, history_run: 0, serials_run: 0 }
-    - { name: config_all, source: "{{ host_src }}", organization: "{{ org }}", threadCount: 0, debugACL: -7000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0, preprocess: 1, biblios_run: 1, items_run: 1, holds_run: 1, fines_run: 1, patrons_run: 1, checkouts_run: 1, history_run: 1, serials_run: 0 }
-#    - { name: configBiblios, source: "{{ src }}", organization: "{{ org }}", threadCount: 0, debugACL: -1000, chunkSize: 5000, startingChunk: 0, endingChunk: -1, loadExternalRepos: 0 }
+    - { name: lxc_config, source: "{{ lxc_src }}", startChunk: 0, endChunk: -1 }
+    - { name: config_all, source: "{{ host_src }}", startChunk: 0, endChunk: -1 }
   when:
     - hostnode_dataenv_enabled
     - hostnode_dataenv_datadir is defined

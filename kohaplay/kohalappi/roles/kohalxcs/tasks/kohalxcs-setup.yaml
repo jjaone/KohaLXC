@@ -65,7 +65,7 @@
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=kohalxc_tooldir,kohalxc_datadir
+- debug: var=kohalxc_tooldir,kohalxc_datadir,kohalxcs_ppmmtenv_runconv_importchains,hostnode_ppmmtenv_importchains
 ## Run conversion: main script
 # - script might run very long time, poll every half a minute, timeout in seconds
 - name: dataenv/ppmmtenv - Start main conversion script in 'lxc_config' for {{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}} (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
@@ -126,6 +126,7 @@
     echo && ./makeStaffAccounts.sh > /dev/null;
     #cat $KOHALXC_DATADIR/source.0/target/Patrons/staffaccounts/givenusernames.txt;
   args:
+    executable: /bin/bash
     chdir: "{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools"
     #creates: $KOHALXC_DATADIR/source.o/target/Patrons/staffaccounts/givenusernames.txt;
   register: cmd_staffaccounts
@@ -144,8 +145,8 @@
        ([[ -d $d ]] && cd $d && echo && echo "== $d: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && find */ -maxdepth 1 -name '*.migrateme' -exec cp -vp {} . \; 2>/dev/null; ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo);
     done
   args:
-    chdir: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}/source.0/target" 
     executable: /bin/bash
+    chdir: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}/source.0/target" 
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled

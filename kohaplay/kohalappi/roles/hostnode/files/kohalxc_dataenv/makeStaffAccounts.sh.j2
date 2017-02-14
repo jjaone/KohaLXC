@@ -257,38 +257,36 @@ IFS='
       mkdir -p ${TARGET_DIR}/${SRC_NAME}/letters
       #echo "== Generate letter to user:'$firstname $surname' in ${TARGET_DIR}/${SRC_NAME}/letters"
 
-      #for line in $(seq 65); do
-      #   < /dev/urandom tr -cd '[:alnum:]' | head -c 120 >> /tmp/${SRC_NAME}.txt
-      # echo >> /tmp/${SRC_NAME}.removeme
-      #done
-
 cat << EOF > /tmp/${SRC_NAME}.txt
 .ps 15
-.sp 6
-Koha-Lappi
-.sp 6
+.sp 5
+Koha-Lappi - virkailijatunnus (staff account)
+.sp 4
 
 .ps 13
 Hei $firstname $surname!
-.sp 3
-
+.sp 2
 Tunnuksesi Koha-järjestelmässä on $usernameorder${username}.
 .br
 Salasanasi on 10 merkkiä pitkä: ${password}.
 .br
 Muistamisen helpottamiseksi voit painaa mieleesi ${passwordpronounce}.
-.sp 1
-
+.sp 2
 Käyttäjätunnuksesi ja salasanasi ovat henkilökohtaisia, ethän jaa niitä muiden kanssa.
 .br
 Tunnuksen haltijana olet vastuussa kaikesta mitä tunnuksella järjestelmässä tehdään.
 .br
 Tunnuksesi on voimassa $expirydateletter asti.
-.sp3
-
-Terveisin Koha-Lappi
-.br
+.sp 3
+.ps 14
+Terveisin Koha-Lappi -käyttöönottoprojekti
+.sp10
+.ps 12
 EOF
+
+      ## Add some scrambled text to hide the above in folded A4
+      #- TODO: does not work in Ansible, generates "tr: write error: Broken Pipe" errors!!
+      #for line in $(seq 65); do < /dev/urandom tr -cd '[:alnum:]' | head -c 120 >> /tmp/${SRC_NAME}.txt; echo >> /tmp/${SRC_NAME}.txt; done
 
       # For PS generattion need to have 'groff' package in host/lxc
       iconv -f utf-8 -t iso-8859-1 /tmp/${SRC_NAME}.txt | groff -Tps - > /tmp/${SRC_NAME}.ps 2> /dev/null
