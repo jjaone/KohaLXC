@@ -1,5 +1,5 @@
 ---
-# File: roles/hostnode/vars/lxcs/lxc_defaults.yaml
+# File: $KOHALXC_TOOLDIR/conf.d/env.data/lxcs/default/config/lxc.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
