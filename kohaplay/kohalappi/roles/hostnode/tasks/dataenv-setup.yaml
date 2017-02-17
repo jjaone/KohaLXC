@@ -217,7 +217,7 @@
 - debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
 ## TODO: Implement the dataset source fix scripts runs
 # [KohaLXC]:dataenv(control)
-- name: dataenv(control) - Run existing dataset fixes for specified sources 
+- name: dataenv(control) - Run dataset fixes for specified sources
   environment:
     KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
     KOHALXC_DATASET: "{{ item.name | d('default') }}"

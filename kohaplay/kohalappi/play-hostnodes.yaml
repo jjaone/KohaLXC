@@ -63,9 +63,10 @@
         - userinput_vars == "y"
       tags: hostnode:prerole
 
-  ## Roles
+  ## Roles:
+  # - Run common tasks before hostnode:{status,setup} tasks
   roles:
-    - common
+    - { role: common, tags: [ 'hostnode:srvenv-status', 'hostnode:srvenv-setup' ] }
     - hostnode
 
   # Post-tasks

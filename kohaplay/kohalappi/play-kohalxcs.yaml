@@ -41,7 +41,8 @@
       #debug: var=groups,hostvars,groups['all']
       tags: debug
 
-  ## Roles
+  ## Roles:
+  # - Run common tasks before kohalxcs:{status,setup} tasks
   roles:
-  - common
+  - { role: common, tags: [ 'kohalxcs:status', 'kohalxcs:setup' ] }
   - kohalxcs

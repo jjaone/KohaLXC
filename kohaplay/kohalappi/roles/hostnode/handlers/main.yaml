@@ -43,7 +43,7 @@
 
 ## Sync server/devops KohaLXC/tools+setups+data w/ control host
 - name: Sync kohalxc
-  #debug: msg="Synchronizing KohaLXC-tools/setups/data.."
+  #debug: msg="Sync KohaLXC-tools/setups/data from '{{ kohalxc_rootdir }}' to '{{ hostnode_kohalxc_works }}'"
   synchronize: >
     mode="push"
     src="{{ kohalxc_rootdir }}"
