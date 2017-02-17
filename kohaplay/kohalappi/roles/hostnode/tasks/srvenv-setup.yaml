@@ -94,6 +94,7 @@
 - debug: var=hostnode_environment,kohalxc_install,kohalxc_tooldir,kohalxc_organization
 ## Setup remote developer environment shell profile (devenv/bash-profile)
 # [KohaLXC]:devenv
+# - TODO: isn't this done in 'common' alreaydy, can we remove this from here?
 # - default settings for 'KohaLXC' are in: 'roles/common/defauls/main.yaml'
 # - kohalxc_devenv (local) configs are in: '[kohalxc_tooldir]/conf.d/env.dev'
 - name: devenv - Setup system-wide Bash profile for remote KohaLXC-development

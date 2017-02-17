@@ -1,0 +1,46 @@
+#!/bin/bash
+
+####################################################################
+# KohaLXC development/setup client/server environment (defaults)
+####################################################################
+
+# Koha-works main directory
+export KOHALXC_WORKS="/KohaData/Works"
+# KohaSuomi organization
+export KOHALXC_ORGANIZATION="KohaLappi"
+# Koha-datas/LXC-setups main directory
+export KOHALXC_SETUPDIR="${KOHALXC_WORKS}/${KOHALXC_ORGANIZATION}/kohalxc"
+
+# Developer: author and git-user
+export KOHALXC_GITUSER=`whoami`
+export KOHALXC_GITEMAIL=
+export KOHALXC_AUTHOR="Jukka Aaltonen"
+
+# LXC environment: clients & server setups and configs
+# Client tools root
+export KOHALXC_ROOTDIR="$KOHALXC_WORKS/KohaLXC"
+# Client kohatools (to be mounted to LXC)
+export KOHALXC_TOOLDIR="$KOHALXC_WORKS/KohaLXC/kohatools"
+
+# Make sure no LXC-name nor LXC-setup dir for is specfied on login
+export -n KOHALXC_NAME
+export -n KOHALXC_SETUP
+
+
+####################################################################
+## My prefeferences in Ubuntu Desktop env for KohaLXC-tooling
+## (override these in your .profile or .bashrc) 
+####################################################################
+# Setup environment unless kohasetup-devenv,sh has done it already
+if [ ! -f /etc/profile.d/kohasetup-devenv.sh ]; then
+    # Aliases
+    alias l='ls -laF'
+
+    # Localizations and languages
+    export LC_COLLATE=C
+
+    # Pagers, editors, ..
+    export LESS=-XR
+    export VISUAL="emacs -nw"
+    export EDITOR="nano"
+fi
