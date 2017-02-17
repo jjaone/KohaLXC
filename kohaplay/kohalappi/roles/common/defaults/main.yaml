@@ -74,3 +74,7 @@ kohalxc_webenv_enabled: false
 ## KohaLXC-dataenv: (koha/conversion)data source, configs and tools scripts
 kohalxc_dataenv: "{{ kohalxc_tooldir }}/conf.d/env.data"
 kohalxc_dataenv_enabled: false
+
+## KohaLXC-lxcenv:
+#kohalxc_lxcenv: "{{ kohalxc_tooldir }}/conf.d/env.lxc"
+kohalxc_lxcenv_enabled: false

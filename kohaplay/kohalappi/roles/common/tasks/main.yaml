@@ -34,7 +34,12 @@
 
 ## Configure and setup timezone (requires: Ansible 2.2.0+)
 - name: setup - Setup timezone (default='Europe/Helsinki')
+  become: yes
+  become_method: sudo
   timezone: name=Europe/Helsinki
+  when:
+    - ansible_distribution == 'Ubuntu'
+    - ansible_distribution_release != 'trusty'
   tags: common:setup
 
 ## Show common KohaLXC-related settings (for all roles)
@@ -73,6 +78,7 @@
     - { regexp: '^(HISTTIMEFORMAT=)(.*)', line: '#\1\2' }
     - { regexp: '^(alias l=)(.*)', line: '#\1\2' }
   when:
+    - hostnode_devenv_enabled is defined
     - hostnode_devenv_enabled
   tags: common:setup
 
@@ -80,4 +86,6 @@
 - name: status - List status of running/stopped LXCs..
   become: yes
   shell: lxc-ls -f
+  when:
+    - kohalxc_lxcenv_enabled
   tags: common:status
