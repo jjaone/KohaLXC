@@ -23,8 +23,6 @@
     autoremove="yes"
   with_flattened:
     - hostnode_lxcenv_pckgs
-  when:
-    - hostnode_lxcenv_enabled
 
 ## [TODO]: LXC networking, DNS, resolvconf, dnsmasq host settings..
 
@@ -54,7 +52,7 @@
 
 ## Show all LXC-containers
 - name: Show all defined LXCs (provisionable/running in inventory host)
-  debug: var=item.net.domain,item.lxc.name,item.lxc.state,item.lxc.template
+  debug: var=item.net.domain,item.lxc.name,item.lxc.state
   with_items: hostnode_lxcs | d()
   changed_when: false
   when:
@@ -96,7 +94,7 @@
     - item.lxc.container_config is defined
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
-- debug: var=cmd_lxccreate.results
+#- debug: var=cmd_lxccreate.results
 ## Check whether we have auth/host-key for sshing to LXCs
 - name: Has control host already auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
@@ -111,7 +109,7 @@
     - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
   delegate_to: localhost
 
-- debug: var=cmd_sshkeys_missing.results
+#- debug: var=cmd_sshkeys_missing.results
 ## Ensure control host/user auth key is present for jump-sshing to remote LXCs
 # - relevant parts copied from kohahosts/lxcenv-setup.yaml (222)
 # - above check based on 'known_hosts' entry in control host, not the key in LXCS
@@ -127,9 +125,13 @@
     - item.stdout is defined and item.stdout != ''
   delegate_to: localhost
 
+## Show the status of existing LXCs..
+- name: status/setup - List status of running/stopped LXCs..
+  become: yes
+  shell: lxc-ls -f
+
 #- debug: var=hostnode_lxcs,ansible_ssh_common_args
 
 ## Abort play here (for testing and development):
 #- fail:
 
- 

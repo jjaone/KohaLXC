@@ -43,6 +43,7 @@
 #- include: lxcenv-status.yaml
 #  tags: hostnode, hostnode:lxcenv, hostnode:lxcenv-status
 - include: lxcenv-setup.yaml
+  when: hostnode_lxcenv_enabled
   tags: hostnode, hostnode:lxcenv, hostnode:lxcenv-setup
 
 ## mdbenv-{status,setup}

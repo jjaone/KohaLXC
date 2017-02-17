@@ -28,7 +28,7 @@
   tags: common:bootstrap
 
 ## Logger - write a timestamp to target hosts system-log
-- name: common - Let target system syslog know about us
+- name: status - Let target system syslog know about us
   command: logger -t Ansible-play "kohalappi/{{ role_path | basename}}" in [{{ inventory_dir | basename }}]; inventory_hostname={{ inventory_hostname }}, ansible_host={{ ansible_host }}, ansible_port={{ ansible_port | d('22') }}, ansible_connection={{ ansible_connection }}, ansible_user={{ ansible_user }}, ansible_distribution={{ ansible_distribution }}, ansible_distribution_release={{ ansible_distribution_release }}, ansible_default_ipv4.interface={{ ansible_default_ipv4.interface }}
   tags: common:status
 
@@ -81,11 +81,3 @@
     - hostnode_devenv_enabled is defined
     - hostnode_devenv_enabled
   tags: common:setup
-
-## Show the status of existing LXCs..
-- name: status - List status of running/stopped LXCs..
-  become: yes
-  shell: lxc-ls -f
-  when:
-    - kohalxc_lxcenv_enabled
-  tags: common:status

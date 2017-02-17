@@ -73,18 +73,26 @@
   post_tasks:
     - raw: echo "In hostnodes(post_tasks/raw) 'play-hostnodes.yaml'"
 
-    # [verbose]: List provisioned LXCs (if any)
+    # List provisioned LXCs (if any)
     - name: hostnode/post_tasks - List provisioned LXCs (if any)
-      debug: var=lxcs_names,hostnode_lxcs,hostnode_environment
+      debug: var=lxcs_names,hostnode_environment
       when:
         - lxcs_names is defined or hostnode_lxcs is defined
         - lxcs_names != "" or hostnode_lxcs != ""
       tags: hostnode:postrole
 
+    # [debug]: List provisioned LXCs (if any)
+    - name: hostnode/post_tasks - List provisioned LXCs (if any)
+      debug: var=lxcs_names,hostnode_lxcs,hostnode_environment
+      when:
+        - lxcs_names is defined or hostnode_lxcs is defined
+        - lxcs_names != "" or hostnode_lxcs != ""
+      tags: hostnode:postrole,hostnode:debug
+
     # [debug]: Show some ssh/connection vars
     - name: hostnode/post_tasks - Show some ssh/connection vars
       debug: var=ansible_host,ansible_port,ansible_user,ansible_become_method,ansible_ssh_common_args,inventory_hostname
-      tags: hostnode:postrole
+      tags: hostnode:postrole,hostnode:debug
 
     #- name: hostnode/post_tasks - Generate list of LXCs for 'loop bypass' in add_hosts
     #  set_fact:
@@ -127,6 +135,7 @@
       - item.net.domain is defined
       - item.net.domain == "weblxc" or item.net.domain == "mdblxc"
       #- item.net.domain is defined and item.net.domain in inventory_hostname
+      delegate_to: localhost
       tags: hostnode:postrole
 
     #- fail:
