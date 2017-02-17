@@ -31,19 +31,21 @@
 ## Debug: some lxcenv related networking and domain settings
 - debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_pckgs,hostnode_lxcenv_networking,hostnode_lxcenv_domain
 
-## LXC-containers: retrieve defaults from 'roles/hostnode/vars/lxcs'
+## LXC-containers: retrieve defaults from 'roles/<role>/vars/'
 - include_vars: lxcs/lxc_defaults.yaml
 # LXCs: to be provisioned/running in inventory host..
-# - 'kldev_dmdbks', 'kltest_dmdbks', ..
+# - 'kldev_dmdbks', 'kldev_mdbks', 'kltest_dmdb', 'kltest_mdbks'
 - include_vars: file=lxcs/lxc-kldev_dmdbks.yaml name=kldev_dmdbks
-- include_vars: file=lxcs/lxc-kltest_dmdbks.yaml name=kltest_dmdbks
+- include_vars: file=lxcs/lxc-kltest_dmdb.yaml name=kltest_dmdb
+- include_vars: file=lxcs/lxc-kltest_mdbks.yaml name=kltest_mdbks
 
 ## LXC-containers: factize defined LXCs
 - name: Collect all defined LXCs
   set_fact:
     hostnode_lxcs:
       - "{{ kldev_dmdbks }}"
-      - "{{ kltest_dmdbks }}"
+      - "{{ kltest_dmdb }}"
+  #    - "{{ kltest_mdbks }}"
   #ignore_errors: yes
 
 ## Show all LXC-containers

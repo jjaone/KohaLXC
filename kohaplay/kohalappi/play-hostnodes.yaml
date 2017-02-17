@@ -81,8 +81,32 @@
       tags: hostnode:postrole
 
     # [debug]: Show some ssh/connection vars
-    #- name: hostnode/post_tasks - Show some ssh/connection vars
-    #  debug: var=ansible_host,ansible_port,ansible_user,ansible_become_method,ansible_ssh_common_args,inventory_hostname
+    - name: hostnode/post_tasks - Show some ssh/connection vars
+      debug: var=ansible_host,ansible_port,ansible_user,ansible_become_method,ansible_ssh_common_args,inventory_hostname
+      tags: hostnode:postrole
+
+    #- name: hostnode/post_tasks - Generate list of LXCs for 'loop bypass' in add_hosts
+    #  set_fact:
+    #    all_lxcs: "{{ hostvars[item]['hostnode_lxcs'] }}"
+    #  #debug: var=item,hostvars[item]['hostnode_lxcs']['net'],hostvars[item]['hostnode_lxcs']['lxc'],hostvars[item]['hostnode_lxcs']
+    #  with_items: "{{ groups['all'] }}"
+    #  tags: hostnode:postrole
+
+    ## [debug]: Just for debug
+    #- name: Show only those LXCs that belong to
+    #  debug: var=inventory_hostname,item.lxc,item.net
+    #  with_items: all_lxcs
+    #  when:
+    #    - item is defined and item != ''
+    #    - item.lxc is defined
+    #    - item.net is defined
+    #    - item.lxc.container_config is defined
+    #    - item.net.domain is defined
+    #    - item.net.domain == "mdblxc"
+    #  #  - item.net.domain is defined and item.net.domain in inventory_hostname
+    #  tags: hostnode:postrole
+
+    #- fail:
     #  tags: hostnode:postrole
 
     # Add provisionable LXCs as new hosts (grouping them by their domain name) 
@@ -99,5 +123,10 @@
       - item.lxc is defined
       - item.net is defined
       - item.lxc.container_config is defined
-      - item.net.domain is defined and item.net.domain in inventory_hostname
+      - item.net.domain is defined
+      - item.net.domain == "weblxc" or item.net.domain == "mdblxc"
+      #- item.net.domain is defined and item.net.domain in inventory_hostname
       tags: hostnode:postrole
+
+    #- fail:
+    #  tags: hostnode:postrole

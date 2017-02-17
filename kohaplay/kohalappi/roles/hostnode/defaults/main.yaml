@@ -43,6 +43,8 @@ hostnode_kohalxc_rootdir: "{{ hostnode_kohalxc_works }}/KohaLXC"
 hostnode_kohalxc_tooldir: "{{ hostnode_kohalxc_rootdir }}/kohatools"
 ## KohaLXC: organization
 hostnode_kohalxc_organization: "{{ kohalxc_organization }}"
+## KohaLXC: setupdir (LXCs are defined here)
+hostnode_kohalxc_setupdir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohalxc"
 
 ## KohaLXC/devenv: role default
 hostnode_devenv_enabled: true
@@ -204,7 +206,10 @@ hostnode_lxcenv_pckgs:
  - lxc-templates
  - bridge-utils
  - wget
-#hostnode_lxcenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.lxc"
+# Directory for LXC-environment related scripts/configs in KohaLXC-tool
+hostnode_lxcenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.lxc"
+# Directory for Koha-related LXC-container definitions and setups
+#hostnode_lxcenv_setupdir: "{{ hostnode_kohalxc_setupdir }}"
 
 ## LXC networking:  manual (configured) / dynamic (dhcp)
 hostnode_lxcenv_networking: dhcp

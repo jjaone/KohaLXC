@@ -281,7 +281,7 @@
     patrons:    "{{ (ics == '' or 'Patrons' in ics)      | ternary(1,0) }}"
     biblios:    "{{ (ics == '' or 'Biblios' in ics)      | ternary(1,0) }}"
     items:      "{{ (ics == '' or 'Items' in ics)        | ternary(1,0) }}"
-    checkuts:   "{{ (ics == '' or 'Checkouts' in ics)    | ternary(1,0) }}"
+    checkouts:  "{{ (ics == '' or 'Checkouts' in ics)    | ternary(1,0) }}"
     holds:      "{{ (ics == '' or 'Holds' in ics)        | ternary(1,0) }}"
     fines:      "{{ (ics == '' or 'Fines' in ics)        | ternary(1,0) }}"
     serials: 0

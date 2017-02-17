@@ -14,7 +14,7 @@
 
 ## Ensure env.* pckgs are installed
 # [KohaLXC]: kohalxcs: Packages for LXCs
-- name: devenv/dataenv - Ensure all development and data environemnt packages are installed
+- name: devenv/dataenv - Ensure development (and data) environment packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -22,13 +22,13 @@
     state="present"
     autoremove="yes"
   with_flattened:
-    - kohalxcs_devenv_pckgs
-    - kohalxcs_dataenv_pckgs
+    - kohalxcs_devenv_pckgs | d()
+    - kohalxcs_dataenv_pckgs | d()
   when:
     - kohalxcs_devenv_enabled
     - kohalxcs_dataenv_enabled
 
-- debug: var=hostnode_environment,kohalxc_install,kohalxc_organization
+- debug: var=hostnode_environment,kohalxc_install,kohalxc_organization,kohalxcs_devenv_enabled
 ## Setup remote developer environment shell profile (devenv/bash-profile)
 # - [TODO]: KOHALXC_ vars have wrong paths (mounts are not in Works but in HOME)
 - name: devenv - Setup system-wide Bash profile for KohaLXC-development
@@ -51,7 +51,6 @@
     mode="u+rwx,g+rx,o-rwx"
     backup="no"
   when:
-    - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
@@ -62,10 +61,9 @@
     state="link"
     force="yes"
   when:
-    - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=kohalxc_tooldir,kohalxc_datadir,kohalxcs_ppmmtenv_runconv_importchains,hostnode_ppmmtenv_importchains
+- debug: var=kohalxc_tooldir,kohalxc_datadir,kohalxcs_ppmmtenv_runconv,kohalxcs_ppmmtenv_runconv_importchains,hostnode_ppmmtenv_importchains
 ## Run conversion: main script
 # - script might run very long time, poll every half a minute, timeout in seconds
 - name: dataenv/ppmmtenv - Start main conversion script in 'lxc_config' for {{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}} (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
@@ -87,7 +85,7 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv is defined
+    - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
 
 ## Run conversion: check whether we are finished
 - name: dataenv/ppmmtenv - Check whether conversion run has finisihed..
@@ -99,7 +97,7 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv is defined
+    - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
 
 - debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
 ## Run conversion: finish the run, split log per ImportChain(s)
@@ -115,7 +113,7 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv is defined
+    - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
 
 ## Make Staff Accounts for PP//MMT-Patrons
 - name: dataenv/ppmmtenv - Make staff accounts for PatronsImportChain Koha-migration
