@@ -1,5 +1,5 @@
 ---
-# File: roles/hostnode/vars/lxcs/lxc-kltest_dmdbks.yaml
+# File: lxcs/kltest_mdbks.mdblxc/config/kltest_mdbks.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -7,20 +7,21 @@
 # License: GNU General Public License version 3.
 #
 # Description:
-# - LXC-name: 'kltest_dmdb.mdblxc'
+# - LXC-name: 'kltest_mdbks.mdblxc'
 # - kltest: KohaLappi/testing, Ubuntu/Trusty, dir, lxcbr0/NAT
-# - dmdb: data/MMT-conversion + MariaDB + Apache2/Koha-dev (KohaSuomi_3.16)
+# - mdbks: MariaDB + Koha-dev (KohaSuomi_3.16)
 # - mdblxc: deploy to host serving '*mdblxc'-domains
-# - network: app(OPAC)-port=85, int(staff)-port=8085
+# - network: (web)app[OPAC]-port=85, (web)int[staff]-port=8085
 # #############################################################################
 
-## netw port mappings/domain (web/mdb)lxc => host: 85/8085 => 80/8080
+## network LXC/host port mappings + domain:
+# - (web/mdb)lxc => host: 85/8085 => 80/8080
 net:
   app_port: 85
   int_port: 8085
   domain: mdblxc
-##  lxc: MariaDb (mdbenv), data/MMT (dataenv), Apache2/KS316 (webenv)
-# - for MMT/conversion etc. (testing, dhcp/mdblxc)
+##  lxc: MariaDb (mdbenv), MMT/migration (mmtenv), Apache2+KS316 (kohaenv)
+# - for MMT/migration and Koha-testing etc. (testing, dhcp/mdblxc)
 lxc:
   name: kltest_dmdbks
   state: started
@@ -30,18 +31,18 @@ lxc:
   container_config: 
     # lxc/mounts
     - "{{ hostnode_lxc_mount_kohatools }}"
-    - "{{ hostnode_lxc_mount_kohadata }}"
+    #- "{{ hostnode_lxc_mount_kohadata }}"
     # lxc/group
     - lxc.group = "{{ hostnode_environment | d('local') }}"
-    #- lxc.group = mdblxc
-    - lxc.group = dataenv
-    - lxc.group = mdbenv
-    - lxc.group = kohaenv
+    - lxc.group = dev
+    - lxc.group = mdb
+    - lxc.group = mmt
+    - lxc.group = koha
     # lxc/start
     - lxc.start.auto = 1
     - lxc.start.delay = 0
     # lxc/network
-    - lxc.network.veth.pair = Vkltest_dmdbks
+    - lxc.network.veth.pair = Vkltest_mdbks
     - lxc.network.type = veth
     - lxc.network.link = lxcbr0
     - lxc.network.flags = up

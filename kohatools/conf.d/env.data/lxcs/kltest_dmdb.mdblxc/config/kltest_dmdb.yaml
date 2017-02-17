@@ -1,5 +1,5 @@
 ---
-# File: roles/hostnode/vars/lxcs/lxc-kltest_dmdb.yaml
+# File: lxcs/kltest_dmdb.mdblxc/config/kltest_dmdb.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -14,7 +14,8 @@
 # - network: (web)app[OPAC]-port=8*, (web)int[STAFF]-port=808*
 # #############################################################################
 
-## netw port mappings/domain (web/mdb)lxc => host: 8*/808* => 80/8080
+## network port LXC/host port mappings + domain:
+# - (web/mdb)lxc => host: 8*/808* => 80/8080
 net:
   #app_port: 85
   #int_port: 8085
