@@ -25,13 +25,35 @@
     executable: /bin/bash
   ignore_errors: yes
 
+## Initialize+reload local facts (mostly for environment enablement of LXCs)
+- name: status - Create directory for custom facts
+  become: yes
+  file: |
+    path=/etc/ansible/facts.d
+    state=directory
+    recurse=yes
+- name: status - Set default custom facts (for this role)
+  become: yes
+  template: |
+    src=files/kohalxcs.fact
+    dest=/etc/ansible/facts.d
+    force=yes
+- name: status - Reload default/custom facts (ansible_local.kohalxcs)
+  setup: filter=ansible_local
+- debug: var=ansible_local.kohalxcs.default,ansible_local.kohalxcs.default.devenv_enabled,ansible_local.kohalxcs.default.dataenv_enabled,ansible_local.kohalxcs.default.mmtenv_enabled,ansible_local.kohalxcs.default.mdbenv_enabled,ansible_local.kohalxcs.default.kohaenv_enabled
+
+## Extract the environment enablements from lxc.group(s)
+#- name: status - Extract KohaLXC environment enablements from lxc.group(s)
+#  become: yes
+#  shell:
+#  shell: lxc-info --name=`echo {{ inventory_hostname }} | cut -d"." -f1` -c lxc.group | tr "\n" " " | cut -d"=" -f2- | cut -c2- | sed 's/{{ hostnode_environment }} //'
+
 ## Some vars: status/debug 
-- debug: var=ansible_host,ansible_user,inventory_hostname
-- debug: var=hostnode_operuser,kohalxc_operuser
+#- debug: var=hostnode_operuser,kohalxc_operuser
+#- debug: var=ansible_host,ansible_user,ansible_host,inventory_hostname
 #- debug: var=hostnode_srvname
 #- debug: var=hostnode_lxcs
-- debug: var=kohalxcs_devenv_enabled
-- debug: var=kohalxcs_dataenv_enabled
+#- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled
 
 
 ## [TODO]: Do we need the below here? ##

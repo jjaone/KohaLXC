@@ -1,1 +1,1 @@
-../kohasetup/env.data/fix_licmarca-split_36631.sh
+../kohasetup/env.data/dump4mmt-default/source/scripts/fix_licmarca-split_36631.sh

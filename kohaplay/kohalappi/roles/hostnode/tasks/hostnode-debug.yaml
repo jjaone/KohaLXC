@@ -34,7 +34,7 @@
 
 # hostnode/lxcenv+dev/srvenv
 - debug: var=hostnode_lxcenv_enabled verbosity=0
-- debug: var=hostnode_lxcs_names,hostnode_lxc_defaults,hostnode_lxcs verbosity=0
+- debug: var=hostnode_lxc_defaults,hostnode_lxcs verbosity=0
 - debug: var=hostnode_devenv_enabled verbosity=1
 - debug: var=hostnode_srvenv_enabled verbosity=1
 

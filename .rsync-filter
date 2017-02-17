@@ -12,6 +12,7 @@
 - *.komodoproject
 - *backup*
 - backup*/
+- .backup*/
 - /ansible/
 - /kohaplay/
 + /docs/

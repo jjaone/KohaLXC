@@ -77,7 +77,7 @@ kohalxcs_devenv_pckgs:
 #hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
 
 ## KohaLXC/dataenv: role default
-kohalxcs_dataenv_enabled: true
+kohalxcs_dataenv_enabled: false
 # Packages needed for dataenv setup/config/tools
 kohalxcs_dataenv_pckgs:
   - libswitch-perl
@@ -103,7 +103,7 @@ kohalxcs_dataenv_pckgs:
 #hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
 # KohaLXC/mmtenv: PP/MMT-tool environment
 #hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
-kohalxcs_ppmmtenv_enabled: true
+kohalxcs_ppmmtenv_enabled: false
 ## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
 # - which import chains should we run (empty means 'all')
 kohalxcs_ppmmtenv_runconv_importchains:
