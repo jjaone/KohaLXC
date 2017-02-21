@@ -52,11 +52,26 @@
   debug: var=gather_facts,hostnode_operuser,ansible_python_interpreter,ansible_connecion,ansible_port,ansible_become_method,ansible_user
   tags: common:debug
 
+- debug: var=hostnode_environment,kohalxc_install
+## Setup KohaLXC-environment for developer shell profile (devenv/bash-profile)
+# - [TODO]: Keep here after checking this works for 'hostnode' and 'kohalxcs' roles!
+# - [TODO]: Check KOHALXC_ vars correct paths:HOME for LXCs, Works for hosts)
+- name: setup - Provide system-wide Bash profile for KohaLXC-development
+  become: yes
+  template: >
+    src="files/devenv/bash_profile.sh.j2"
+    dest="/etc/profile.d/kohalxc-devenv.sh"
+    backup="yes"
+  when:
+    - kohalxc_devenv_enabled
+    - hostnode_environment != "localdev"
+  tags: common:setup
+
 ## Show KohaLXC-environment in the host, if any 
 - name: status - Show KohaLXC_ environment for '{{ hostnode_operuser }}'
   become: yes
   become_user: "{{ ansible_user | d(hostnode_operuser) }}"
-  shell: whoami && [[ -f /etc/profile.d/kohalxc-devenv.sh ]] && source /etc/profile.d/kohalxc-devenv.sh || source ~/.kohalxc.rc  && env | grep -s "^KOHALXC_"
+  shell: (whoami && [[ -f /etc/profile.d/kohalxc-devenv.sh ]] && source /etc/profile.d/kohalxc-devenv.sh; [[ -f ~/.kohalxc.rc ]] && source ~/.kohalxc.rc); env | grep -s "^KOHALXC_"
   args:
     executable: /bin/bash
   register: cmd
@@ -64,6 +79,7 @@
   failed_when: cmd.stderr != ""
   tags: common:status
 
+- debug: var=kohalxc_devenv_enabled
 ## Comment out overlapping settings (alias, HIST, ect) in user HOME profile
 - name: setup - Comment out settings in user HOME (.bashrc) that overlap w/ devenv
   lineinfile:
@@ -78,6 +94,6 @@
     - { regexp: '^(HISTTIMEFORMAT=)(.*)', line: '#\1\2' }
     - { regexp: '^(alias l=)(.*)', line: '#\1\2' }
   when:
-    - hostnode_devenv_enabled is defined
-    - hostnode_devenv_enabled
+    - kohalxc_devenv_enabled
+    #- (hostnode_devenv_enabled is defined and hostnode_devenv_enabled) or (kohalxcs_devenv_enabled is defined and kohalxcs_devenv_enabled is defined)
   tags: common:setup

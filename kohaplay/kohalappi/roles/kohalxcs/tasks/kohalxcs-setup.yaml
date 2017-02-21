@@ -12,9 +12,34 @@
 # - 
 # ##############################################################################
 
-## Ensure env.* pckgs are installed
-# [KohaLXC]: kohalxcs: Packages for LXCs
-- name: devenv/dataenv - Ensure development (and data) environment packages are installed
+- debug: var=inventory_hostname,hostnode_environment,kohalxc_tooldir,kohalxcs_kohalxc_tooldir
+
+## Read ansible_facts from target ansible localized folder: /etc/ansible/facts.d
+- name: setup - Read LXC env facts (ansible_local/{{inventory_hostname}}).lxc_group
+  #become:
+  setup: >
+    fact_path="{{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{inventory_hostname}}/config"
+    filter="ansible_local"
+- debug: var=ansible_local
+
+## Set this LXC-environment enablements based on above facts
+- name: setup - Set the LXC-specific environment based on local facts (if any)
+  vars:
+    #lxc_name: "{{ inventory_hostname.split('.')[0] | d('default') }}"
+    lxcg: "{{ ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_group }}"
+  set_fact:
+    kohalxcs_devenv_enabled: "{{ lxcg.devenv_enabled | d(false) }}"
+    kohalxcs_dataenv_enabled: "{{ lxcg.dataenv_enabled | d(false) }}"
+    kohalxcs_mmtenv_enabled: "{{ lxcg.mmtenv_enabled | d(false) }}"
+    kohalxcs_ppmmtenv_enabled: "{{ lxcg.ppmmtenv_enabled | d(false) }}"
+    kohalxcs_origommtenv_enabled: "{{ lxcg.origommtenv_enabld | d(false) }}"
+    kohalxcs_mdbvenv_enabled: "{{ lxcg.mdbenv_enabled | d(false) }}"
+    kohalxcs_kohaenv_enabled: "{{ lxcg.kohaenv_enabled | d(false) }}"
+#- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_origommtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
+
+#- debug: var=kohalxcs_devenv_pckgs,kohalxcs_dataenv_pckgs
+## Ensure {dev,data}env.* pckgs are installed (if respective env is enabled)
+- name: devenv/dataenv - Ensure dev + data environment packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -22,39 +47,63 @@
     state="present"
     autoremove="yes"
   with_flattened:
-    - kohalxcs_devenv_pckgs | d()
-    - kohalxcs_dataenv_pckgs | d()
+    - "{{ (kohalxcs_devenv_enabled) | ternary(kohalxcs_devenv_pckgs, '') }}"
+    - "{{ (kohalxcs_dataenv_enabled) | ternary(kohalxcs_dataenv_pckgs, '' ) }}"
   when:
-    - kohalxcs_devenv_enabled
-    - kohalxcs_dataenv_enabled
+    - kohalxcs_devenv_enabled or kohalxcs_dataenv_enabled
+    - item is defined and item != ''
 
-- debug: var=hostnode_environment,kohalxc_install,kohalxc_organization,kohalxcs_devenv_enabled
-## Setup remote developer environment shell profile (devenv/bash-profile)
-# - [TODO]: KOHALXC_ vars have wrong paths (mounts are not in Works but in HOME)
-- name: devenv - Setup system-wide Bash profile for KohaLXC-development
+## Ensure koha-group exists in the lXC
+- name: setup - Ensure we have a koha-user group
   become: yes
-  template: >
-    src="files/devenv/bash_profile.sh.j2"
-    dest="/etc/profile.d/kohalxc-devenv.sh"
-    backup="no"
+  group: >
+    name={{ kohalxc_kohagrp_name }}
+    gid={{ kohalxc_kohagrp_id }}
+    state=present
   when:
-    - kohalxcs_devenv_enabled
-    - hostnode_environment != "localdev"
+    - kohalxc_kohagrp_name is defined
+    - kohalxc_kohagrp_id is defined
 
-- debug: var=kohalxcs_kohalxc_tooldir
+## Ensure kohaoper ('ubuntu') belongs to koha-group and has ssh-keys
+- name: setup - Ensure LXC-operuser has ssh-keys and belongs to koha-group
+  become: yes
+  user: >
+    name="{{ kohalxc_operuser }}"
+    uid="{{ kohalxc_operid }}"
+    groups="{{ kohalxc_kohagrp_name | d(hostnode_kohagrp_name) }}"
+    append="yes"
+    generate_ssh_key="yes"
+    comment="Koha/LXC kohaoper user"
+  when:
+    - kohalxc_operuser is defined
+    - kohalxc_operid is defined
+    - kohalxc_kohagrp_name is defined
+
+## Ensure kohalxc_operuser(khaoper/HOME) has required dirs
+- name: setup - Ensure LXC-operuser has dirs for scripts and logs
+  file: >
+    path="/home/{{ kohalxc_operuser }}/{{ item }}"
+    state="directory"
+  with_items:
+    - bin
+    - log
+  when:
+    - kohalxc_operuser is defined
+
 ## Push/copy 'run_conversion' script to ConversionTools
-- name: dataenv - Push containerized conversion main script to ConversionTools
+# - TODO: mode="u+rwx,g+rx,o-rwx"
+- name: mmtenv - Push containerized conversion main script to ConversionTools
   #become: yes
   template: >
     src="files/dataenv/run_conversion-perl_import_pl.sh.j2"
     dest="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
-    mode="u+rwx,g+rx,o-rwx"
+    mode="u+x,g+rx"
     backup="no"
   when:
     - kohalxcs_ppmmtenv_enabled
 
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
-- name: dataenv - Symlink conversion main script in container HOME/bin
+- name: mmtenv - Symlink conversion main script in container HOME/bin
   file: >
     src="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
     dest="{{ '/home/'~ansible_user~'/bin/run_conversion' }}"
@@ -63,10 +112,10 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=kohalxc_tooldir,kohalxc_datadir,kohalxcs_ppmmtenv_runconv,kohalxcs_ppmmtenv_runconv_importchains,hostnode_ppmmtenv_importchains
+- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_runconv,kohalxcs_ppmmtenv_runconv_importchains,hostnode_ppmmtenv_importchains
 ## Run conversion: main script
 # - script might run very long time, poll every half a minute, timeout in seconds
-- name: dataenv/ppmmtenv - Start main conversion script in 'lxc_config' for {{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}} (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
+- name: data+ppmmtenv - Start main conversion script in 'lxc_config' for {{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}} (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -88,7 +137,7 @@
     - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
 
 ## Run conversion: check whether we are finished
-- name: dataenv/ppmmtenv - Check whether conversion run has finisihed..
+- name: data+ppmmtenv - Check whether conversion run has finisihed..
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
@@ -101,7 +150,7 @@
 
 - debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
 ## Run conversion: finish the run, split log per ImportChain(s)
-- name: dataenv/ppmmtenv - Finish conversion run (split/show log by import-chains)
+- name: data+ppmmtenv - Finish conversion run (split/show log by import-chains)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -116,7 +165,7 @@
     - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
 
 ## Make Staff Accounts for PP//MMT-Patrons
-- name: dataenv/ppmmtenv - Make staff accounts for PatronsImportChain Koha-migration
+- name: data+ppmmtenv - Make staff accounts for PatronsImportChain Koha-migration
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -133,7 +182,7 @@
     - kohalxcs_ppmmtenv_enabled
 
 ## Run conversion: build '{Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme' files
-- name: dataenv/ppmmtenv - Build '*.migrateme' files for insertation to Koha
+- name: data+ppmmtenv - Build '*.migrateme' files for insertation to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"

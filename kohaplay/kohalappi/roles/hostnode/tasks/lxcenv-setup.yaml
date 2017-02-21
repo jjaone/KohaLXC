@@ -29,29 +29,51 @@
 ## Debug: some lxcenv related networking and domain settings
 - debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_pckgs,hostnode_lxcenv_networking,hostnode_lxcenv_domain
 
+## reate directory with correct permissions for custom localized facts
+- name: lxcenv - Create default directory for custom Ansible/LXC-related facts
+  become: yes
+  file: |
+    path=/etc/{{ item }}
+    state=directory
+    recurse=yes
+    force=yes
+    mode="g=rx,o-rwx"
+    group="{{hostnode_kohagrp_name | d('koha') }}"
+  with_items:
+    - ansible
+    - ansible/facts.d
+
 ## LXC-containers:
-# - retrieve list of all LXC names to be provisioned
+# - retrieve list of all named LXCs to be provisioned
 - include_vars: lxcs/all_lxcs.yaml name=lxc_names
 #- debug: var=lxc_names
 # - retrieve defaults from 'roles/<role>/vars/lxcs/default'
-- include_vars: lxcs/default/config/lxc.yaml
+- include_vars: lxcs/default/config/default.yaml
 # LXCs: to be provisioned/running in inventory host in: $KOHALXC_SETUP
 # - 'kldev_dmdbks', 'kldev_mdbks', 'kltest_dmdb', 'kltest_mdbks'
 - include_vars: file=lxcs/kldev_dmdbks.weblxc/config/kldev_dmdbks.yaml name=kldev_dmdbks
 - include_vars: file=lxcs/kltest_dmdb.mdblxc/config/kltest_dmdb.yaml name=kltest_dmdb
-#- include_vars: file=lxcs/lxc-kltest_mdbks.yaml name=kltest_mdbks
+#- include_vars: file=lxcs/kltest_mdbks.mdblxc/config/kltest_mdbks.yaml name=kltest_mdbks
 
 ## LXC-containers: factize defined LXCs
-- name: Collect all defined LXCs
+- name: lxcenv - Collect all defined LXCs
   set_fact:
     hostnode_lxcs:
       - "{{ kldev_dmdbks }}"
       - "{{ kltest_dmdb }}"
   #    - "{{ kltest_mdbks }}"
-  #ignore_errors: yes
+
+- debug: var=hostnode_lxcs
+## Extract the env enablements from lxc.group's in container_config
+- name: lxcenv - Extract LXC environments from lxc.group in 'container_congig'
+  template: >
+    src="files/kohalxc_lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
+    dest="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
+    force="yes"
+  with_items: hostnode_lxcs | d()
 
 ## Show all LXC-containers
-- name: Show all defined LXCs (provisionable/running in inventory host)
+- name: lxcenv - Show all defined LXCs (provisionable/running in inventory host)
   debug: var=item.net.domain,item.lxc.name,item.lxc.state
   with_items: hostnode_lxcs | d()
   changed_when: false
@@ -61,7 +83,7 @@
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
 ## Ensure that LXCs to be provisioned are stopped (if they exists already)
-- name: Ensure provisionable LXCs are stopped (if they are present)
+- name: lxcenv - Ensure provisionable LXCs are stopped (if they are present)
   become: yes
   #environment:
   #  KOHALXC_WORKS: "{{ hostnode_kohalxc_works }}"
@@ -81,7 +103,7 @@
 
 ## Create/re-configure and enable all LXCs
 # - should be done this way only in remote 'development' and 'testing'
-- name: Create/re-configure all defined LXCs
+- name: lxcenv - Create/re-configure all defined LXCs
   become: yes
   lxc_container:
     "{{ item.lxc }}"
@@ -96,7 +118,7 @@
 
 #- debug: var=cmd_lxccreate.results
 ## Check whether we have auth/host-key for sshing to LXCs
-- name: Has control host already auth/host-key for jump-sshing to remote LXCs
+- name: lxcenv - Has control host already auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
   environment:
     LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
@@ -114,7 +136,7 @@
 # - relevant parts copied from kohahosts/lxcenv-setup.yaml (222)
 # - above check based on 'known_hosts' entry in control host, not the key in LXCS
 # - pass only to runnning LXCs (in respective hosts) whose keys are missing
-- name: Pass control host/user auth-key for jump-sshing to remote LXCs
+- name: lxcenv - Pass control host/user auth-key for jump-sshing to remote LXCs
   environment:
     LXCHOST: "{{ item.stdout }}"
     SSHPASS: "{{ kohalxc_operpass }}"
@@ -126,7 +148,7 @@
   delegate_to: localhost
 
 ## Show the status of existing LXCs..
-- name: status/setup - List status of running/stopped LXCs..
+- name: lxcenv - status/setup - List status of running/stopped LXCs..
   become: yes
   shell: lxc-ls -f
 

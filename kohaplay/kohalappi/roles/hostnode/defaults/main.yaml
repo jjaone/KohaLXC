@@ -35,6 +35,8 @@ gather_facts: False
 ## #######################
 # - defaults in 'roles/common/defaults/main.yaml'
 # - override these in inventory/group+host_vars
+## KohaLXC: install dir
+kohalxc_install: "/home/{{ansible_user}}/Works"
 ## KohaLXC: works
 hostnode_kohalxc_works: "{{ kohalxc_install }}"
 ## KohaLXC: rootdir
@@ -291,7 +293,7 @@ hostnode_mdbenv_pckginstall: |
 # LXC: container command: kohalxc/kohaenv pckgs installation
 # - Koha non-interactive (dev)-installation (debconf/apt-get)
 hostnode_kohaenv_setup: |
-  echo "== kohalxc [ansible:kohaenvenv]: Installation of Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a {{ hostnode_lxcenv_logfile }};
+  echo "== kohalxc [ansible:kohaenvenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a {{ hostnode_lxcenv_logfile }};
   pwd && ls -la
 
 ## LXC: template

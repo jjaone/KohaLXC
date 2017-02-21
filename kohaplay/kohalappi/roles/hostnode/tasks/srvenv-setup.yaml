@@ -59,7 +59,7 @@
     uid="{{ hostnode_kohasys_id }}"
     state="present"
     generate_ssh_key="yes"
-    comment="Koha/LXC system user"
+    comment="Koha/host system user"
   when:
     - hostnode_kohasys_user is defined
     - hostnode_kohasys_id is defined
@@ -94,18 +94,19 @@
 - debug: var=hostnode_environment,kohalxc_install,kohalxc_tooldir,kohalxc_organization
 ## Setup remote developer environment shell profile (devenv/bash-profile)
 # [KohaLXC]:devenv
-# - TODO: isn't this done in 'common' alreaydy, can we remove this from here?
+# - [TODO]: Remove from here after checking this works from 'common' role!
+# - [TODO]: Check KOHALXC_ vars have correct paths (should be in Works)
 # - default settings for 'KohaLXC' are in: 'roles/common/defauls/main.yaml'
 # - kohalxc_devenv (local) configs are in: '[kohalxc_tooldir]/conf.d/env.dev'
-- name: devenv - Setup system-wide Bash profile for remote KohaLXC-development
-  become: yes
-  template: >
-    src="files/kohalxc_devenv/bash_profile.sh.j2"
-    dest="/etc/profile.d/kohalxc-devenv.sh"
-    backup="no"
-  when:
-    - hostnode_devenv_enabled
-    - hostnode_environment != "localdev"
+#- name: devenv - Setup system-wide Bash profile for remote KohaLXC-development
+#  become: yes
+#  template: >
+#    src="files/kohalxc_devenv/bash_profile.sh.j2"
+#    dest="/etc/profile.d/kohalxc-devenv.sh"
+#    backup="no"
+#  when:
+#    - hostnode_devenv_enabled
+#    - hostnode_environment != "localdev"
 
 ## Ensure kohahosts_operuser (devops/HOME) has required dirs
 # [KOHALXC]:srvenv

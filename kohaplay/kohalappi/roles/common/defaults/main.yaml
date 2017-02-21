@@ -37,7 +37,7 @@ kohalxc_author: "Koha Developer"
 
 ## KohaLXC-toolset
 # KohaLXC-installation (target host) directory:
-kohalxc_install: "/home/{{ ansible_user }}/Works"
+#kohalxc_install: "/home/{{ ansible_user }}/Works"
 # KohaLXC-works source directories (from the host env w/ defaults):
 kohalxc_works: "{{ lookup('env', 'KOHALXC_WORKS') }}"
 # KohaLXC-root directory (kohalxc_root): 
@@ -57,7 +57,7 @@ kohalxc_dataset: "{{ lookup('env', 'KOHALXC_DATASET') | d({},true) }}"
 
 ## KohaLXC-devenv: developer env config files and setup scripts
 kohalxc_devenv: "{{ kohalxc_tooldir }}/conf.d/env.dev"
-kohalxc_devenv_enabled: false
+kohalxc_devenv_enabled: "{{ (hostnode_devenv_enabled is defined and hostnode_devenv_enabled) or (kohalxcs_devenv_enabled is defined and kohalxcs_devenv_enabled) }}"
 
 ## KohaLXC-srvenv: common server env config files and setup scripts
 kohalxc_srvenv: "{{ kohalxc_tooldir }}/conf.d/env.srv"
