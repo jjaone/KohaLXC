@@ -23,7 +23,7 @@
 - debug: var=ansible_local
 
 ## Set this LXC-environment enablements based on above facts
-- name: setup - Set the LXC-specific environment based on local facts (if any)
+- name: setup - Set the LXC-environments based on local facts (if any)
   vars:
     #lxc_name: "{{ inventory_hostname.split('.')[0] | d('default') }}"
     lxcg: "{{ ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_group }}"
@@ -115,7 +115,7 @@
 - debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_runconv,kohalxcs_ppmmtenv_runconv_importchains,hostnode_ppmmtenv_importchains
 ## Run conversion: main script
 # - script might run very long time, poll every half a minute, timeout in seconds
-- name: data+ppmmtenv - Start main conversion script in 'lxc_config' for {{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}} (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
+- name: data+ppmmtenv - Start main conversion script using 'lxc_config' for '{{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}' (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -134,7 +134,9 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
+    - kohalxcs_ppmmtenv_runconv_importchains is defined
+    - kohalxcs_ppmmtenv_runconv_importchains != ''
+  #- kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
 
 ## Run conversion: check whether we are finished
 - name: data+ppmmtenv - Check whether conversion run has finisihed..
@@ -146,7 +148,9 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
+    - kohalxcs_ppmmtenv_runconv_importchains is defined
+    - kohalxcs_ppmmtenv_runconv_importchains != ''
+    #- kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
 
 - debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
 ## Run conversion: finish the run, split log per ImportChain(s)
@@ -162,7 +166,9 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
+    - kohalxcs_ppmmtenv_runconv_importchains is defined
+    - kohalxcs_ppmmtenv_runconv_importchains != ''
+    #- kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv|bool
 
 ## Make Staff Accounts for PP//MMT-Patrons
 - name: data+ppmmtenv - Make staff accounts for PatronsImportChain Koha-migration
@@ -198,6 +204,15 @@
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
+## Configure Koha(Apache2) OPAC and Intranet for https
+#- name: Configure Koha/Apache2 for https
+#  template: >
+#    src="files/kohaenv/koha-https.conf.j2"
+#    dest="/etc/koha/koha-https.conf"
+#    mode="u=rw,g=r,o=rwx"
+#    backup="no"
+#  when:
+#    - kohalxcs_kohaenv_enabled
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:

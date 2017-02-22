@@ -100,7 +100,7 @@ echo && cp -vpr logs/* $LOGS_DIR/conversion-$STARTSTAMP/.
 (cd $LOGS_DIR && ln -s -f -T conversion-$STARTSTAMP conversion-last && ls -l)
 
 ## Show what we got
-echo && ls -l $LOGS_DIR/conversion-$STARTSTAMP && head -15 $LOGS_DIR/conversion-$STARTSTAMP/import_all.log
+echo && ls -l $LOGS_DIR/conversion-$STARTSTAMP && head -15 $LOGS_DIR/conversion-$STARTSTAMP/import_*.log
 
 ## Check  whhich chains were actually succesfully run?
 #IMPORTCHAINS="Patrons Biblios Items"
