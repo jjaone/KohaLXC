@@ -23,13 +23,13 @@ $ perl import.pl ../config.xml
 $ cd $KOHALXC_ROOTDIR/kohaplay/kohalappi
 $ kohalxc -i inventory/development ansible\
  -t hostnode:srvenv-setup,hostnode:dataenv-setup,hostnode:lxcenv-setup,\
-  hostnode:postrole,kohalxcs:setup -e "kohalxcs_ppmmtenv_runconv_polling=0"
+  hostnode:postrole,kohalxcs:setup -e "kohalxcs_ppmmtenv_polling=0"
 ```
 
 #### Explicitly ensures target server, dump data and LXC enviroment are setup:
 * conversion step is run iff `hostnode_ppmmtenv_enabled` has been set(up)
 * dedicated LXC-container created to mount setup/dumps and to run conversion
-* setting `kohalxcs_ppmmtenv_runconv_polling=0` makes conversion run asynchronous
+* setting `kohalxcs_ppmmtenv_polling=0` makes conversion run asynchronous
 
 #### Options used:
 * -i = inventory in which to setup and run the conversion play

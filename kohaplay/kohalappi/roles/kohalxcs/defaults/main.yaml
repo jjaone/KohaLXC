@@ -102,18 +102,35 @@ kohalxcs_dataenv_pckgs:
 kohalxcs_ppmmtenv_enabled: false
 ## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
 # - which import chains should we run (empty means 'all')
-kohalxcs_ppmmtenv_runconv_importchains:
+kohalxcs_ppmmtenv_importchains:
 # - run timeout (default): 2 hrs = 7200s = 2 * 3600 s
-kohalxcs_ppmmtenv_runconv_timeout: 7200
+kohalxcs_ppmmtenv_timeout: 7200
 # - run poll frequency: 30 seconds
-kohalxcs_ppmmtenv_runconv_polling: 30
+kohalxcs_ppmmtenv_polling: 30
 # - how many times to check whether conversion has finished (default: 60):
 # - 120 * 60 s = 2 hours
-kohalxcs_ppmmtenv_runconv_checkfinished: 120
+kohalxcs_ppmmtenv_checkfinished: 120
 # - the delay between checks of whether conversion has finished (default: 5)
-kohalxcs_ppmmtenv_runconv_checkdelay: 60
+kohalxcs_ppmmtenv_checkdelay: 60
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 #hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
+
+## KohaLXC/kohaenv: role default
+kohalxcs_kohaenv_enabled: false
+# Packages needed for kohaenv setup/config/tools
+kohalxcs_kohaenv_pckgs:
+# Koha/webapp (OPAC): server admin:
+kohalxcs_kohaenv_opac_srvadmin: webmaster@fkohaopac.example.fake
+# Koha/webapp (OPAC): document root
+kohalxcs_kohaenv_opac_docroot: /usr/share/koha/opac/htdocs
+# Koha/webapp (OPAC): server name
+kohalxcs_kohaenv_opac_srvname: kohastaff.example.fake
+# Koha/webapp (Staff): server admin:
+kohalxcs_kohaenv_staff_srvadmin: webmaster@kohastaff.example.fake
+# Koha/webapp (OPAC): document root
+kohalxcs_kohaenv_staff_docroot: /usr/share/koha/intranet/htdocs
+# Koha/webapp (OPAC): server name
+kohalxcs_kohaenv_staff_srvname: kohaopac.example.fake
 
 
 ## ###########################

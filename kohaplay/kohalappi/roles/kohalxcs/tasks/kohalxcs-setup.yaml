@@ -112,45 +112,43 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_runconv,kohalxcs_ppmmtenv_runconv_importchains,hostnode_ppmmtenv_importchains
+- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,hostnode_ppmmtenv_importchains
 ## Run conversion: main script
 # - script might run very long time, poll every half a minute, timeout in seconds
-- name: data+ppmmtenv - Start main conversion script using 'lxc_config' for '{{ kohalxcs_ppmmtenv_runconv_importchains | d('all') }}' (max {{ (kohalxcs_ppmmtenv_runconv_timeout | d(3600) | int) // 3600 }} hours)
+- name: data+ppmmtenv - Start main conversion script using 'lxc_config' for '{{ kohalxcs_ppmmtenv_importchains }}' (max {{ (kohalxcs_ppmmtenv_timeout | d(3600) | int) // 3600 }} hours)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
   shell: |
     ls -l ~/bin/run_conversion;
     echo && echo "== START OF PP/MMT CONVERSION.." && echo;
-    $HOME/bin/run_conversion lxc_config.xml {{ kohalxcs_ppmmtenv_runconv_importchains | d() }} > /dev/null;
+    $HOME/bin/run_conversion lxc_config.xml {{ kohalxcs_ppmmtenv_importchains }} > /dev/null;
     head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log;
     echo && echo "== ..CONVERTING.." && echo;
   args:
     chdir: "{{ '/home/'~ansible_user }}"
     creates: ~/bin/.run_conversion.finished
-  async: "{{ kohalxcs_ppmmtenv_runconv_timeout | d(3600) }}"
-  poll: "{{ kohalxcs_ppmmtenv_runconv_polling | d(0) }}"
+  async: "{{ kohalxcs_ppmmtenv_timeout | d(3600) }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_runconversion
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv_importchains is defined
-    - kohalxcs_ppmmtenv_runconv_importchains != ''
-  #- kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
+    - kohalxcs_ppmmtenv_importchains is defined
+    - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
 - name: data+ppmmtenv - Check whether conversion run has finisihed..
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
-  retries: "{{ kohalxcs_ppmmtenv_runconv_checkfinished | d(60) }}"
-  delay: "{{ kohalxcs_ppmmtenv_runconv_checkdelay | d(5) }}"
+  retries: "{{ kohalxcs_ppmmtenv_checkfinished | d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(5) }}"
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv_importchains is defined
-    - kohalxcs_ppmmtenv_runconv_importchains != ''
-    #- kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv
+    - kohalxcs_ppmmtenv_importchains is defined
+    - kohalxcs_ppmmtenv_importchains != ''
 
 - debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
 ## Run conversion: finish the run, split log per ImportChain(s)
@@ -166,9 +164,8 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_runconv_importchains is defined
-    - kohalxcs_ppmmtenv_runconv_importchains != ''
-    #- kohalxcs_ppmmtenv_runconv is defined and kohalxcs_ppmmtenv_runconv|bool
+    - kohalxcs_ppmmtenv_importchains is defined
+    - kohalxcs_ppmmtenv_importchains != ''
 
 ## Make Staff Accounts for PP//MMT-Patrons
 - name: data+ppmmtenv - Make staff accounts for PatronsImportChain Koha-migration
