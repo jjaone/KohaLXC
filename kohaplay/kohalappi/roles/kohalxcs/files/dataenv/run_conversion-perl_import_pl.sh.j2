@@ -41,12 +41,12 @@ echo "LOGS_DIR=$LOGS_DIR"
 echo "CONFIG_XML=$CONFIG_XML"
 echo "IMPORTCHAINS=$IMPORTCHAINS"
 
+## Save the start moment
+STARTSTAMP=`date +%Y%m%d_%H%M`
+
 # Check that PP/MMT main config exists..
 [[ ! -e "${PPMMT_DIR}/${CONFIG_XML}" ]] && 
-    echo "== No config file found..exiting" && exit 1
-
-## Do the stuff ##
-STARTSTAMP=`date +%Y%m%d_%H%M`
+    echo "== $PROGNAME ($STARTSTAMP): No config file found..exiting" && exit 1
 
 ## Cleanup for traping kills/terminations of the script
 function onterminated() {
@@ -81,6 +81,12 @@ echo && echo "== $PROGNAME ($STARTSTAMP) for:$IMPORTCHAINS"
 ## Clean previous run process artifacts..
 # - kill 'perl import.pl' and the trap should handle the rest
 cleanPreviousRun;
+
+#- TODO: Run only for "all" importchains for now!!
+if [[ "all" != $IMPORTCHAINS ]]; then
+    echo "== $PROGNAME ($STARTSTAMP): Will only run for 'all' importchains..done."
+    exit 0
+fi
 
 ## Make required directories (and empty run log directory)
 cd $PPMMT_DIR/PerlMMT && mkdir -vp logs && pwd && rm -f -r logs/*

@@ -91,8 +91,8 @@ hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
 # - not defined or empty means 'all'
 hostnode_ppmmtenv_importchains:
   - Preprocess
-  - Biblios
   - Patrons
+#  - Biblios
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 

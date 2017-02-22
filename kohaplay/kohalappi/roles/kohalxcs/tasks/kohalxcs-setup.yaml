@@ -112,7 +112,7 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,hostnode_ppmmtenv_importchains
+- debug: var=hostnode_ppmmtenv_importchains,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
 ## Run conversion: main script
 # - script might run very long time, poll every half a minute, timeout in seconds
 - name: data+ppmmtenv - Start main conversion script using 'lxc_config' for '{{ kohalxcs_ppmmtenv_importchains }}' (max {{ (kohalxcs_ppmmtenv_timeout | d(3600) | int) // 3600 }} hours)
