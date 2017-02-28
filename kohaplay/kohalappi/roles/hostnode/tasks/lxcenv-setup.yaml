@@ -65,7 +65,7 @@
 
 - debug: var=hostnode_lxcs
 ## Extract the env enablements from lxc.group's in container_config
-- name: lxcenv - Extract LXC environments from lxc.group in 'container_congig'
+- name: lxcenv - Extract LXC environments from lxc.group in 'container_config'
   template: >
     src="files/kohalxc_lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
     dest="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"

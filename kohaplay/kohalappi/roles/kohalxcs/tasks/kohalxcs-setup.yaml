@@ -185,7 +185,7 @@
     - kohalxcs_ppmmtenv_enabled
 
 ## Run conversion: build '{Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme' files
-- name: data+ppmmtenv - Build '*.migrateme' files for insertation to Koha
+- name: data+ppmmtenv - Build '*.migrateme' files for insertion to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -196,20 +196,66 @@
     done
   args:
     executable: /bin/bash
-    chdir: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}/source.0/target" 
+    chdir: "{{ '/home/'~ansible_user~'/{{ kohalxcs_organization | d(kohalxc_organization) }}/kohadata' }}/source.0/target"
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
+## Koha/webapp-setup after this point => should be moved to kohaenv-setup.yaml ##
+- fail:
+
+- debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohanv_srvname,kohalxcs_kohaenv_ssl,kohalxc_organization
+## Install LetsEncrypt/certbot client for SSL-certificates
+- name: Install LetsEncrypt from Git for SSL-certificate generation
+  become: yes
+  shell: mkdir -p /opt/letsencrypt && git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt &% cd /etc/letsencrypt && ./letsencrypt-auto certonly --email {{ kohalxcs_kohaenv_srvadmin | d() }} --apache -d {{ kohalxcs_kohaenv_srvname }}
+  args:
+    chdir: /opt
+    executable: /bin/bash
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_https
+    - kohalxcs_kohaenv_sslle
+
 ## Configure Koha(Apache2) OPAC and Intranet for https
-#- name: Configure Koha/Apache2 for https
-#  template: >
-#    src="files/kohaenv/koha-https.conf.j2"
-#    dest="/etc/koha/koha-https.conf"
-#    mode="u=rw,g=r,o=rwx"
-#    backup="no"
-#  when:
-#    - kohalxcs_kohaenv_enabled
+- name: Generate Koha/Apache2 configuration for https
+  template: >
+    src="files/kohaenv/koha-https.conf.j2"
+    dest="/etc/koha/{{ kohalxc_organization | lower }}-https.conf"
+    mode="u=rw,g=r,o=rwx"
+    backup="no"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_https
+
+- name: Make available our SSL-site configuration in Koha/Apache2
+  become: yes
+  shell: ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
+  #shell: service apache stop && a2enmod ssl && a2dissite koha.conf && ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-enabled/koha-ssl.conf && service apache2 restart
+  when:
+  - kohalxcs_kohaenv_enabled
+  - kohalxcs_kohaenv_https
+
+## Generate SSL-certificate (self-signed)
+- name: Generate server.key and self-signed SSL-certificate for Koha/Apache2
+  become: yes
+  shell: rm -f server.* && mkdir /etc/apache2/ssl && openssl genrsa -des3 -passout pass:x -out /tmp/server.pass.key 2048 && openssl rsa -passin pass:x -in /tmp/server.pass.key -out /tmp/server.key && rm /tmp/server.pass.key && openssl req -new -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization }| d('KohaSuomi') }}/O=Lapin kirjasto/OU={{ kohalxc_organization | d('KohaSuomi') }} ({{ hostnode_environment | d('local') }})/CN={{ kohalxcs_kohaenv_srvname | d('localhost') }}" -key /tmp/server.key -out /tmp/server.csr && openssl x509 -req -sha256 -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /etc/apache2/ssl/server.crt
+  #shell:  openssl req -new -newkey rsa:4096 -days 365 -nodes -x509  -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization | d('KohaSuomi') }} /O=Lapin kirjasto/OU={{ kohalxc_organization | d('KohaSuomi') }} ({{ hostnode_environment | d('local') }}/CN={{ kohalxcs_kohaenv_srvname | d('localhost')" -keyout /etc/apache2/ssl/server.key  -out /etc/apache2/ssl/server.crt
+  args:
+    executable: /bin/bash
+    chdir: /tmp
+    #creates: /etc/apache2/ssl/server.crt
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_https
+    - kohalxcs_kohaenv_srvname
+
+- name: Enable SSL, switch from http to https, restart Koha/Apache2
+  become: yes
+  shell: service apache stop && a2dissite koha.conf && a2ensite koha-ssl.conf && a2enmod ssl && service apache2 restart
+  when:
+  - kohalxcs_kohaenv_enabled
+  - kohalxcs_kohaenv_https
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:
