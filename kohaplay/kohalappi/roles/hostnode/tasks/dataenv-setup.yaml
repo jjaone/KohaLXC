@@ -21,7 +21,7 @@
 
 ## Ensure env.* pckgs are installed
 # [KohaLXC]: dataenv: Packages for data/MMT environment(s)
-- name: dataenv - Ensure all needed packages are installed
+- name: dataenv+mmtenv - Ensure all needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -104,7 +104,7 @@
 - debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
 ## Ensure dataset extraction/conv sources have subdirs (in control host)
 # [KohaLXC]:dataenv(control)
-- name: dataenv(control) - Dirs/perms for dataset extraction/conversion sources
+- name: dataenv(control) - Dirs/perms for dataset extraction/conversion sources (PallasPro+Origo)
   file: >
     path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/{{ hostnode_dataenv_datasrc | d('source') }}/{{ item.1 }}"
     state="directory"
@@ -113,22 +113,39 @@
     mode="u=rwx,g=rwxs,o-rwx"
   with_nested:
     - "{{ hostnode_dataenv_dataset | d({}) }}"
-    - [ 'TranslationTables', 'preprocessed', 'scripts', 'target', 'logs' ]
+    - [ 'TranslationTables', 'preprocessed', 'scripts', 'target', 'logs', 'valid', 'complete' ]
   when:
     - kohalxc_datadir is defined
     - hostnode_dataenv_enabled
-    - item.0 is defined
+    - hostnode_ppmmtenv_enabled or hostnode_origommtenv_enabled
+    - item is defined
   delegate_to: localhost
 
-## Extract/uncompress listed dataset(s) from pulled archives, if any
-# [KohaLXC]:dataenv(control)
+- debug: var=hostnode_ppmmtenv_enabled,hostnode_origommtenv_enabled
+## Extract/uncompress listed dataset(s) from pulled archives for PallasPro
+# [KohaLXC]:dataenv(control),ppmtenv("PallasPro")
 # - must use local action/gunzip cause no Ansible module for "uncompress" exists
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
-- name: dataenv(control) - Extract listed datasets/table data from pulled dumps
+- name: dataenv(control)/ppmmt - Extract datasets/table data from pulled dumps
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/{{ hostnode_dataenv_datasrc | d('source') }} && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
   with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
   when:
+    - item is defined and ("PallasPro" in item)
     - hostnode_dataenv_enabled
+    - hostnode_ppmmtenv_enabled
+    - kohalxc_datadir is defined
+
+## Extract/uncompress listed dataset(s) from pulled archives for 'Origo'
+# [KohaLXC]:dataenv(control),origommtenv("Origo")
+# - must use local action/gunzip cause no Ansible module for "uncompress" exists
+# - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
+- name: dataenv(control)/origommt - Extract datasets/table data from pulled dumps
+  local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.zip; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .zip); ( cd $d/{{ hostnode_dataenv_datasrc | d('source') }} && unzip $f || exit 0); done
+  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  when:
+    - item is defined and ("Origo" in item)
+    - hostnode_dataenv_enabled
+    - hostnode_origommtenv_enabled
     - kohalxc_datadir is defined
 
 - debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
@@ -137,7 +154,7 @@
 # - liqlocde_translation.csv  for 'liqlocde_translation.pm' (PP/MMT)
 # - staffaccounts.csv for 'makeStaffAccounts' (PP/MMT)
 # - 'File id' and 'Sheet id (gid)' equired
-- name: dataenv(control),ppmmtenv - Extract CSVs for TranslationTables/{liqlocde_translation,staffaccounts} from G-spreadsheet(s)
+- name: dataenv(control)/ppmmt - Extract CSVs for TranslationTables/{liqlocde_translation,staffaccounts} from G-spreadsheet(s)
   vars:
     org: "{{ hostnode_kohalxc_organization }}"
     gDocsUrl: "https://docs.google.com/spreadsheets/d"
@@ -158,11 +175,12 @@
     - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
     - hostnode_ppmmtenv_enabled
+    - item.0 is defined and ("PallasPro" in item.0)
   delegate_to: localhost
 
 ## For 'liqlocde_translation.pm' (PP/MMT) split source CSV from Google-docs/spreadsheet:
 # [KohaLXC]:dataenv(local),ppmtenv
-- name: dataenv - Fix delimiters and split source CSV by library id (first field)
+- name: dataenv/ppmmt - Fix delimiters and split source CSV by library id (first field)
   vars:
     srcName: liqlocde_translation
   local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/{{ hostnode_dataenv_datasrc }}/TranslationTables && rm -f {{ srcName }}-*.csv && cat {{ srcName }}.csv | tr ',' ';' | awk -F, 'NR>1 {print>"{{ srcName }}-" sprintf("%02d", $1) ".csv"}' && rm -f {{ kohalxc_tooldir }}/ppmmtws/PerlMMT/TranslationTables/{{ srcName }}.pm-map
@@ -172,11 +190,12 @@
     - kohalxc_tooldir is defined
     - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
+    - item is defined and ("PallasPro" in item)
 
 ## Run in control host the kohatools/ppmmtws/ConversionTools/makeliqlocde.sh
 # [KohaLXC]:dataenv(control),ppmtenv
 # - to generate the liqlocde_translation map for $org_unitsLappi (TranslationTable)
-- name: dataenv - Generate '$org_Units' mapping for PP/MMT (TranslationTables/licloqde_translation.pm-map)
+- name: dataenv/ppmmt - Generate '$org_Units' mapping for MMT (TranslationTables/licloqde_translation.pm-map)
   vars:
     srcName: liqlocde_translation
   environment:
@@ -192,7 +211,9 @@
     - kohalxc_tooldir is defined
     - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
+    - item is defined and ("PallasPro" in item)
   delegate_to: localhost
+
 #  notify: Sync kohalxc
 ## [TODO]: Instead of using any 'synchronize' task below:
 # - forcefully notifyhandler to sync KohaLXC-contents to server/devops
@@ -215,7 +236,7 @@
   delegate_to: localhost
 
 - debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasrc,hostnode_dataenv_fixsource
-## TODO: Implement the dataset source fix scripts runs
+## Run dataset fix scripts for those MMT-envs and sources that need them
 # [KohaLXC]:dataenv(control)
 - name: dataenv(control) - Run dataset fixes for specified sources
   environment:
@@ -228,13 +249,13 @@
     - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
     - item.name is defined and item.src is defined and item.script is defined
-- debug: var=cmd_fixsource.results
+#- debug: var=cmd_fixsource.results
 
-- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
+- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_mmtenv_enabled
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
 # [KohaLXC]:dataenv,mmtenv
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
-- name: dataenv - Push KohaLXC lxc-setups & org datasets to operuser/Works 
+- name: dataenv/mmt - Push KohaLXC lxc-setups & org datasets to operuser/Works 
   synchronize: >
     mode="push"
     src="{{ item }}"
@@ -269,7 +290,7 @@
 # - loadExternalRepos: whether to load external repositories or not
 # - preprocess: do the 'PreProcess' phase in each import chain
 # - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
-- name: dataenv - Configure PP/MMT-tools host/lxc_config.xml
+- name: dataenv/ppmmt - Configure MMT-tools host/lxc_config.xml
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/source.0"
     lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/source.0"
@@ -305,7 +326,7 @@
 
 ## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
+- name: dataenv/ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.dir }}/{{ item.name }}"
@@ -326,7 +347,7 @@
   
 ## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
+- name: dataenv/ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"

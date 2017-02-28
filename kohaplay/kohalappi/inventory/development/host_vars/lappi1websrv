@@ -55,6 +55,8 @@ hostnode_dataenv_enabled: True
 #hostnode_dataenv_dataset: {}
 hostnode_dataenv_dataset:
   - "Axiell-20161019-Lappi_PallasPro"
+  - "Axiell-20161230-Kemi_Origo"
+  - "Axiell-20170228-Lappi_PallasPro"
 
 ## ##########################
 ## Server updates/reboots/nic

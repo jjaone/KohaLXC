@@ -82,10 +82,11 @@ hostnode_dataenv_fixssource:
   - { name: "default", src: "source" }
 
 ## KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
-# - by default enable here if dataenv_dataset(s) have been defined in the host
+# - by default enable here if any dataset(s) have been defined (for the host)
 hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
-# KohaLXC/mmtenv: PP/MMT-tool environment
-hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
+
+# KohaLXC/ppmmtenv: PP/MMT-tool environment  (enabled when 'PallasPro' datasets exist)
+hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled and (hostnode_dataenv_dataset | join(' ') | match('.*PallasPro.*')) }}"
 ## KohaLXC/ppmmtenv: PP/MMT-conversion settings
 # - import chains: Preprocess Patrons Biblios Items Checkouts Holds Fines 
 # - not defined or empty means 'all'
@@ -93,8 +94,21 @@ hostnode_ppmmtenv_importchains:
   - Preprocess
   - Patrons
 #  - Biblios
-# KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
-hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
+
+# KohaLXC/origommtenv: Origo/MMT-tool environment (enabled when 'Origo' datasets exist)
+hostnode_origommtenv_enabled: "{{ hostnode_mmtenv_enabled and (hostnode_dataenv_dataset | join(' ') | match('.*Origo.*')) }}"
+## KohaLXC/origommtenv: PP/MMT-conversion settings
+# - import chains: Preprocess Patrons Biblios Items Checkouts Holds Fines
+hostnode_origommtenv_importchains:
+  #- preprocess
+  - biblios
+  - items
+  - borrowers
+  - checkouts
+  - fines
+  - holds
+  - rotatingCollections
+  - acquisitions
 
 # KohaLXC/backup: enable support for each server
 hostnode_backup_enabled: false
@@ -295,6 +309,11 @@ hostnode_mdbenv_pckginstall: |
 hostnode_kohaenv_setup: |
   echo "== kohalxc [ansible:kohaenvenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a {{ hostnode_lxcenv_logfile }};
   pwd && ls -la
+
+## Koha/webapp-environment ##
+# - Koha/webapp: server name (DNS)
+hostnode_kohaenv_srvname: localhost
+hostnode_kohaenv_ssl_acmechallenge: _acme-challenge.localhost TXT "blabloh"
 
 ## LXC: template
 # - template (distro): Ubuntu

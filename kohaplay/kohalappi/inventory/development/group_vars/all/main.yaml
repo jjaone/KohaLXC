@@ -1,5 +1,5 @@
 ---
-# File: inventory/development/group_vars/all
+# File: inventory/development/group_vars/all/main.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -106,6 +106,15 @@ hostnode_lxdenv_enabled: False
 hostnode_lxcenv_networking: manual
 # LXC-network domain name: none, lxc, kohalxc, weblxc, mdblxc
 hostnode_lxcenv_domain: "{{ (hostnode_lxcenv_networking == 'dhcp') | ternary('kohalxc','lxc') }}"
+
+## ################
+## Koha-environment
+## ################
+# Koha/webapp: server name (DNS)
+# - defined in secure file: './vault.yaml' 
+#hostnode_kohaenv_srvname:
+# - TODO: only for LetsEncrypt-based dns-01 challange implementations
+#hostnode_kohaenv_ssl_acmechallenge:
 
 ## ###########################
 ## LXCs: defaults/provisioning

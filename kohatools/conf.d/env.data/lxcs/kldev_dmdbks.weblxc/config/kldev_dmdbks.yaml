@@ -19,6 +19,7 @@ net:
   app_port: 88
   int_port: 8088
   domain: weblxc
+  srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
 ## lxc: MariaDb (mdbenv), data (dataenv), Apache2/KS316 (webaenv)
 # - for MMT/conversion & Koha-deployment (development, dhcp/weblxc)
 lxc:
