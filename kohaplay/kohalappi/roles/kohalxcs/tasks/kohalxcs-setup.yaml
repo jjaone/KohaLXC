@@ -64,31 +64,29 @@
     - kohalxc_kohagrp_name is defined
     - kohalxc_kohagrp_id is defined
 
-## Ensure kohaoper ('ubuntu') belongs to koha-group and has ssh-keys
-- name: setup - Ensure LXC-operuser has ssh-keys and belongs to koha-group
+## Ensure kohaoper (default: 'ubuntu') belongs to koha-group and has ssh-keys
+- name: setup - Ensure LXC-user (ansible_user) has ssh-keys and belongs to koha-group
   become: yes
   user: >
-    name="{{ kohalxc_operuser }}"
+    name="{{ ansible_user }}"
     uid="{{ kohalxc_operid }}"
     groups="{{ kohalxc_kohagrp_name | d(hostnode_kohagrp_name) }}"
     append="yes"
     generate_ssh_key="yes"
     comment="Koha/LXC kohaoper user"
   when:
-    - kohalxc_operuser is defined
     - kohalxc_operid is defined
     - kohalxc_kohagrp_name is defined
 
+#- debug: var=ansible_user,kohalxc_operuser,kohalxc_operid,kohalxc_kohagrp_id
 ## Ensure kohalxc_operuser(khaoper/HOME) has required dirs
-- name: setup - Ensure LXC-operuser has dirs for scripts and logs
+- name: setup - Ensure LXC-user (ansible_user) has dirs for scripts and logs
   file: >
-    path="/home/{{ kohalxc_operuser }}/{{ item }}"
+    path="/home/{{ ansible_user }}/{{ item }}"
     state="directory"
   with_items:
     - bin
     - log
-  when:
-    - kohalxc_operuser is defined
 
 ## Push/copy 'run_conversion' script to ConversionTools
 # - TODO: mode="u+rwx,g+rx,o-rwx"
@@ -196,15 +194,15 @@
     done
   args:
     executable: /bin/bash
-    chdir: "{{ '/home/'~ansible_user~'/{{ kohalxcs_organization | d(kohalxc_organization) }}/kohadata' }}/source.0/target"
+    chdir: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization~'/kohadata' }}/source.0/target"
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
 ## Koha/webapp-setup after this point => should be moved to kohaenv-setup.yaml ##
-- fail:
 
 - debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohanv_srvname,kohalxcs_kohaenv_ssl,kohalxc_organization
+- fail:
 ## Install LetsEncrypt/certbot client for SSL-certificates
 - name: Install LetsEncrypt from Git for SSL-certificate generation
   become: yes

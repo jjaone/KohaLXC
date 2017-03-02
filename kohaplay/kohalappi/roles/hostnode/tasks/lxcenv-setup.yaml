@@ -38,7 +38,7 @@
     recurse=yes
     force=yes
     mode="g=rx,o-rwx"
-    group="{{hostnode_kohagrp_name | d('koha') }}"
+    group="{{ hostnode_kohagrp_name | d('koha') }}"
   with_items:
     - ansible
     - ansible/facts.d
@@ -53,7 +53,7 @@
 # - 'kldev_dmdbks', 'kldev_mdbks', 'kltest_dmdb', 'kltest_mdbks'
 - include_vars: file=lxcs/kldev_dmdbks.weblxc/config/kldev_dmdbks.yaml name=kldev_dmdbks
 - include_vars: file=lxcs/kltest_dmdb.mdblxc/config/kltest_dmdb.yaml name=kltest_dmdb
-#- include_vars: file=lxcs/kltest_mdbks.mdblxc/config/kltest_mdbks.yaml name=kltest_mdbks
+- include_vars: file=lxcs/kltest_mdbks.mdblxc/config/kltest_mdbks.yaml name=kltest_mdbks
 
 ## LXC-containers: factize defined LXCs
 - name: lxcenv - Collect all defined LXCs
@@ -61,16 +61,27 @@
     hostnode_lxcs:
       - "{{ kldev_dmdbks }}"
       - "{{ kltest_dmdb }}"
-  #    - "{{ kltest_mdbks }}"
+      - "{{ kltest_mdbks }}"
 
-- debug: var=hostnode_lxcs
+#- debug: var=hostnode_lxcs,hostnode_kohalxc_tooldir,kohalxc_tooldir
 ## Extract the env enablements from lxc.group's in container_config
-- name: lxcenv - Extract LXC environments from lxc.group in 'container_config'
+# TODO: (remove this): delete *.fact files first -> obsolete, dirs have been cleared previously
+#- name: lxcenv - Start LXC-environments facts building with clean state
+#  file: |
+#    path="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
+#    state=absent
+#  with_items: hostnode_lxcs | d()
+#  when:
+#    - item.net.domain is defined and item.net.domain in inventory_hostname
+    
+- name: lxcenv - Extract LXC-environments facts from lxc.group in 'container_config'
   template: >
     src="files/kohalxc_lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
     dest="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
     force="yes"
   with_items: hostnode_lxcs | d()
+  when:
+    - item.net.domain is defined and item.net.domain in inventory_hostname
 
 ## Show all LXC-containers
 - name: lxcenv - Show all defined LXCs (provisionable/running in inventory host)
@@ -85,11 +96,6 @@
 ## Ensure that LXCs to be provisioned are stopped (if they exists already)
 - name: lxcenv - Ensure provisionable LXCs are stopped (if they are present)
   become: yes
-  #environment:
-  #  KOHALXC_WORKS: "{{ hostnode_kohalxc_works }}"
-  #  KOHALXC_ROOTDIR: "{{ hostnode_kohalxc_rootdir }}"
-  #  KOHALXC_TOOLDIR: "{{ hostnode_kohalxc_tooldir }}"
-  #  KOHALXC_ORGANIZATION: "{{ hostnode_kohalxc_organization }}"
   shell: "lxc-ls -f --active | grep -q {{ item.lxc.name }} && lxc-stop -n {{ item.lxc.name }} || echo 'Nothing to stop.'"
   args:
     executable: /bin/bash
@@ -102,7 +108,7 @@
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
 ## Create/re-configure and enable all LXCs
-# - should be done this way only in remote 'development' and 'testing'
+# - do this only in remote 'development' and 'testing'
 - name: lxcenv - Create/re-configure all defined LXCs
   become: yes
   lxc_container:
@@ -117,8 +123,22 @@
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
 #- debug: var=cmd_lxccreate.results
+## TODO: Ensure that hostnode ssh-key has been copied to provisioned LXC
+- name: lxcenv - Ensure host is authorized to PK-access in LXC
+  environment:
+    LXCHOST: "{{ item.lxc_container.name }}.{{ item.item.net.domain }}"
+    LXCUSER: "{{ item.item.net.user | d('ubuntu') }}"
+    SSHPASS: "{{ kohalxc_operpass }}"
+  shell: sshpass -e ssh-copy-id -i .ssh/id_rsa.pub $LXCUSER@$LXCHOST
+  no_log: True
+  with_items: cmd_lxccreate.results
+  when:
+    - item.lxc_container is defined and item.lxc_container.state == "running"
+    - item.item.net is defined
+    - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
+
 ## Check whether we have auth/host-key for sshing to LXCs
-- name: lxcenv - Has control host already auth/host-key for jump-sshing to remote LXCs
+- name: lxcenv - Has control host auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
   environment:
     LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
@@ -131,7 +151,7 @@
     - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
   delegate_to: localhost
 
-#- debug: var=cmd_sshkeys_missing.results
+#- debug: var=cmd_sshkeys_missing.results,kohalxc_operuser,hostnode_sshport
 ## Ensure control host/user auth key is present for jump-sshing to remote LXCs
 # - relevant parts copied from kohahosts/lxcenv-setup.yaml (222)
 # - above check based on 'known_hosts' entry in control host, not the key in LXCS
@@ -139,12 +159,18 @@
 - name: lxcenv - Pass control host/user auth-key for jump-sshing to remote LXCs
   environment:
     LXCHOST: "{{ item.stdout }}"
+    LXCUSER: "{{ item.item.item.net.user | d(kohalxc_operuser) }}"
     SSHPASS: "{{ kohalxc_operpass }}"
-  shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub {{ kohalxc_operuser }}@$LXCHOST
+  shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub $LXCUSER@$LXCHOST
+  #debug: msg="item.stdout={{item.stdout}},item.item.item.net.usr={{item.item.item.net.user}},sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub $LXCUSER@$LXCHOST"
+  #shell: echo sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub {{ kohalxc_operuser }}@$LXCHOST
+  #no_log: True
   with_items: cmd_sshkeys_missing.results
   when:
     - item is defined
     - item.stdout is defined and item.stdout != ''
+    - item.item is defined and item.item.item is defined and item.item.item.net is defined
+    - item.item.item.net.user is defined
   delegate_to: localhost
 
 ## Show the status of existing LXCs..
@@ -152,8 +178,6 @@
   become: yes
   shell: lxc-ls -f
 
-#- debug: var=hostnode_lxcs,ansible_ssh_common_args
 
 ## Abort play here (for testing and development):
 #- fail:
-

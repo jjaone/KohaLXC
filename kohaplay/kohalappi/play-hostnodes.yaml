@@ -122,7 +122,7 @@
     - name: hostnode/post_tasks - Create LXC host for detailed setup/config
       #debug: var=item
       local_action: |
-        add_host name="{{ item.lxc.name  + '.' + item.net.domain }}" groups="{{ item.net.domain | d('lxc') }}" ansible_user="{{ kohalxc_operuser }}" ansible_port=22 ansible_become_pass="{{ kohalxc_operpass }}"
+        add_host name="{{ item.lxc.name  + '.' + item.net.domain }}" groups="{{ item.net.domain | d('lxc') }}" ansible_user="{{ item.net.user | d(kohalxc_operuser) }}" ansible_port=22 ansible_become_pass="{{ kohalxc_operpass }}"
 #        add_host name="{{ item.lxc.name  + '.' + item.net.domain }}" groups="{{ item.net.domain | d('lxc') }}" ansible_user="{{ kohalxc_operuser | d('default-user') }}" ansible_port=22 ansible_become_method="sudo" ansible_become_pass="{{ kohalxc_operpass | d('default-pass') }}"
       #  add_host name="{{ item.name  + ('lxc.group = weblxc' in item.container_config) | ternary('.weblxc','.mdblxc') | d() }}" groups="{{ ('lxc.group = weblxc' in item.container_config) | ternary('weblxc','mdblxc') | d('lxc') }}" ansible_user="{{ kohalxc_operuser | d('default-user') }}" ansible_port=22 ansible_become_method="sudo" ansible_become_pass="{{ kohalxc_operpass | d('default-user') }}"
 #    local_action: add_host name="{{ item.split('.')[0] }}" groups="{{ item.split('.')[-1] | d('lxc') }}"

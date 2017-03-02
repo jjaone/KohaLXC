@@ -20,18 +20,20 @@ net:
   app_port: 85
   int_port: 8085
   domain: mdblxc
+  srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
+  user: kohaoper
 ##  lxc: MariaDb (mdbenv), MMT/migration (mmtenv), Apache2+KS316 (kohaenv)
 # - for MMT/migration and Koha-testing etc. (testing, dhcp/mdblxc)
 lxc:
-  name: kltest_dmdbks
+  name: kltest_mdbks
   state: started
   backing_store: "{{ lxc_default.backing_store }}"
   container_log: "{{ lxc_default.container_log }}"
   container_log_level: "{{ lxc_default.container_log_level }}"
   container_config: 
     # lxc/mounts
-    - "{{ hostnode_lxc_mount_kohatools }}"
-    #- "{{ hostnode_lxc_mount_kohadata }}"
+    - "{{ hostnode_lxc_mount_kohatools_pre }} home/kohaoper/KohaLXC/kohatools {{ hostnode_lxc_mount_post }}"
+    - "{{ hostnode_lxc_mount_kohadata_pre }} home/kohaoper/{{kohalxc_organization}}/kohadata {{ hostnode_lxc_mount_post }}"
     # lxc/group
     - lxc.group = "{{ hostnode_environment | d('local') }}"
     - lxc.group = dev
@@ -47,7 +49,8 @@ lxc:
     - lxc.network.link = lxcbr0
     - lxc.network.flags = up
   template: "{{ lxc_default.template }}"
-  template_options:
-    "{{ lxc_default.template_options }}"
+  template_options: >
+    --user kohaoper
+    {{ lxc_default.template_options }}
   container_command:
     "{{ lxc_default.container_command + hostnode_mdbenv_pckginstall + hostnode_kohaenv_setup }}"

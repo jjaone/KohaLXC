@@ -29,20 +29,20 @@
 # - mostly for environment enablement of LXCs
 
 ## Set the kohalxcs defaults as localized ansible facts
-- name: status - Set default custom facts (for this role)
-  become: yes
-  template: |
-    src=files/kohalxcs.fact
-    dest=/etc/ansible/facts.d
-    force=yes
+# - TODO: this requires the folder /etc/ansible/facts.d to have been created
+# - TODO: is this even needed -> commenting out for now!
+#- name: status - Set default custom facts (for this role)
+#  become: yes
+#  template: |
+#    src=files/kohalxcs.fact
+#    dest=/etc/ansible/facts.d
+#    force=yes
 
 # Load kohalxcs environment defaults as localized ansible facts
 - name: status - Reload default/custom facts (ansible_local.kohalxcs)
   setup: filter=ansible_local
 #- debug: var=ansible_host,inventory_hostname,ansible_local.kohalxcs.default,ansible_local.kohalxcs.default.devenv_enabled,ansible_local.kohalxcs.default.dataenv_enabled,ansible_local.kohalxcs.default.mmtenv_enabled,ansible_local.kohalxcs.default.mdbenv_enabled,ansible_local.kohalxcs.default.kohaenv_enabled
-
 - debug: var=ansible_host,inventory_hostname,kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
-
 
 ## Extract the environment enablements from lxc.group(s)
 #- name: status - Extract KohaLXC environment enablements from lxc.group(s)

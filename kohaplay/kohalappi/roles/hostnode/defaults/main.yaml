@@ -246,8 +246,9 @@ hostnode_lxcenv_bdev: dir
 hostnode_lxcenv_zfsroot: "{{ hostnode_zfs_zpool }}/{{ hostnode_zfs_rootdir }}"
 
 ## Container logging
-# - log directory: server <devops>/log -dir
-hostnode_lxcenv_logdir: "/home/{{ kohalxc_operuser | d('ubuntu') }}/log"
+# - log directory: server <devops>/log -dir (must relative to LXC-operuser home)
+hostnode_lxcenv_logdir: "log"
+#hostnode_lxcenv_logdir: "/home/{{ kohalxc_operuser | d('ubuntu') }}/log"
 # - log file: kohalxc-ansible.log
 hostnode_lxcenv_logfile: "{{ hostnode_lxcenv_logdir }}/kohalxc-ansible.log"
 # - log_level: INFO/DEBUG
@@ -258,9 +259,12 @@ hostnode_lxcenv_loglevel: DEBUG
 ## ##########################
 
 ## LXC: mount entries
+hostnode_lxc_mount_post: none bind,create=dir 0 0
 # - kohatools
+hostnode_lxc_mount_kohatools_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools
 hostnode_lxc_mount_kohatools: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools home/{{ kohalxc_operuser }}/KohaLXC/kohatools none bind,create=dir 0 0
 # - kohadata
+hostnode_lxc_mount_kohadata_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }}
 hostnode_lxc_mount_kohadata: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }} home/{{ kohalxc_operuser }}/{{ kohalxc_organization }}/kohadata none bind,create=dir 0 0
 hostnode_lxc_mounts:
   - "{{ hostnode_lxc_mount_kohatools }}" 
@@ -280,35 +284,41 @@ hostode_lxc_starts:
 hostnode_lxc_container_command: |
   addgroup --gid "{{hostnode_kohagrp_gid}}" "{{hostnode_kohagrp_name}}"
   usermod -a -G "{{hostnode_kohagrp_name}}" `getent passwd 1000 | cut -d: -f1`
-  mkdir -p {{ hostnode_lxcenv_logdir }}
-  touch {{ hostnode_lxcenv_logfile }}
-  id | tee -a {{ hostnode_lxcenv_logfile }}
-  chown -R 1000:1000 {{ hostnode_lxcenv_logdir }}
-  echo "== kohalxc [ansible:lxc_create]: Playbook:'kohalappi' in roles/hostnode/defaults/main.yaml)" | tee -a {{ hostnode_lxcenv_logfile }}
-  echo "== kohalxc [ansible:lxc_create]: `date`" | tee -a {{ hostnode_lxcenv_logfile }}
-  env | grep KOHA | {{ hostnode_lxcenv_logfile }}
-  echo "== kohalxc [ansible:lxc_create]: Use '{{ hostnode_lxcenv_networking }}' scheme for IP-addresses in LXC-net.." | tee -a {{ hostnode_lxcenv_logfile }}
+  export KOHALXC_OPERUSER=$(getent passwd 1000 | cut -d: -f1) && export KOHALXC_OPERHOME=/home/$KOHALXC_OPERUSER
+  [[ -z $KOHALXC_OPERUSER ]] && export KOHALXC_OPERHOME=/tmp
+  mkdir -p $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logdir }}
+  touch $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  id | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  chown -R 1000:1000 $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logdir }}
+  echo "== kohalxc [ansible:lxc_create]: Playbook:'kohalappi' in roles/hostnode/defaults/main.yaml)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  echo "== kohalxc [ansible:lxc_create]: `date`" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  env | grep KOHA | $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  echo "== kohalxc [ansible:lxc_create]: Use '{{ hostnode_lxcenv_networking }}' scheme for IP-addresses in LXC-net.." | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
   [[ "manual" == "{{ hostnode_lxcenv_networking }}" ]] && sed -i "s/iface eth0 inet dhcp/iface eth0 inet manual/" /etc/network/interfaces
   [[ "dhcp" == "{{ hostnode_lxcenv_networking }}" ]] && sed -i "s/iface eth0 inet manual/iface eth0 inet dhcp/" /etc/network/interfaces
-  echo "== kohalxc [ansible:lxc_create]: Contents of: /etc/network/interfaces:" | tee -a {{ hostnode_lxcenv_logfile }}
-  cat /etc/network/interfaces | tee -a {{ hostnode_lxcenv_logfile }}
-  ifconfig -a | tee -a {{ hostnode_lxcenv_logfile }}
+  echo "== kohalxc [ansible:lxc_create]: Contents of: /etc/network/interfaces:" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  cat /etc/network/interfaces | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  ifconfig -a | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
 
 # LXC: container command: kohalxc/mdbenv pckgs installation
 # - MariaDB-5.5/Mysql-5.5 non-interactive installation (debconf/apt-get)
 hostnode_mdbenv_pckginstall: |
-  echo "== kohalxc [ansible:mdbenv]: Debconf for non-interactive install of database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
+  export KOHALXC_OPERUSER=$(getent passwd 1000 | cut -d: -f1) && export KOHALXC_OPERHOME=/home/$KOHALXC_OPERUSER
+  [[ -z $KOHALXC_OPERUSER ]] && export KOHALXC_OPERHOME=/tmp
+  echo "== kohalxc [ansible:mdbenv]: Debconf for non-interactive install of database server (MariaDB-5.5)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
   debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password password"
   debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password_again password"
-  echo "== kohalxc [ansible:mdbenv]: Installing database server (MariaDB-5.5)" | tee -a {{ hostnode_lxcenv_logfile }}
+  echo "== kohalxc [ansible:mdbenv]: Installing database server (MariaDB-5.5)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
   DEBIAN_FRONTEND=noninteractive apt-get -q -y install mariadb-server-5.5
-  mysqladmin ping status -u root | tee -a {{ hostnode_lxcenv_logfile }}
+  mysqladmin ping status -u root | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
 
 # LXC: container command: kohalxc/kohaenv pckgs installation
 # - Koha non-interactive (dev)-installation (debconf/apt-get)
 hostnode_kohaenv_setup: |
-  echo "== kohalxc [ansible:kohaenvenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a {{ hostnode_lxcenv_logfile }};
-  pwd && ls -la
+  export KOHALXC_OPERUSER=$(getent passwd 1000 | cut -d: -f1) && export KOHALXC_OPERHOME=/home/$KOHALXC_OPERUSER
+  [[ -z $KOHALXC_OPERUSER ]] && export KOHALXC_OPERHOME=/tmp
+  echo "== kohalxc [ansible:kohaenvenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }};
+  id && pwd && ls -la
 
 ## Koha/webapp-environment ##
 # - Koha/webapp: server name (DNS)

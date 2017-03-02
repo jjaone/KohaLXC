@@ -1,0 +1,22 @@
+#jinja2: lstrip_blocks: True
+# {{ ansible_managed | comment }}
+{# Jinja2-template generates <lxcname>.fact based on container_config/lxc_group #}
+
+[lxc_group]
+{# [{{ item.lxc.name | d('default') }}.{{ item.net.domain | d() }}] #}
+{# container_config={{ item.lxc.container_config | d() }} #}
+{% for c in item.lxc.container_config if 'lxc.group =' in c %}
+  {# {{c}} #}
+  {% for e in [ 'dev', 'data', 'mmt', 'ppmmt', 'ommt', 'mdb', 'koha' ] %}
+    {% if 'lxc.group = ' + e == c %}
+{{e}}env_enabled=true
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+
+{% if (item.net.srvname is defined) and (item.net.srvname != "") %}
+[lxc_net]
+  {% if 'lxc.group = koha' in item.lxc.container_config %}
+kohaenv_srvname={{ item.net.srvname }} 
+  {% endif %}
+{% endif %}

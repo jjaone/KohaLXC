@@ -74,10 +74,9 @@ lxc_default_d:
     - lxc.network.script.down =
   template: "{{ hostnode_lxc_tmpl | d('ubuntu') }}"
   template_options: >
+    --password {{ kohalxc_operpass }}
     --release {{ hostnode_lxc_tmpl_release | d('trusty') }}
     --packages {{ hostnode_lxc_tmpl_pckgs }}
-    --user {{ kohalxc_operuser }}
-    --password {{ kohalxc_operpass }}
     --auth-key /home/{{ ansible_user }}/{{ hostnode_lxc_tmpl_authkey }}
   container_command: |
     {{ hostnode_lxc_container_command }}	

@@ -20,6 +20,7 @@ net:
   int_port: 8088
   domain: weblxc
   srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
+  user: "{{ kohalxc_operuser }}"
 ## lxc: MariaDb (mdbenv), data (dataenv), Apache2/KS316 (webaenv)
 # - for MMT/conversion & Koha-deployment (development, dhcp/weblxc)
 lxc:
@@ -49,7 +50,8 @@ lxc:
     - lxc.network.link = lxcbr0
     - lxc.network.flags = up
   template: "{{ lxc_default.template }}"
-  template_options:
-    "{{ lxc_default.template_options }}"
+  template_options: >
+    --user {{ kohalxc_operuser }}
+    {{ lxc_default.template_options }}
   container_command:
     "{{ lxc_default.container_command + hostnode_mdbenv_pckginstall }}"

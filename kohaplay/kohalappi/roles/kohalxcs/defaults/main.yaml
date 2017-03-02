@@ -54,9 +54,8 @@ kohalxcs_devenv_pckgs:
   - wget
   - joe
   - nano
-  - python2.7-minimal
   - git
-  - tig
+  - python2.7-minimal
 #hostnode_devenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
 #hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
 
