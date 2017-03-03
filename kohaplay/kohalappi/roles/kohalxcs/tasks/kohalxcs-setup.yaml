@@ -26,7 +26,8 @@
 - name: setup - Set the LXC-environments based on local facts (if any)
   vars:
     #lxc_name: "{{ inventory_hostname.split('.')[0] | d('default') }}"
-    lxcg: "{{ ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_group }}"
+    lxcg: "{{ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_group}}"
+    lxcn: "{{ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_net|d()}}"
   set_fact:
     kohalxcs_devenv_enabled: "{{ lxcg.devenv_enabled | d(false) }}"
     kohalxcs_dataenv_enabled: "{{ lxcg.dataenv_enabled | d(false) }}"
@@ -35,6 +36,7 @@
     kohalxcs_origommtenv_enabled: "{{ lxcg.origommtenv_enabld | d(false) }}"
     kohalxcs_mdbvenv_enabled: "{{ lxcg.mdbenv_enabled | d(false) }}"
     kohalxcs_kohaenv_enabled: "{{ lxcg.kohaenv_enabled | d(false) }}"
+    kohalxcs_kohaenv_srvname: "{{ lxcn.kohaenv_srvname | d() }}" 
 #- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_origommtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
 
 #- debug: var=kohalxcs_devenv_pckgs,kohalxcs_dataenv_pckgs
@@ -194,15 +196,14 @@
     done
   args:
     executable: /bin/bash
-    chdir: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization~'/kohadata' }}/source.0/target"
+    chdir: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}/source.0/target"
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
 
 ## Koha/webapp-setup after this point => should be moved to kohaenv-setup.yaml ##
 
-- debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohanv_srvname,kohalxcs_kohaenv_ssl,kohalxc_organization
-- fail:
+- debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname,kohalxcs_kohaenv_https,kohalxcs_kohaenv_sslle,kohalxc_organization
 ## Install LetsEncrypt/certbot client for SSL-certificates
 - name: Install LetsEncrypt from Git for SSL-certificate generation
   become: yes
@@ -216,44 +217,82 @@
     - kohalxcs_kohaenv_sslle
 
 ## Configure Koha(Apache2) OPAC and Intranet for https
-- name: Generate Koha/Apache2 configuration for https
+- name: Generate Koha/Apache2 https config (only if 'kohaenv_srvname' is set)
+  become: yes
+  #become_user: koha
   template: >
-    src="files/kohaenv/koha-https.conf.j2"
-    dest="/etc/koha/{{ kohalxc_organization | lower }}-https.conf"
-    mode="u=rw,g=r,o=rwx"
-    backup="no"
+    src="files/kohaenv/{{ kohalxc_organization|lower }}-https.conf.j2"
+    dest="/etc/koha/{{ kohalxc_organization|lower }}-https.conf"
+    mode="u=rw,g=r,o=r"
+    owner="koha"
+    group="koha"
+    backup="yes"
   when:
     - kohalxcs_kohaenv_enabled
-    - kohalxcs_kohaenv_https
+    - kohalxc_organization is defined
+    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
 
 - name: Make available our SSL-site configuration in Koha/Apache2
   become: yes
-  shell: ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
+  shell: ln -s -f /etc/koha/{{ kohalxc_organization|lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
   #shell: service apache stop && a2enmod ssl && a2dissite koha.conf && ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-enabled/koha-ssl.conf && service apache2 restart
   when:
   - kohalxcs_kohaenv_enabled
-  - kohalxcs_kohaenv_https
+  - kohalxc_organization is defined
+  - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
 
 ## Generate SSL-certificate (self-signed)
 - name: Generate server.key and self-signed SSL-certificate for Koha/Apache2
   become: yes
-  shell: rm -f server.* && mkdir /etc/apache2/ssl && openssl genrsa -des3 -passout pass:x -out /tmp/server.pass.key 2048 && openssl rsa -passin pass:x -in /tmp/server.pass.key -out /tmp/server.key && rm /tmp/server.pass.key && openssl req -new -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization }| d('KohaSuomi') }}/O=Lapin kirjasto/OU={{ kohalxc_organization | d('KohaSuomi') }} ({{ hostnode_environment | d('local') }})/CN={{ kohalxcs_kohaenv_srvname | d('localhost') }}" -key /tmp/server.key -out /tmp/server.csr && openssl x509 -req -sha256 -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /etc/apache2/ssl/server.crt
-  #shell:  openssl req -new -newkey rsa:4096 -days 365 -nodes -x509  -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization | d('KohaSuomi') }} /O=Lapin kirjasto/OU={{ kohalxc_organization | d('KohaSuomi') }} ({{ hostnode_environment | d('local') }}/CN={{ kohalxcs_kohaenv_srvname | d('localhost')" -keyout /etc/apache2/ssl/server.key  -out /etc/apache2/ssl/server.crt
+  shell: mkdir -p /etc/apache2/ssl && openssl genrsa -des3 -passout pass:x -out /tmp/server.pass.key 2048 && openssl rsa -passin pass:x -in /tmp/server.pass.key -out /tmp/server.key && rm -f /tmp/server.pass.key && openssl req -new -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization }}/O=Lapin kirjasto/OU={{ kohalxc_organization }} ({{ hostnode_environment | d('local') }})/CN={{ kohalxcs_kohaenv_srvname | d('localhost') }}" -key /tmp/server.key -out /tmp/server.csr && openssl x509 -req -sha256 -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /etc/apache2/ssl/server.crt && cp -vpf /tmp/server.key /etc/apache2/ssl/. && rm -f /tmp/server.*
   args:
     executable: /bin/bash
     chdir: /tmp
     #creates: /etc/apache2/ssl/server.crt
   when:
     - kohalxcs_kohaenv_enabled
-    - kohalxcs_kohaenv_https
-    - kohalxcs_kohaenv_srvname
+    - kohalxc_organization is defined
+    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
 
-- name: Enable SSL, switch from http to https, restart Koha/Apache2
+- name: Enable SSL (switch to https) restart Koha/Apache2
   become: yes
-  shell: service apache stop && a2dissite koha.conf && a2ensite koha-ssl.conf && a2enmod ssl && service apache2 restart
+  shell: service apache2 stop && a2dissite koha.conf && a2enmod ssl && a2ensite koha-ssl.conf && service apache2 restart
   when:
   - kohalxcs_kohaenv_enabled
-  - kohalxcs_kohaenv_https
+  - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
+
+## Database: full dump of the db
+#- name: Dump all databases to hostname.sql
+#  mysql_db:
+#    state: dump
+#    name: all
+#    login_user: koha
+#    login_password: koha
+#    target: /tmp/{{ inventory_hostname }}.sql
+
+#- name: Just testing reads/selects from the db
+#  mysql_db:
+#    state: dump
+
+## Migrate: patrons (and staffaccounts)
+# TODO: What is the best way to ensure that no Patron related data exists?
+# - DELETE FROM kohadata.borrowers WHERE borrowernumber <> 1;
+- name: Migrate converted Patrons (and generated Staff accounts)
+  become: yes
+  shell: |
+    pwd && ls -la Patrons
+    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme
+    [[ -f Patrons/patrons.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate"
+    [[ -f Patrons/staffaccounts.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/staffaccounts.migrateme --deduplicate"
+    #su -l koha -c "bulkPatronImport.pl --help"
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
+    #creates: Patrons/.patrons.migrateme
+  when:
+    - kohalxcs_kohaenv_enabled
+    - ('patrons' in kohalxcs_ppmmtenv_importchains)
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:
