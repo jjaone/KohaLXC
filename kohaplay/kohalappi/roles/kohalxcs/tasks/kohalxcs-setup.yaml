@@ -114,8 +114,8 @@
 
 - debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
 ## Run conversion: main script
-# - script might run very long time, poll every half a minute, timeout in seconds
-- name: data+ppmmtenv - Start main conversion script using 'lxc_config' (max {{ (kohalxcs_ppmmtenv_timeout | d(3600) | int) // 3600 }} hours)
+# - might run very long time, async by default, poll and timeout in seconds (if given)
+- name: data+ppmmtenv - Start main conversion script using 'lxc_config' ({{ (kohalxcs_ppmmtenv_timeout |d(7200)|int) // 60 }} mins)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -128,8 +128,8 @@
   args:
     chdir: "{{ '/home/'~ansible_user }}"
     creates: ~/bin/.run_conversion.finished
-  async: "{{ kohalxcs_ppmmtenv_timeout | d(3600) }}"
-  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  async: "{{ kohalxcs_ppmmtenv_timeout|d(7200) }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling|d(0) }}"
   register: job_runconversion
   when:
     - kohalxcs_dataenv_enabled
@@ -137,12 +137,12 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
-- name: data+ppmmtenv - Check whether conversion run has finisihed..
+- name: data+ppmmtenv - Is PP/MMT conversion run still on ({{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
-  retries: "{{ kohalxcs_ppmmtenv_checkfinished | d(60) }}"
-  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(5) }}"
+  retries: "{{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
@@ -210,15 +210,15 @@
 #    target: /tmp/mdbenv-dump_{{ inventory_hostname }}_all-ddmmyyy.sql
 
 ## Database/status: 'patrons' and staffaccounts
-# - USE {{ kohalxcs_mdbenv_kohadb | d('kohadata') }}
+# - USE {{ kohalxcs_mdbenv_kohadb }}
 # - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> 'S';
 # - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = 'S';
 - name: Show status of converted Patrons and generated Staff accounts, if any
   become: yes
   shell: |
     pwd && ls -1sh Patrons && echo
-    [[ -f Patrons/patrons.migrateme ]] && mysql -h localhost -u {{ kohalxcs_mdbenv_kohauser | d('koha') }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb | d('kohadata') }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers LIMIT 10;'
-    [[ -f Patrons/staffaccounts.migrateme ]] && mysql -h localhost -u {{ kohalxcs_mdbenv_kohauser | d('koha') }} --password="{{ kohalxcs_mdbenv_kohapass }}" {{ kohalxcs_mdbenv_kohadb | d('kohadata') }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'
+    [[ -f Patrons/patrons.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers LIMIT 10;'
+    [[ -f Patrons/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'
     exit 0
   args:
     executable: /bin/bash
@@ -234,7 +234,7 @@
 - name: Migrate converted Patrons and Staff accounts
   become: yes
   shell: |
-    pwd && ls -la Patrons
+    pwd && ls -1sh Patrons
     head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme
     [[ -f Patrons/patrons.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate"
     [[ -f Patrons/staffaccounts.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/staffaccounts.migrateme --deduplicate"
@@ -254,7 +254,7 @@
 - name: Migrate converted Biblios
   become: yes
   shell: |
-    pwd && ls -1sh Biblios && echo
+    pwd && ls -1sh Biblios
   args:
     executable: /bin/bash
     chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
@@ -266,8 +266,7 @@
 
 - debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
-# - su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -b -r -v -x --offset 0 --length 20000"
-- name: koha+mmt - Rebuild Zebra index for Koha ({{ (kohalxcs_ppmmtenv_timeout | d(7200) | int) // 3600 }} hours)
+- name: koha+mmt - Rebuild Zebra index for Koha ({{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // 60 }} mins)
   become: yes
   #become_user: koha
   shell: |
@@ -282,24 +281,24 @@
   args:
     executable: /bin/bash
     chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
-  async: "{{ kohalxcs_ppmmtenv_timeout | d(7200) }}"
-  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  async: "{{ kohalxcs_ppmmtenv_timeout|d(7200) }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling|d(0) }}"
   register: job_rebuildidx
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('biblios' in kohalxcs_mmtenv_migrateme)
 
+- debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
 ## Zebra rebuild: check whether we are finished
-- name: koha+mmt - Check whether Zebra index building is on ({{ (kohalxcs_ppmmtenv_timeout | d(7200) | int) // 60 }} mins)
+- name: koha+mmt - Is Biblios/Zebra index building still on ({{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
   become: yes
   #become_user: koha
   async_status: jid={{ job_rebuildidx.ansible_job_id }}
   register: cmd_rebuildidx_result
   until: cmd_rebuildidx_result.finished
-  retries: "{{ (kohalxcs_ppmmtenv_timeout | d(7200) | int ) // 60 }}"
-  #retries: "{{ kohalxcs_ppmmtenv_checkfinished | d(120) }}"
-  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  retries: "{{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled

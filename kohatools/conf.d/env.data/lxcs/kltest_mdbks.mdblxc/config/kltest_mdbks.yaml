@@ -44,6 +44,7 @@ lxc:
     # lxc/start
     - lxc.start.auto = 1
     - lxc.start.delay = 0
+    - lxc.start.order = 0
     # lxc/network
     - lxc.network.veth.pair = Vkltest_mdbks
     - lxc.network.type = veth

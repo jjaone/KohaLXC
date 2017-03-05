@@ -34,9 +34,7 @@ lxc:
     # lxc/group
     - lxc.group = {{ hostnode_environment | d('local') }}
     - lxc.group = dev
-    #- lxc.group = data
     - lxc.group = mdb
-    - lxc.group = mmt
     - lxc.group = ppmmt
     # lxc/start
     - lxc.start.auto = 1

@@ -38,9 +38,7 @@ lxc:
     - lxc.group = dev
     - lxc.group = mdb
     - lxc.group = data
-    - lxc.group = mmt
     - lxc.group = ppmmt
-    # lxc.group = koha
     # lxc_start:
     - lxc.start.auto = 1
     - lxc.start.delay = 0

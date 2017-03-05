@@ -259,13 +259,14 @@ hostnode_lxcenv_loglevel: DEBUG
 ## ##########################
 
 ## LXC: mount entries
+#- end-part of LXC mount entries: specs: no opts, bind, create dirs, no fs checks
 hostnode_lxc_mount_post: none bind,create=dir 0 0
 # - kohatools
 hostnode_lxc_mount_kohatools_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools
-hostnode_lxc_mount_kohatools: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools home/{{ kohalxc_operuser }}/KohaLXC/kohatools none bind,create=dir 0 0
+hostnode_lxc_mount_kohatools: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools home/{{ kohalxc_operuser }}/KohaLXC/kohatools {{ hostnode_lxc_mount_post }}
 # - kohadata
 hostnode_lxc_mount_kohadata_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }}
-hostnode_lxc_mount_kohadata: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }} home/{{ kohalxc_operuser }}/{{ kohalxc_organization }}/kohadata none bind,create=dir 0 0
+hostnode_lxc_mount_kohadata: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }} home/{{ kohalxc_operuser }}/{{ kohalxc_organization }}/kohadata {{ hostnode_lxc_mount_post }}
 hostnode_lxc_mounts:
   - "{{ hostnode_lxc_mount_kohatools }}" 
   - "{{ hostnode_lxc_mount_kohadata }}"
@@ -278,6 +279,7 @@ hostnode_lxc_groups:
 hostode_lxc_starts:
   - lxc.start.auto = 0
   - lxc.start.delay = 0
+  - lxc.start.order = 0
 
 ## LXC: container_command
 # - common LXC-setups to run during Ansible/lxc-create:
@@ -317,7 +319,7 @@ hostnode_mdbenv_pckginstall: |
 hostnode_kohaenv_setup: |
   export KOHALXC_OPERUSER=$(getent passwd 1000 | cut -d: -f1) && export KOHALXC_OPERHOME=/home/$KOHALXC_OPERUSER
   [[ -z $KOHALXC_OPERUSER ]] && export KOHALXC_OPERHOME=/tmp
-  echo "== kohalxc [ansible:kohaenvenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }};
+  echo "== kohalxc [ansible:kohaenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }};
   id && pwd && ls -la
 
 ## Koha/webapp-environment ##
