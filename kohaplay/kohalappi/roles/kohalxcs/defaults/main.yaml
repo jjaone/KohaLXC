@@ -101,8 +101,8 @@ kohalxcs_dataenv_pckgs:
 #hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
 kohalxcs_ppmmtenv_enabled: false
 ## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
-# - which import chains should we run (empty means 'all')
-kohalxcs_ppmmtenv_importchains:
+# - which import chains should we run (empty means none)
+kohalxcs_ppmmtenv_importchains: ''
 # - run timeout (default): 2 hrs = 7200s = 2 * 3600 s
 kohalxcs_ppmmtenv_timeout: 7200
 # - run poll frequency: none = asynchronous run
@@ -116,11 +116,27 @@ kohalxcs_ppmmtenv_checkdelay: 60
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 #hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 
+# Koha/mmtenv: migration
+kohalxcs_mmtenv_migrateme: ''
+
+## ####################
+## Mysql/MariaDB-mdbenv
+## ####################
+kohalxcs_mdbenv_enabled: false
+# Packages needed for setup/config/tools
+kohalxcs_mdbenv_pckgs:
+# Koha/database user
+kohalxcs_mdbenv_kohauser: "{{ kohalxc_mdbenv_kohauser }}"
+# Koha/database user pass
+kohalxcs_mdbenv_kohapass: "{{ kohalxc_mdbenv_kohapass }}"
+# Koha/database name
+kohalxcs_mdbenv_kohadb: "{{ kohalxc_mdbenv_kohadb }}"
+
 ## ###############
 ## KohaLXC/kohaenv
 ## ###############
 kohalxcs_kohaenv_enabled: false
-# Packages needed for kohaenv setup/config/tools
+# Packages needed for setup/config/tools
 kohalxcs_kohaenv_pckgs:
   - openssl
   - apache2

@@ -34,7 +34,7 @@
     kohalxcs_mmtenv_enabled: "{{ lxcg.mmtenv_enabled | d(false) }}"
     kohalxcs_ppmmtenv_enabled: "{{ lxcg.ppmmtenv_enabled | d(false) }}"
     kohalxcs_origommtenv_enabled: "{{ lxcg.origommtenv_enabld | d(false) }}"
-    kohalxcs_mdbvenv_enabled: "{{ lxcg.mdbenv_enabled | d(false) }}"
+    kohalxcs_mdbenv_enabled: "{{ lxcg.mdbenv_enabled | d(false) }}"
     kohalxcs_kohaenv_enabled: "{{ lxcg.kohaenv_enabled | d(false) }}"
     kohalxcs_kohaenv_srvname: "{{ lxcn.kohaenv_srvname | d() }}" 
 #- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_origommtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
@@ -112,10 +112,10 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=hostnode_ppmmtenv_importchains,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
+- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
 ## Run conversion: main script
 # - script might run very long time, poll every half a minute, timeout in seconds
-- name: data+ppmmtenv - Start main conversion script using 'lxc_config' for '{{ kohalxcs_ppmmtenv_importchains }}' (max {{ (kohalxcs_ppmmtenv_timeout | d(3600) | int) // 3600 }} hours)
+- name: data+ppmmtenv - Start main conversion script using 'lxc_config' (max {{ (kohalxcs_ppmmtenv_timeout | d(3600) | int) // 3600 }} hours)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -134,7 +134,6 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_importchains is defined
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
@@ -147,11 +146,10 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_importchains is defined
     - kohalxcs_ppmmtenv_importchains != ''
 
-- debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
-## Run conversion: finish the run, split log per ImportChain(s)
+#- debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
+## Run conversion: finish the run (split/show log per ImportChains
 - name: data+ppmmtenv - Finish conversion run (split/show log by import-chains)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
@@ -164,11 +162,10 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - kohalxcs_ppmmtenv_importchains is defined
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Make Staff Accounts for PP//MMT-Patrons
-- name: data+ppmmtenv - Make staff accounts for PatronsImportChain Koha-migration
+- name: data+ppmmtenv - Make staff accounts for PatronsImportChain-conversion
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -183,9 +180,10 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
+    - ('patrons' in kohalxcs_ppmmtenv_importchains)
 
 ## Run conversion: build '{Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme' files
-- name: data+ppmmtenv - Build '*.migrateme' files for insertion to Koha
+- name: data+ppmmt - Build '*.migrateme' files for insertion to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -200,6 +198,111 @@
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
+    - kohalxcs_ppmmtenv_importchains != ''
+
+## Database: full dump of the db
+#- name: Dump all databases to hostname.sql
+#  mysql_db:
+#    state: dump
+#    name: all
+#    login_user: "{{ kohalxc_mdbenv_kohauser }}"
+#    login_password: "{{ kohalxc_mdbenv_kohauser }}"
+#    target: /tmp/mdbenv-dump_{{ inventory_hostname }}_all-ddmmyyy.sql
+
+## Database/status: 'patrons' and staffaccounts
+# - USE {{ kohalxcs_mdbenv_kohadb | d('kohadata') }}
+# - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> 'S';
+# - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = 'S';
+- name: Show status of converted Patrons and generated Staff accounts, if any
+  become: yes
+  shell: |
+    pwd && ls -1sh Patrons && echo
+    [[ -f Patrons/patrons.migrateme ]] && mysql -h localhost -u {{ kohalxcs_mdbenv_kohauser | d('koha') }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb | d('kohadata') }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers LIMIT 10;'
+    [[ -f Patrons/staffaccounts.migrateme ]] && mysql -h localhost -u {{ kohalxcs_mdbenv_kohauser | d('koha') }} --password="{{ kohalxcs_mdbenv_kohapass }}" {{ kohalxcs_mdbenv_kohadb | d('kohadata') }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mdbenv_enabled
+    - ('patrons' in kohalxcs_mmtenv_migrateme)
+
+## Migrate: 'patrons' (and staffaccounts)
+# TODO: What is the best way to ensure that no Patron related data exists?
+# - DELETE FROM borrowers WHERE borrowernumber <> 1;
+- name: Migrate converted Patrons and Staff accounts
+  become: yes
+  shell: |
+    pwd && ls -la Patrons
+    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme
+    [[ -f Patrons/patrons.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate"
+    [[ -f Patrons/staffaccounts.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/staffaccounts.migrateme --deduplicate"
+    #su -l koha -c "bulkPatronImport.pl --help"
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
+    #creates: Patrons/.patrons.migrateme
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('patrons' in kohalxcs_mmtenv_migrateme)
+    - ('patrons' in kohalxcs_ppmmtenv_importchains)
+
+## Migrate: 'biblios'
+- name: Migrate converted Biblios
+  become: yes
+  shell: |
+    pwd && ls -1sh Biblios && echo
+  args:
+    executable: /bin/bash
+    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('biblios' in kohalxcs_mmtenv_migrateme)
+    - ('biblios' in kohalxcs_ppmmtenv_importchains)
+
+- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
+## Zebra: rebuild index
+# - su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -b -r -v -x --offset 0 --length 20000"
+- name: koha+mmt - Rebuild Zebra index for Koha (max {{ (kohalxcs_ppmmtenv_timeout | d(3600) | int) // 3600 }} hours)
+  become: yes
+  #become_user: koha
+  shell: |
+    pwd && whoami && echo "== ansible-kohalxc: Rebuild and Start Zebra index for Koha ==";
+    service koha-zebra-daemon stop
+    ln -s -f /usr/share/koha/bin/koha-zebra-ctl.sh /etc/init.d/koha-zebra-daemon
+    update-rc.d koha-zebra-daemon defaults
+    service koha-zebra-daemon start
+    chown koha -R /var/lib/koha
+    su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -b -r -v -x"
+    echo && echo "== ansible-kohalxc: Zebra index rebuild done."
+  args:
+    executable: /bin/bash
+    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
+  async: "{{ kohalxcs_ppmmtenv_timeout | d(3600) }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  register: job_rebuildidx
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('biblios' in kohalxcs_mmtenv_migrateme)
+
+## Zebra rebuild: check whether we are finished
+- name: koha+mmt - Check whether the Zebra index building has finisihed..
+  become: yes
+  #become_user: koha
+  async_status: jid={{ job_rebuildidx.ansible_job_id }}
+  register: cmd_rebuildidx_result
+  until: cmd_rebuildidx_result.finished
+  retries: "{{ kohalxcs_ppmmtenv_checkfinished | d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(5) }}"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('biblios' in kohalxcs_mmtenv_migrateme)
 
 ## Koha/webapp-setup after this point => should be moved to kohaenv-setup.yaml ##
 
@@ -260,39 +363,6 @@
   when:
   - kohalxcs_kohaenv_enabled
   - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
-
-## Database: full dump of the db
-#- name: Dump all databases to hostname.sql
-#  mysql_db:
-#    state: dump
-#    name: all
-#    login_user: koha
-#    login_password: koha
-#    target: /tmp/{{ inventory_hostname }}.sql
-
-#- name: Just testing reads/selects from the db
-#  mysql_db:
-#    state: dump
-
-## Migrate: patrons (and staffaccounts)
-# TODO: What is the best way to ensure that no Patron related data exists?
-# - DELETE FROM kohadata.borrowers WHERE borrowernumber <> 1;
-- name: Migrate converted Patrons (and generated Staff accounts)
-  become: yes
-  shell: |
-    pwd && ls -la Patrons
-    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme
-    [[ -f Patrons/patrons.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate"
-    [[ -f Patrons/staffaccounts.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/staffaccounts.migrateme --deduplicate"
-    #su -l koha -c "bulkPatronImport.pl --help"
-    exit 0
-  args:
-    executable: /bin/bash
-    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
-    #creates: Patrons/.patrons.migrateme
-  when:
-    - kohalxcs_kohaenv_enabled
-    - ('patrons' in kohalxcs_ppmmtenv_importchains)
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:
