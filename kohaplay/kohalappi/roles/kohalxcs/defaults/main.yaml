@@ -116,8 +116,11 @@ kohalxcs_ppmmtenv_checkdelay: 60
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 #hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 
-# Koha/mmtenv: migration
+# Koha/mmtenv: migration (list datas that should be migrated)
 kohalxcs_mmtenv_migrateme: ''
+# Koha/mmtenv: Zebra-index rebuilder
+kohalxcs_mmtenv_zebrarebuild: /usr/share/koha/bin/migration_tools/rebuild_zebra.pl
+kohalxcs_mmtenv_zebrarebuild_opts: -b -r -v -x
 
 ## ####################
 ## Mysql/MariaDB-mdbenv
