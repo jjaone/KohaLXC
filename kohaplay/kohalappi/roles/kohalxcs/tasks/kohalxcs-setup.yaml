@@ -112,10 +112,11 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
+#- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
+#- debug: var=kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
 # - might run very long time, async by default, poll and timeout in seconds (if given)
-- name: data+ppmmtenv - Start main conversion script using 'lxc_config' ({{ (kohalxcs_ppmmtenv_timeout |d(7200)|int) // 60 }} mins)
+- name: data+ppmmt - Start main conversion script using 'lxc_config' ({{ (kohalxcs_ppmmtenv_timeout |d(7200)|int) // 60 }} mins)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -137,7 +138,7 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
-- name: data+ppmmtenv - Is PP/MMT conversion run still on ({{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: data+ppmmt - Is PP/MMT conversion run still on ({{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
@@ -150,7 +151,7 @@
 
 #- debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
 ## Run conversion: finish the run (split/show log per ImportChains
-- name: data+ppmmtenv - Finish conversion run (split/show log by import-chains)
+- name: data+ppmmt - Finish conversion run (split/show log by import-chains)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -165,7 +166,7 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Make Staff Accounts for PP//MMT-Patrons
-- name: data+ppmmtenv - Make staff accounts for PatronsImportChain-conversion
+- name: data+ppmmt - Make staff accounts for PatronsImportChain-conversion
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
@@ -213,7 +214,7 @@
 # - USE {{ kohalxcs_mdbenv_kohadb }}
 # - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> 'S';
 # - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = 'S';
-- name: Show status of converted Patrons and generated Staff accounts, if any
+- name: koha+mdb - Show converted Patrons and generated Staff accounts, if any are in the db
   become: yes
   shell: |
     pwd && ls -1sh Patrons && echo
@@ -228,10 +229,27 @@
     - kohalxcs_mdbenv_enabled
     - ('patrons' in kohalxcs_mmtenv_migrateme)
 
+## Push/copy KohaLXC/kohalxcs migration environment (mmtenv) customization scripts to target
+- name: koha+mmt - Push/copy bulkImport scripts and settings to migration enabled LXCs
+  become: yes
+  template: >
+    src="files/kohaenv/{{ item.name }}.j2"
+    dest="/usr/share/koha/bin/{{ item.dir }}/{{ item.name}}"
+    owner="koha"
+    group="{{ kohalxc_kohagrp_name }}"
+    mode="u=rwx,g=rx,o=rx"
+    backup="yes"
+  with_items:
+    - { name: bulkPatronImport.pl, dir: migration_tools }
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('patrons' in kohalxcs_mmtenv_migrateme)
+
 ## Migrate: 'patrons' (and staffaccounts)
 # TODO: What is the best way to ensure that no Patron related data exists?
 # - DELETE FROM borrowers WHERE borrowernumber <> 1;
-- name: Migrate converted Patrons and Staff accounts
+- name: koha+mmt - Migrate newly converted Patrons and Staff accounts
   become: yes
   shell: |
     pwd && ls -1sh Patrons
@@ -251,7 +269,7 @@
     - ('patrons' in kohalxcs_ppmmtenv_importchains)
 
 ## Migrate: 'biblios'
-- name: Migrate converted Biblios
+- name: koha+mmt - Migrate newly converted Biblios
   become: yes
   shell: |
     pwd && ls -1sh Biblios
@@ -308,7 +326,7 @@
 
 - debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname,kohalxcs_kohaenv_https,kohalxcs_kohaenv_sslle,kohalxc_organization
 ## Install LetsEncrypt/certbot client for SSL-certificates
-- name: Install LetsEncrypt from Git for SSL-certificate generation
+- name: koha+ssl - Install LetsEncrypt from Git for SSL-certificate generation
   become: yes
   shell: mkdir -p /opt/letsencrypt && git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt &% cd /etc/letsencrypt && ./letsencrypt-auto certonly --email {{ kohalxcs_kohaenv_srvadmin | d() }} --apache -d {{ kohalxcs_kohaenv_srvname }}
   args:
@@ -320,7 +338,7 @@
     - kohalxcs_kohaenv_sslle
 
 ## Configure Koha(Apache2) OPAC and Intranet for https
-- name: Generate Koha/Apache2 https config (only if 'kohaenv_srvname' is set)
+- name: koha+ssl - Generate Koha/Apache2 https config (only if 'kohaenv_srvname' is set)
   become: yes
   #become_user: koha
   template: >
@@ -335,7 +353,7 @@
     - kohalxc_organization is defined
     - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
 
-- name: Make available our SSL-site configuration in Koha/Apache2
+- name: koha+ssl - Make available our SSL-site configuration in Koha/Apache2
   become: yes
   shell: ln -s -f /etc/koha/{{ kohalxc_organization|lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
   #shell: service apache stop && a2enmod ssl && a2dissite koha.conf && ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-enabled/koha-ssl.conf && service apache2 restart
@@ -345,7 +363,7 @@
   - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
 
 ## Generate SSL-certificate (self-signed)
-- name: Generate server.key and self-signed SSL-certificate for Koha/Apache2
+- name: koha+ssl - Generate server.key and self-signed SSL-certificate for Koha/Apache2
   become: yes
   shell: mkdir -p /etc/apache2/ssl && openssl genrsa -des3 -passout pass:x -out /tmp/server.pass.key 2048 && openssl rsa -passin pass:x -in /tmp/server.pass.key -out /tmp/server.key && rm -f /tmp/server.pass.key && openssl req -new -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization }}/O=Lapin kirjasto/OU={{ kohalxc_organization }} ({{ hostnode_environment | d('local') }})/CN={{ kohalxcs_kohaenv_srvname | d('localhost') }}" -key /tmp/server.key -out /tmp/server.csr && openssl x509 -req -sha256 -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /etc/apache2/ssl/server.crt && cp -vpf /tmp/server.key /etc/apache2/ssl/. && rm -f /tmp/server.*
   args:
@@ -357,7 +375,7 @@
     - kohalxc_organization is defined
     - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
 
-- name: Enable SSL (switch to https) restart Koha/Apache2
+- name: koha+ssl - Enable SSL (switch to https) restart Koha/Apache2
   become: yes
   shell: service apache2 stop && a2dissite koha.conf && a2enmod ssl && a2ensite koha-ssl.conf && service apache2 restart
   when:

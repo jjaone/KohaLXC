@@ -44,7 +44,7 @@
 
 ## Show common KohaLXC-related settings (for all roles)
 - name: debug - Show common (KohaLXC-) environment settings
-  debug: var=local_home,kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_rootdir,kohalxc_tooldir,kohalxc_organization,kohalxc_setupdir,kohalxc_datadir,kohalxc_dataset,kohalxc_devenv,kohalxc_srvenv,kohalxc_mdbenv,kohalxc_webenv
+  debug: var=local_home,hostnode_environment,kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_rootdir,kohalxc_tooldir,kohalxc_organization,kohalxc_setupdir,kohalxc_datadir,kohalxc_dataset,kohalxc_devenv,kohalxc_srvenv,kohalxc_mdbenv,kohalxc_webenv
   tags: common:debug
 
 ## Show Ansible-related settings
@@ -52,7 +52,6 @@
   debug: var=gather_facts,hostnode_operuser,ansible_python_interpreter,ansible_connecion,ansible_port,ansible_become_method,ansible_user
   tags: common:debug
 
-- debug: var=hostnode_environment,kohalxc_install
 ## Setup KohaLXC-environment for developer shell profile (devenv/bash-profile)
 # - [TODO]: Keep here after checking this works for 'hostnode' and 'kohalxcs' roles!
 # - [TODO]: Check KOHALXC_ vars correct paths:HOME for LXCs, Works for hosts)
@@ -79,7 +78,6 @@
   failed_when: cmd.stderr != ""
   tags: common:status
 
-- debug: var=kohalxc_devenv_enabled
 ## Comment out overlapping settings (alias, HIST, ect) in user HOME profile
 - name: setup - Comment out settings in user HOME (.bashrc) that overlap w/ devenv
   lineinfile:

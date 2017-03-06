@@ -120,7 +120,7 @@ kohalxcs_ppmmtenv_polling: 0
 kohalxcs_ppmmtenv_checkdelay: 60
 # - check this many times (minutes) conversion run status (default: 120 times/mins):
 # - 120 * 60 s = 7200 s (= 2 hours)
-kohalxcs_ppmmtenv_checkfinished: "{{ (kohalxcs_ppmmtenv_timeot|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+kohalxcs_ppmmtenv_checkfinished: "{{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 #hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 
