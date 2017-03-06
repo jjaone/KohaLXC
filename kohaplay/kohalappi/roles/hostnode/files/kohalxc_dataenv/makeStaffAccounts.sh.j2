@@ -132,7 +132,7 @@ IFS='
 #    # You need to "apt-get install xlsx2csv" for this
 #    xlsx2csv -d ';' -i "$file" > "/tmp/create_accounts.csv"
 #    
-   for patron in $(cat $file.csv | sed '1,17d'); do
+   for patron in $(cat $file.csv | sed '1d'); do
 
       borrowernumber=$((borrowernumber + 1))
       surname="$(getfield 1 $patron)"
