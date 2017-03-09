@@ -82,10 +82,10 @@ echo && echo "== $PROGNAME ($STARTSTAMP) for:$IMPORTCHAINS"
 # - kill 'perl import.pl' and the trap should handle the rest
 cleanPreviousRun;
 
-#- TODO: Run only for "all" importchains for now!!
-if [[ "all" != $IMPORTCHAINS ]]; then
-    echo "== $PROGNAME ($STARTSTAMP): Will only run for 'all' importchains..done."
-    exit 0
+#- TODO: Run always for "all" importchains for now)!!
+if [[ -n "$IMPORTCHAINS" && "all" != $IMPORTCHAINS ]]; then
+    echo "== $PROGNAME ($STARTSTAMP): Will only run for 'all' importchains.."
+    IMPORTCHAINS=all
 fi
 
 ## Make required directories (and empty run log directory)

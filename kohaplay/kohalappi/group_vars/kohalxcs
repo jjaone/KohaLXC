@@ -1,0 +1,3 @@
+
+## The Home of KohalXC-stuff
+kohalxc_install: "/home/{{ ansible_user }}"

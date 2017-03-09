@@ -111,7 +111,7 @@ kohalxcs_dataenv_pckgs:
 kohalxcs_ppmmtenv_enabled: false
 ## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
 # - which import chains should we run (empty means none)
-kohalxcs_ppmmtenv_importchains: ''
+kohalxcs_ppmmtenv_importchains: "{{ hostnode_ppmmtenv_importchains | d('') }}"
 # - run timeout (in seconds): 2 hrs = 2 * 3600 s = 7200 s
 kohalxcs_ppmmtenv_timeout: 7200
 # - run poll frequency (in seconds): 0 or none = asynchronous run

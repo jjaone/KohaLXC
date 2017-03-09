@@ -29,7 +29,7 @@
 ## Debug: some lxcenv related networking and domain settings
 - debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_pckgs,hostnode_lxcenv_networking,hostnode_lxcenv_domain
 
-## reate directory with correct permissions for custom localized facts
+## Create directory with correct permissions for custom localized facts
 - name: lxcenv - Create default directory for custom Ansible/LXC-related facts
   become: yes
   file: |
@@ -61,7 +61,9 @@
     hostnode_lxcs:
       - "{{ kldev_dmdbks }}"
       - "{{ kltest_dmdb }}"
-      - "{{ kltest_mdbks }}"
+# Comment out our 'testikoha' to protect it from being changed or deleted
+# - 2017-03-08: Keep this out from or tool-chain during 'testing' phase
+#      - "{{ kltest_mdbks }}"
 
 #- debug: var=hostnode_lxcs,hostnode_kohalxc_tooldir,kohalxc_tooldir
 ## Extract the env enablements from lxc.group's in container_config
@@ -106,6 +108,39 @@
     - item.net is defined
     - item.lxc is defined and item.lxc.name is defined
     - item.net.domain is defined and item.net.domain in inventory_hostname
+
+- debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_kohalxc_works
+##  Use this to resolve need to manual mounts of devenv/convlog dirs
+# - for browsing and migration/LXCs (non 'dataenv' hostnodes)
+- name: non-dataenv(sshfs) - Mount datenv hosts folders for 'kohadata'
+  #become: yes
+  environment:
+    SSHPASS: "{{hostnode_operpass}}"
+  shell: |
+    sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -i /home/{{hostnode_operuser}}/.ssh/id_rsa.pub {{hostnode_operuser}}@{{hostnode_websrv}}
+    (cd {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata &&
+    mkdir -vp dump4mmt-convsource && chmod g+w dump4mmt-convsource &&
+    [[ ! -e dump4mmt-default ]] && ln -s dump4mmt-convsource dump4mmt-default;
+    [[ ! -d dump4mmt-convsource/logs ]] && sshfs -o allow_other,reconnect {{hostnode_operuser}}@{{hostnode_websrv}}:Works/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-default/source.0/ {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource;
+    ls -l dump4mmt-default/ && echo "== All done.")
+  args:
+    executable: /bin/bash
+  when:
+    - not hostnode_dataenv_enabled
+
+- name: Mount access for Koha-staff to dump4default-convsources (if any)
+  become: yes
+  shell: |
+    [[ -d {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource ]] && ( rm -f /home/koha/{dumpdefault,konversiolokit,virkailijakirjeet} &&
+    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource /home/koha/dumpdefault &&
+    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/logs /home/koha/konversiolokit &&
+    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/target/Patrons/staffaccounts/letters /home/koha/virkailijakirjeet &&
+    echo "== All symlinks done.")
+    exit 0
+  args:
+    executable: /bin/bash
+  when:
+    - not hostnode_dataenv_enabled
 
 ## Create/re-configure and enable all LXCs
 # - do this only in remote 'development' and 'testing'

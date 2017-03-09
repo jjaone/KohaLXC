@@ -12,8 +12,7 @@
 # - 
 # ##############################################################################
 
-- debug: var=inventory_hostname,hostnode_environment,kohalxc_tooldir,kohalxcs_kohalxc_tooldir
-
+#- debug: var=inventory_hostname,hostnode_environment,kohalxc_tooldir,kohalxcs_kohalxc_tooldir
 ## Read ansible_facts from target ansible localized folder: /etc/ansible/facts.d
 - name: setup - Read LXC env facts (ansible_local/{{inventory_hostname}}).lxc_group
   #become:
@@ -80,7 +79,6 @@
     - kohalxc_operid is defined
     - kohalxc_kohagrp_name is defined
 
-#- debug: var=ansible_user,kohalxc_operuser,kohalxc_operid,kohalxc_kohagrp_id
 ## Ensure kohalxc_operuser(khaoper/HOME) has required dirs
 - name: setup - Ensure LXC-user (ansible_user) has dirs for scripts and logs
   file: >
@@ -102,6 +100,8 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
+- fail:
+
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
 - name: mmtenv - Symlink conversion main script in container HOME/bin
   file: >
@@ -112,21 +112,21 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-#- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
+- debug: var=kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
 #- debug: var=kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
 # - might run very long time, async by default, poll and timeout in seconds (if given)
 - name: data+ppmmt - Start main conversion script using 'lxc_config' ({{ (kohalxcs_ppmmtenv_timeout |d(7200)|int) // 60 }} mins)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
-    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
+    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
     ls -l ~/bin/run_conversion;
-    echo && echo "== START OF PP/MMT CONVERSION.." && echo;
+    echo && echo "== START OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date)" && echo;
     $HOME/bin/run_conversion lxc_config.xml {{ kohalxcs_ppmmtenv_importchains }} > /dev/null;
-    head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log;
-    echo && echo "== ..CONVERTING.." && echo;
+    [[ "0" == "$?" ]] && (head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log; echo && echo "== ..CONVERTING.." && echo;)
   args:
+    executable: /bin/bash
     chdir: "{{ '/home/'~ansible_user }}"
     creates: ~/bin/.run_conversion.finished
   async: "{{ kohalxcs_ppmmtenv_timeout|d(7200) }}"
@@ -154,11 +154,11 @@
 - name: data+ppmmt - Finish conversion run (split/show log by import-chains)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
-    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
+    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
     tail -30 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
-    echo && echo "== END OF PP/MMT CONVERSION." && echo
-    (cd $KOHALXC_DATADIR/source.0/logs && pwd && ls -l && echo)
+    echo && echo "== END OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date)." && echo
+    (cd $KOHALXC_DATADIR/source.0/logs && pwd && ls -l | grep '\-last\|\-previous' && echo)
     (cd $KOHALXC_DATADIR/source.0/target && pwd && ls -Csh && echo)
   when:
     - kohalxcs_dataenv_enabled
@@ -166,31 +166,33 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Make Staff Accounts for PP//MMT-Patrons
-- name: data+ppmmt - Make staff accounts for PatronsImportChain-conversion
+- name: data+pp+migrate - Make staff accounts for PatronsImportChain-conversion
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
-    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
+    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
-    echo && ./makeStaffAccounts.sh > /dev/null;
-    #cat $KOHALXC_DATADIR/source.0/target/Patrons/staffaccounts/givenusernames.txt;
+    echo "== ansible-kohalxc: For now, don't generate new staffaccouns (07.03.2017)"
+    #echo && ./makeStaffAccounts.sh > /dev/null;
   args:
     executable: /bin/bash
     chdir: "{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools"
-    #creates: $KOHALXC_DATADIR/source.o/target/Patrons/staffaccounts/givenusernames.txt;
   register: cmd_staffaccounts
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
-    - ('patrons' in kohalxcs_ppmmtenv_importchains)
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
+    - ('patrons' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Run conversion: build '{Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme' files
 - name: data+ppmmt - Build '*.migrateme' files for insertion to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
-    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/KohaLappi/kohadata' }}"
+    KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
-    ls -1sh && for d in Patrons Biblios Items Holds Checkouts Fines
+    #ls -1sh && for d in "Patrons Biblios Items Holds Checkouts Fines"
+    ls -1sh && for d in "{{ kohalxcs_ppmmtenv_importchains | d() }}"
     do
+       #echo ${d,,}.migrateme
        ([[ -d $d ]] && cd $d && echo && echo "== $d: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && find */ -maxdepth 1 -name '*.migrateme' -exec cp -vp {} . \; 2>/dev/null; ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo);
     done
   args:
@@ -217,8 +219,8 @@
 - name: koha+mdb - Show converted Patrons and generated Staff accounts, if any are in the db
   become: yes
   shell: |
-    pwd && ls -1sh Patrons && echo
-    [[ -f Patrons/patrons.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers LIMIT 10;'
+    pwd && ls -1shl Patrons && echo
+    [[ -f Patrons/patrons.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> "S" LIMIT 15;'
     [[ -f Patrons/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'
     exit 0
   args:
@@ -227,10 +229,10 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mdbenv_enabled
-    - ('patrons' in kohalxcs_mmtenv_migrateme)
+    - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
 
 ## Push/copy KohaLXC/kohalxcs migration environment (mmtenv) customization scripts to target
-- name: koha+mmt - Push/copy bulkImport scripts and settings to migration enabled LXCs
+- name: koha+mmt - Templatize bulkImport scripts and settings for migration LXCs
   become: yes
   template: >
     src="files/kohaenv/{{ item.name }}.j2"
@@ -244,18 +246,19 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('patrons' in kohalxcs_mmtenv_migrateme)
+    - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
 
 ## Migrate: 'patrons' (and staffaccounts)
-# TODO: What is the best way to ensure that no Patron related data exists?
+# TODO: Do we want to ensure some Patron-related data will be emptied?
 # - DELETE FROM borrowers WHERE borrowernumber <> 1;
+# - DELETE FROM borrowers WHERE categorycode <> 'S';
 - name: koha+mmt - Migrate newly converted Patrons and Staff accounts
   become: yes
   shell: |
-    pwd && ls -1sh Patrons
+    pwd && ls -1shl Patrons
     head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme
     [[ -f Patrons/patrons.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate"
-    [[ -f Patrons/staffaccounts.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/staffaccounts.migrateme --deduplicate"
+    #[[ -f Patrons/staffaccounts.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/staffaccounts.migrateme &> log/bulkPatronImport-20170307_1505.log"
     #su -l koha -c "bulkPatronImport.pl --help"
     exit 0
   args:
@@ -265,8 +268,8 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('patrons' in kohalxcs_mmtenv_migrateme)
-    - ('patrons' in kohalxcs_ppmmtenv_importchains)
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
+    - ('patrons' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate: 'biblios'
 - name: koha+mmt - Migrate newly converted Biblios
@@ -279,8 +282,10 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('biblios' in kohalxcs_mmtenv_migrateme)
-    - ('biblios' in kohalxcs_ppmmtenv_importchains)
+    - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
+    - ('biblios' in kohalxcs_ppmmtenv_importchains|lower)
+
+- fail:
 
 - debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
@@ -322,7 +327,9 @@
     - kohalxcs_mmtenv_enabled
     - ('biblios' in kohalxcs_mmtenv_migrateme)
 
+##
 ## Koha/webapp-setup after this point => should be moved to kohaenv-setup.yaml ##
+##
 
 - debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname,kohalxcs_kohaenv_https,kohalxcs_kohaenv_sslle,kohalxc_organization
 ## Install LetsEncrypt/certbot client for SSL-certificates

@@ -196,11 +196,21 @@ sub processNewFromRow {
     }
 
     ## TODO/FIX:KohaLappi; 
-    # - 2017-03-06: Add default permissions for all virkailija/staffaccounts (when categorycode == 'S') 
+    # - 2017-03-06: Some perms for staffaccounts
+    # - (check they are Staff, i.e. categorycode == 'S')
     if ($patron->{borrowernumber} && $patron->{categorycode} eq "S" ) {
         $permissionManager->grantPermission($patron->{borrowernumber}, 'catalogue', 'staff_login');
     }
-
+    # - 2017-03-06: Add superlibrarian permissions to select staff accounts
+    # - NOTE: 'return unless ($string =~ m/(str1|str2|str3)/)';
+    # - (check they are SuperStaff, i.e. categorycode == 'SS' )
+    if ($patron->{borrowernumber} && $patron->{categorycode} eq "SS") {
+    #if ($patron->{borrowernumber} && $patron->{categorycode} eq "S" &&
+    #    (($patron->{userid} eq "super1") ||
+    #         ($patron->{userid} eq "super2") ||
+    #             ($patron->{userid} eq "super3" ))) {
+	$permissionManager->grantPermission($patron->{borrowernumber}, 'superlibrarian', 'superlibrarian');
+    }
 
     last if $i == $number;
 }

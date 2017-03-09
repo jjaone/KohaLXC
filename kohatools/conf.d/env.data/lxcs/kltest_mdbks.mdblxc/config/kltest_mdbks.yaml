@@ -34,9 +34,10 @@ lxc:
     # lxc/mounts
     - "{{ hostnode_lxc_mount_kohatools_pre }} home/kohaoper/KohaLXC/kohatools {{ hostnode_lxc_mount_post }}"
     - "{{ hostnode_lxc_mount_kohadata_pre }} home/kohaoper/{{kohalxc_organization}}/kohadata {{ hostnode_lxc_mount_post }}"
-    - "lxc.mount.entry = /home/koha/dumpdefault/target home/kohaoper/{{kohalxc_organization}}/kohadata/target {{ hostnode_lxc_mount_post }}"
+    #- "{{ hostnode_lxc_mount_convsource_pre }} home/kohaoper/{{kohalxc_organization}}/kohaconv {{ hostnode_lxc_mount_post }}"
+    #- "lxc.mount.entry = /home/koha/dumpdefault/target home/kohaoper/{{kohalxc_organization}}/kohadata/target {{ hostnode_lxc_mount_post }}"
     # lxc/group
-    - lxc.group = "{{ hostnode_environment | d('local') }}"
+    - lxc.group = {{ hostnode_environment | d('local') }}
     - lxc.group = dev
     - lxc.group = mdb
     - lxc.group = mmt
