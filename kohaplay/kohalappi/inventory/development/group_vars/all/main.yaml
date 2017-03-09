@@ -83,8 +83,8 @@ hostnode_upgrade_pckgsignore: "bacula-"
 ## ############
 ## LVM support: false/true (in group only in testing/production)
 hostnode_lvm_enabled: False
-# Volume group (VG) name:
-hostnode_lvmvg: roi-vg
+# Volume group (VG) name (main):
+hostnode_lvmvg_main: roi-vg
 
 ## ############
 ## Storage: ZFS

@@ -47,8 +47,9 @@
   with_flattened:
     - hostnode_srvenv_pckgs
     - hostnode_secure_pckgs
+    - hostnode_lvm_pckgs
   when:
-    - hostnode_srvenv_enabled or hostnode_secure_enabled
+    - hostnode_srvenv_enabled or hostnode_secure_enabled or hostnode_lvm_enabled
 
 ## Ensure 'kohasys'-user exists (by default: kohasys/1000)
 # [KohaLXC]:srvenv
@@ -139,7 +140,7 @@
 # - can use '--force-handler' to ensure handler is called (atleast eventually)
 - meta: flush_handlers
 
-- debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
+#- debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
 ## Ensure devops/hostnode has required symlinks in $HOME
 # [KohaLXC]:srvenv
 - name: srvenv - Symlink for 'kohalxc' main script in devops/HOME
@@ -155,17 +156,91 @@
     state="link"
     force="yes"
 
-- debug: var=ansible_host,hostnode_backupsrv,hostnode_backup_sshfssrv,hostnode_backup_mountpath
+## Does LVM/VG+LV for backups and misc data exist?
+- name: backup - Check we have VG-'data' for server backups and misc data
+  become: yes
+  shell: lvdisplay | grep -q "LV Path.*/{{hostnode_lvmvg_data}}/{{hostnode_lvmlv_backup}}"
+  register: found_hostnode_lvmlv_backup
+  failed_when: found_hostnode_lvmlv_backup.rc == 2
+  changed_when: found_hostnode_lvmlv_backup.rc == 1
+  when:
+    - ansible_host == hostnode_backupsrv
+
+## Setup backup+data LVS in Backup-server VG
+- name: backup - Setup backup and data LVs in Backup server VG-data
+  become: yes
+  lvol: >
+    vg="{{ hostnode_lvmvg_data }}"
+    lv="{{ item.lv }}"
+    size="{{ item.size }}"
+    opts="-v"
+    state="present"
+  with_items:
+    - { lv: "{{hostnode_lvmlv_backup}}", size: "{{hostnode_lvmlv_backup_size}}" }
+    - { lv: "{{hostnode_lvmlv_data}}", size: "{{hostnode_lvmlv_data_size}}" }
+  when:
+    - ansible_host == hostnode_backupsrv
+    - hostnode_lvmvg_data is defined
+    - found_hostnode_lvmlv_backup.rc != 0
+
+## Create LV-filesystem in Backup-server VG for backups+data
+#- e.g. "shell: mkfs.ext4 /dev/roidata/backup"
+- name: backup - Create filesystem in for VG-'data' LVs (backup+data)
+  become: yes
+  filesystem: >
+    fstype="{{ hostnode_lvmlv_data_fs | d('ext4') }}"
+    dev="/dev/{{ hostnode_lvmvg_data }}/{{ item }}"
+    resizefs="yes"
+    force="no"
+  with_items:
+    - "{{ hostnode_lvmlv_backup }}"
+    - "{{ hostnode_lvmlv_data }}"
+  when:
+    - ansible_host == hostnode_backupsrv
+    - hostnode_lvmvg_data is defined
+    - found_hostnode_lvmlv_backup.rc != 0
+
+## Mount LV-filesystems in Backup-server VG
+- name: backup - Mount LV-fileystem(s) in Backup server VG
+  become: yes
+  mount: >
+    name="{{ hostnode_backup_rootdir }}/{{ item }}"
+    src="/dev/{{ hostnode_lvmvg_data }}/{{ item }}"
+    fstype="{{ hostnode_lvmlv_data_fs | d('ext4') }}"
+    opts="users,rw"
+    state="mounted"
+  with_items:
+    - "{{ hostnode_lvmlv_backup }}"
+    - "{{ hostnode_lvmlv_data }}"
+  when:
+    - ansible_host == hostnode_backupsrv
+    - hostnode_lvmvg_data is defined
+
+## Correct the Backup-related directory permissions and symlink them
+- name: backup - Correct perms for Backup(s) locations
+  become: yes
+  shell: |
+    chgrp -R koha {{ hostnode_backup_rootdir }}
+    MP={{item}} && ln -s -f {{ hostnode_backup_rootdir}}/$MP /${MP^}
+  args:
+    executable: /bin/bash
+  with_items:
+    - "{{ hostnode_lvmlv_backup }}"
+    - "{{ hostnode_lvmlv_data }}"
+  when:
+    - ansible_host == hostnode_backupsrv
+    - hostnode_backup_rootdir is defined
+
 ## Enable Backup-locations using 'sshfs' (e.g. from 'ansible_host' to backupsrv)
 # - step 1 / 5: Unmount any existing mount points..
-- name: srvenv/backup(sshfs) - Ensure backup/source is unmounted from backup/target
+- name: backup(sshfs) - Ensure backup/source is unmounted from backup/target
   become: yes
   shell: mount | grep -q {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }} || exit 0 && umount {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
   when:
     - ansible_host != hostnode_backup_sshfssrv
 
 # - step 2 / 5: Ensure we have the mount point..
-- name: srvenv/backup(sshfs) - Ensure the mount-point for backup/target exist
+- name: backup(sshfs) - Ensure the mount-point for backup/target exist
   become: yes
   file: >
     path="{{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}"
@@ -175,7 +250,7 @@
     - ansible_host != hostnode_backup_sshfssrv
 
 # - step 3 / 5: Ensure we have required access keys for remote backup/mounting..
-- name: srvenv/backup(sshfs) - Ensure backup/source auth-key is in backup/target
+- name: backup(sshfs) - Ensure backup/source auth-key is in backup/target
   environment:
     SSHPASS: "{{ hostnode_operpass }}"
   shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -i /home/{{ hostnode_operuser }}/.ssh/id_rsa.pub {{ hostnode_operuser }}@{{ hostnode_backupsrv }}
@@ -183,13 +258,13 @@
     - ansible_host != hostnode_backup_sshfssrv
 
 # - step 4 / 5: Mount the remote backup..
-- name: srvenv/backup(sshfs) - Mount remote backup/target location
-  shell: /usr/bin/sshfs -o idmap=user,reconnect {{ hostnode_operuser }}@{{ hostnode_backup_sshfssrv | d(hostnode_backupsrv) }}:/{{ hostnode_backup_targetdir | d('Backup') }} {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
+- name: backup(sshfs) - Mount remote backup/target location
+  shell: /usr/bin/sshfs -o idmap=user,reconnect {{ hostnode_operuser }}@{{ hostnode_backup_sshfssrv | d(hostnode_backupsrv) }}:/{{ hostnode_backup_targetdir | d('Backup') }}/ {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
   when:
     - ansible_host != hostnode_backup_sshfssrv
 
 # - step 5 / 5: Synlink mounted backup target to proper filesystem location..
-- name: srvenv/backup(sshfs) - Symlink for '/Backup' to mounted target location
+- name: backup(sshfs) - Symlink for '/Backup' to mounted target location
   become: yes
   file: >
     src="{{ hostnode_backup_mountpath }}"

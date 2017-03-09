@@ -76,7 +76,7 @@ hostnode_reboot_enabled: True
 ## LVM support: false/true (in group only in testing/production)
 hostnode_lvm_enabled: True
 # Volume group (VG) name:
-hostnode_lvmvg: roi1-vg
+hostnode_lvmvg_main: roi1-vg
 
 ## ############
 ## Storage: ZFS

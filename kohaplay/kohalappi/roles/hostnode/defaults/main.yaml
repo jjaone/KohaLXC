@@ -116,7 +116,9 @@ hostnode_backup_enabled: false
 #hostnode_backupsrv:
 # KohaLXC/backup(sshfs): server
 hostnode_backup_sshfssrv: "{{ hostnode_backupsrv }}"
-# KosaLXC/backup:  mount path
+# KosaLXC/backup+data:  root dir (in the Backup-server)
+hostnode_backup_rootdir: /vol
+# KosaLXC/backup:  mount path (in the Backup-client)
 hostnode_backup_mountpath: /mnt/Backup@remote
 
 
@@ -173,13 +175,18 @@ hostnode_lvm_enabled: false
 # LVM-related packages
 hostnode_lvm_pckgs:
   - lvm2
-
-# Volume group (VG) name: e.g /dev/roi1_vg 
-hostnode_lvmvg: host_vg 
+# Volume group (VG) name (main): e.g /dev/roi1-vg
+hostnode_lvmvg_main: host-vg
+# Volume group (VG) name (backup+data): e.g /dev/roidata-vg 
+hostnode_lvmvg_data: hostdata-vg
 # Logical volume for host OS (root): /dev/roi1_vg/root
 hostnode_lvmlv_os: root 
 # Logical volume size for host OS (root)
 hostnode_lvmlv_os_size: 80G
+# Logical volume for backups: /dev/roidata-vg/backup
+hostnode_lvmlv_backup: backup
+# Logical volume size for bckups
+hostnode_lvmlv_backup_size: +65%FREE
 # Logical volume for data (containers): /dev/roi1_vg/data
 hostnode_lvmlv_data: data 
 # Logical volume size for (containers) dir-data

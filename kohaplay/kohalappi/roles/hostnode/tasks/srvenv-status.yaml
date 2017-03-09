@@ -26,6 +26,12 @@
   shell: timedatectl || dpkg-reconfigure -f noninteractive tzdata
   changed_when: false
 
+## Filesystem devices and disks
+- name: Show server filesystem  and disks info
+  become: yes
+  shell: fdisk -l
+  changed_when: false
+
 ## Show: LVM Physical Volume (PV) attributes 
 - name:  Show attributes of LVM-Physical volume (PV), if any
   become: yes
@@ -72,6 +78,10 @@
   changed_when: cmd_aptlist_upgrades.rc == 0
 
 ## Show servers rebootability and upgradability status (+ dataenv status)
-- debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_dataenv_enabled
+- debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_lvm_enabled,hostnode_zfs_enabled,hostnode_dataenv_enabled,hostnode_lxcenv_enabled
+
 ## Show SSH-port info
 - debug: var=ansible_port,hostnode_sshport
+
+## Show Backup-related info
+- debug: var=hostnode_backupsrv,hostnode_backup_sshfssrv,hostnode_backup_mountpath
