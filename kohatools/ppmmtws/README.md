@@ -12,6 +12,17 @@ for Koha/ILS-development, deployment & database conversion/migration._
 **Organization**: Rovaniemi City Library, Lapland (2016/06 - 2017/05)<br/>
 **License**: GNU General Public License (GPL) version 3
 
+### Usage: original instructions for Koha/Joensuu conversions:
+Pallas-konversiota varten käytä "MMT Perl"-työkalua
+```
+MMT\ Perl/import.pl config.xml
+```
+Pallaksesta saa tiedot ulos ajamalla skripti Pallaksen tietokantapalvelimella:
+```
+MMT\ Perl/JesperExpoerter/faep.sh
+```
+Libra3-konversiota varten käytä libra3-työkalua.
+
 ### Usage: directly from the command line shell in target host:
 ```
 $ cd $KOHALXC_TOOLDIR/ppmmtws/PerlMMT
