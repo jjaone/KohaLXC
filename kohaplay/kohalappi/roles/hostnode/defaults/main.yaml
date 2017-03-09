@@ -30,9 +30,9 @@ gather_facts: False
 # Local/management user home directory
 #local_home: "{{ lookup('env', 'HOME') }}"
 
-## #######################
-## Server: KohaLXC tooling
-## #######################
+## ############################
+## Server/Host: KohaLXC tooling
+## ############################
 # - defaults in 'roles/common/defaults/main.yaml'
 # - override these in inventory/group+host_vars
 ## KohaLXC: install dir
@@ -48,11 +48,17 @@ hostnode_kohalxc_organization: "{{ kohalxc_organization }}"
 ## KohaLXC: setupdir (LXCs are defined here)
 hostnode_kohalxc_setupdir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohalxc"
 
+## ############################
+## KohaLXC/development (devenv)
+## ############################
 ## KohaLXC/devenv: role default
 hostnode_devenv_enabled: true
-#hostnode_devenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
-#hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
+# Environment main configuration directory: Shell/kohasetup + Ansible/plays
+hostnode_devenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
 
+## ############################
+## KohaLXC/server/host (srvenv)
+## ############################
 ## KohaLXC/srvenv: role default
 hostnode_srvenv_enabled: true
 # Packages needed for srvenv setup/config/tools
@@ -63,23 +69,32 @@ hostnode_srvenv_pckgs:
   - iptables-persistent
   - bridge-utils
   - mailutils
-#hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
-#hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
+# Environment main configuration directory: Shell/kohasetup + Ansible/plays
+hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
 
+## ##########################
+## KohaLXC/datasets (dataenv)
+## ##########################
 ## KohaLXC/dataenv: role default
 hostnode_dataenv_enabled: true
 # Packages needed for dataenv setup/config/tools
 hostnode_dataenv_pckgs:
-#hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
+# Environment main configuration directory: Shell/kohasetup + Ansible/plays
+hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
 # KohaLXC/dataenv: datadir
 hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
 # KohaLXC/dataenv: datasets name(s) for MMT-migration:
 hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
 # KohaLXC/dataenv: dataset source dir(s) for MMT
-hostnode_dataenv_datasrc: "source"
+# - TODO/FIX-obsolete: 'hostnode_dataenv_datasrc: "source"'
 # KohaLXC/dataenv: default dataset with latest fix source dir(s) for MMT
 hostnode_dataenv_fixssource:
   - { name: "default", src: "source" }
+
+## #########################################################################
+## KohaLXC/MMT(PP/Origo): mmtenv=ppmmtenv+origommtenv conversions/migrations
+## #########################################################################
+# KohaLXC/(pp/o)mmtenv: support creation of data+MMT-aware LXCs
 
 ## KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
 # - by default enable here if any dataset(s) have been defined (for the host)
@@ -116,10 +131,12 @@ hostnode_backup_enabled: false
 #hostnode_backupsrv:
 # KohaLXC/backup(sshfs): server
 hostnode_backup_sshfssrv: "{{ hostnode_backupsrv }}"
-# KosaLXC/backup+data:  root dir (in the Backup-server)
+# KosaLXC/backup+data:  root dir [Backup-server]
 hostnode_backup_rootdir: /vol
-# KosaLXC/backup:  mount path (in the Backup-client)
-hostnode_backup_mountpath: /mnt/Backup@remote
+# KosaLXC/backup+data:  backup-dir (symlinked) [Backup-server]
+hostnode_backup_backupdir: /Backup
+# KosaLXC/backup:  mount path [Backup-client]
+hostnode_backup_clientpath: /mnt/Backup@remote
 
 
 ## ###########################

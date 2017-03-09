@@ -33,10 +33,11 @@
   changed_when: false
 
 ## Show: LVM Physical Volume (PV) attributes 
-- name:  Show attributes of LVM-Physical volume (PV), if any
+- name:  Show attributes of LVM-Physical volumes (PV), if any
   become: yes
   command: pvdisplay -m -v
-  when: hostnode_lvm_enabled
+  when:
+    - hostnode_lvm_enabled or (ansible_host == hostnode_backupsrv)
   changed_when: false
 
 ## Show: ZFS and zpool status and attributes 
@@ -70,18 +71,18 @@
   shell: echo "== /etc/apt/apt.conf.d/20auto-upgrades ==" && cat /etc/apt/apt.conf.d/20auto-upgrades | grep -v "//\|#"; echo "== /etc/apt/apt.conf.d/50unattended-upgrades ==" && cat /etc/apt/apt.conf.d/50unattended-upgrades | grep -v "//\|#"
   changed_when: false
 
-## Show packages that are upgradable
+## Packages that are upgradable
 - name: List what is updateable/upgradable (sans held/ignored packages)
   shell:  apt list --upgradable 2>/dev/null | grep -v "{{ hostnode_upgrade_pckgsignore | d()}}" | grep -s "upgradable"
   register: cmd_aptlist_upgrades
   failed_when: cmd_aptlist_upgrades.stderr != ""
   changed_when: cmd_aptlist_upgrades.rc == 0
 
-## Show servers rebootability and upgradability status (+ dataenv status)
+## Servers rebootability/upgradability status (+ lvm/zfs/lxc/data/mmt/ppmmt/ommt)
 - debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_lvm_enabled,hostnode_zfs_enabled,hostnode_dataenv_enabled,hostnode_lxcenv_enabled
 
-## Show SSH-port info
-- debug: var=ansible_port,hostnode_sshport
+## SSH-port info
+#- debug: var=ansible_port,hostnode_sshport
 
-## Show Backup-related info
-- debug: var=hostnode_backupsrv,hostnode_backup_sshfssrv,hostnode_backup_mountpath
+## More Backup-system related info
+- debug: var=hostnode_backupsrv,hostnode_backup_backupdir,hostnode_backup_rootdir,hostnode_backup_sshfssrv,hostnode_backup_clientpath

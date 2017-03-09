@@ -55,7 +55,6 @@ hostnode_dataenv_enabled: False
 # KohaLXC/dataenv: dataset name(s) and fixes in source dir(s) for MMT-migration:
 #hostnode_dataenv_dataset: {}
 hostnode_dataenv_dataset:
-hostnode_dataenv_datasrc: "source"
 hostnode_dataenv_fixsource:
 
 # KohaLXC/dataenv+mmtenv: support creation of data+mmt-aware LXCS

@@ -220,8 +220,9 @@
 - name: backup - Correct perms for Backup(s) locations
   become: yes
   shell: |
-    chgrp -R koha {{ hostnode_backup_rootdir }}
-    MP={{item}} && ln -s -f {{ hostnode_backup_rootdir}}/$MP /${MP^}
+    chgrp koha {{ hostnode_backup_rootdir | d('/vol') }}/* && chmod g+w,o-rwx {{ hostnode_backup_rootdir | d('/vol') }}/*
+    MP={{item}} && [[ ! -L /${MP^} ]] && ln -s {{ hostnode_backup_rootdir}}/$MP /${MP^}
+    exit 0
   args:
     executable: /bin/bash
   with_items:
@@ -230,20 +231,21 @@
   when:
     - ansible_host == hostnode_backupsrv
     - hostnode_backup_rootdir is defined
+    - ("vol" in hostnode_backup_rootdir)
 
 ## Enable Backup-locations using 'sshfs' (e.g. from 'ansible_host' to backupsrv)
-# - step 1 / 5: Unmount any existing mount points..
+# - step 1 / 5: Unmount any existing mount points in client..
 - name: backup(sshfs) - Ensure backup/source is unmounted from backup/target
   become: yes
-  shell: mount | grep -q {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }} || exit 0 && umount {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
+  shell: mount | grep -q {{ hostnode_backup_clientpath | d('/mnt/Backup@remote') }} || exit 0 && umount {{ hostnode_backup_clientpath | d('/mnt/Backup@remote') }}
   when:
     - ansible_host != hostnode_backup_sshfssrv
 
-# - step 2 / 5: Ensure we have the mount point..
+# - step 2 / 5: Ensure we have the mount point in client..
 - name: backup(sshfs) - Ensure the mount-point for backup/target exist
   become: yes
   file: >
-    path="{{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}"
+    path="{{ hostnode_backup_clientpath | d('/mnt/Backup@remote') }}"
     state="directory"
     owner="{{ hostnode_operuser }}"
   when:
@@ -259,20 +261,21 @@
 
 # - step 4 / 5: Mount the remote backup..
 - name: backup(sshfs) - Mount remote backup/target location
-  shell: /usr/bin/sshfs -o idmap=user,reconnect {{ hostnode_operuser }}@{{ hostnode_backup_sshfssrv | d(hostnode_backupsrv) }}:/{{ hostnode_backup_targetdir | d('Backup') }}/ {{ hostnode_backup_mountpath | d('/mnt/Backup@remote') }}
+  shell: /usr/bin/sshfs -o reconnect {{ hostnode_operuser }}@{{ hostnode_backup_sshfssrv | d(hostnode_backupsrv) }}:{{ hostnode_backup_backupdir | d('Backup') }}/ {{ hostnode_backup_clientpath | d('/mnt/Backup@remote') }}
   when:
     - ansible_host != hostnode_backup_sshfssrv
 
 # - step 5 / 5: Synlink mounted backup target to proper filesystem location..
-- name: backup(sshfs) - Symlink for '/Backup' to mounted target location
-  become: yes
-  file: >
-    src="{{ hostnode_backup_mountpath }}"
-    dest="/Backup"
-    state="link"
-    force="yes"
-  when:
-    - ansible_host != hostnode_backup_sshfssrv
+# - TODO: Do we need this? (In the client better not have same folder as in server)
+#- name: backup(sshfs) - Symlink for '/Backup' to mounted target location
+#  become: yes
+#  file: >
+#    src="{{ hostnode_backup_clientpath | d('/mnt/Backup@remote') }}"
+#    dest="/Backup"
+#    state="link"
+#    force="yes"
+#  when:
+#    - ansible_host != hostnode_backup_sshfssrv
 
 ## Make sure hosts package cache is not stale
 # [KohaLXC]:srvenv

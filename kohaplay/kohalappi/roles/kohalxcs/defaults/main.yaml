@@ -31,9 +31,9 @@ kohalxcs_testvar: roles_kohalxcs_defaults_main.yaml
 # Local/management user home directory
 #local_home: "{{ lookup('env', 'HOME') }}"
 
-## #######################
-## Server: KohaLXC tooling
-## #######################
+## ###########################
+## Server/LXC: KohaLXC tooling
+## ###########################
 # - defaults in 'roles/common/defaults/main.yaml'
 # - override these in inventory/group+host_vars
 ## KohaLXC: install dir
@@ -44,12 +44,10 @@ kohalxcs_kohalxc_works: "{{ kohalxc_install }}"
 kohalxcs_kohalxc_rootdir: "{{ kohalxcs_kohalxc_works }}/KohaLXC"
 ## KohaLXC: tooldir
 kohalxcs_kohalxc_tooldir: "{{ kohalxcs_kohalxc_rootdir }}/kohatools"
-## KohaLXC: organization
-#kohalxcs_kohalxc_organization: "{{ kohalxc_organization }}"
 
 ## ############################
 ## KohaLXC/development (devenv)
-## ###########################
+## ############################
 ## KohaLXC/devenv: role default
 kohalxcs_devenv_enabled: true
 # Packages needed for dataenv setup/config/tools
@@ -61,8 +59,10 @@ kohalxcs_devenv_pckgs:
   - python2.7-minimal
 #  - python-mysqldb
 #hostnode_devenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
-#hostnode_kohalxc_devenv: "{{ kohalxc_devenv }}"
 
+## ############################
+## KohaLXC/server/host (srvenv)
+## ############################
 ## KohaLXC/srvenv: role default
 #hostnode_srvenv_enabled: true
 # Packages needed for srvenv setup/config/tools
@@ -73,11 +73,10 @@ kohalxcs_devenv_pckgs:
 #  - bridge-utils
 #  - mailutils
 #hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
-#hostnode_kohalxc_srvenv: "{{ kohalxc_srvenv }}"
 
 ## ##########################
 ## KohaLXC/datasets (dataenv)
-## #########################
+## ##########################
 ## KohaLXC/dataenv: role default
 kohalxcs_dataenv_enabled: false
 # Packages needed for dataenv setup/config/tools
@@ -97,16 +96,13 @@ kohalxcs_dataenv_pckgs:
 #hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
 # KohaLXC/dataenv: datasets name(s) for MMT-migration:
 #hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
-# KohaLXC/dataenv: dataset source dir(s) for MMT
-#hostnode_dataenv_datasrc: "source"
 
-## ##################################################
-## KohaLXC/MMT(PP/Origo): mmtenv+ppmmtenv+origommtenv
-## ##################################################
-# KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
-# - by default enable here if dataenv_dataset(s) have been defined in the host
-#hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
-# KohaLXC/mmtenv: PP/MMT-tool environment
+## #########################################################################
+## KohaLXC/MMT(PP/Origo): mmtenv=ppmmtenv+origommtenv conversions/migrations
+## #########################################################################
+# KohaLXC/(pp/o)mmtenv: support creation of data+MMT-aware LXCs
+
+# KohaLXC/ppmmtenv: PP/MMT-tool environment
 #hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
 kohalxcs_ppmmtenv_enabled: false
 ## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
@@ -124,7 +120,11 @@ kohalxcs_ppmmtenv_checkfinished: "{{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // 
 # KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
 #hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 
-# Koha/mmtenv: migration
+# KohaLXC/ommtenv: Origo/MMT-tool environment
+#hostnode_ommtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
+kohalxcs_ommtenv_enabled: false
+
+# Koha/mmtenv: migration phase of the comversion
 kohalxcs_mmtenv_enabled: false
 # Koha/mmtenv: migration (list datas that should be migrated)
 kohalxcs_mmtenv_migrateme: ''
@@ -133,9 +133,9 @@ kohalxcs_mmtenv_zebrarebuild: /usr/share/koha/bin/migration_tools/rebuild_zebra.
 kohalxcs_mmtenv_zebrarebuild_opts: -b -r -v -x
 #kohalxcs_mmtenv_zebrarebuild_opts: -b -r -v -x --offset 100000 --length 50000
 
-## ####################
-## Mysql/MariaDB-mdbenv
-## ####################
+## ######################
+## Mysql/MariaDB (mdbenv)
+## ######################
 kohalxcs_mdbenv_enabled: false
 # Packages needed for setup/config/tools
 kohalxcs_mdbenv_pckgs:
