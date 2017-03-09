@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <sourceDataDirectory>/home/kivilahtio/PallasProDumps/</sourceDataDirectory>
+    <preprocessedFolder>/home/kivilahtio/PallasProDumps/preprocessed/</preprocessedFolder>
+    <targetDataDirectory>/home/kivilahtio/PallasProDumps/target/</targetDataDirectory>
+    <openilsDirectory>/openils/</openilsDirectory>
+    <!--How many extra processes are launched? 0 disables multithreading -->
+    <threadCount>0</threadCount> <!-- PatronImportChain throws segmentation fault, so keep this disabled -->
+    <organization>pielinen</organization> <!-- Are we migrating 'pielinen' or 'jokunen' ? Can't tell which one is more trouble...-->
+
+    <!-- Debug related parameters, set to -1 if no debugging required -->
+    <DEBUGAuthoritiesCountLimit>-7000</DEBUGAuthoritiesCountLimit>
+
+    <!-- Do we separate volatile objects to a volatile-file, or push them to Evergreen database, org_unit "KONVERSIO"? -->
+    <MigrateVolatile>1</MigrateVolatile> <!--  valid settings are [ 0 , 1 ] -->
+
+    <!-- Batch management -->
+    <ChunkSize>5000</ChunkSize>   <!-- How many records does each licmarca-chunk contain? Maximum chunks/sourceFile = 10000 -->
+    <StartingChunk>0</StartingChunk>    <!-- From which chunk to start? -->
+    <EndingChunk>-1</EndingChunk>     <!-- To which chunk to end, exclusive! Chunk you set won"t get processed. -1 to process all. -->
+    <!-- Component parts will claim their docId"s starting  from this value, so it must be one higher than the highest docId in importable licmarca.kir -->
+    <!-- If set to 0, MasterMigrationTool will find the biggest docId from the sorted-by-docid licmarca.kir. -->
+
+    <!-- Should we read external repositories such as ONKI, YSA, KAUNOKKI etc. -->
+    <LoadExternalRepositories>0</LoadExternalRepositories>
+    
+    <BibliosImportChain>
+
+        <!-- Program phase control variables -->
+        <!-- Processing datasets for database INSERTion -->
+        <doRun>0</doRun>
+        <PreProcess>0</PreProcess>
+        <BuildMARC>0</BuildMARC>
+        <RunUSEMARCON>0</RunUSEMARCON>
+
+        <NextFreeDocId>100000</NextFreeDocId>
+
+        <UsemarconLog>logs/usemarcon.log</UsemarconLog>
+    </BibliosImportChain>
+
+    <ItemsImportChain>
+        <!-- Processing datasets for database INSERTion -->
+        <doRun>0</doRun>
+        <PreProcess>0</PreProcess>
+        <BuildItems>0</BuildItems>
+    </ItemsImportChain>
+
+    <HoldsImportChain>
+        <doRun>0</doRun>
+        <PreProcess>0</PreProcess>
+        <BuildHolds>0</BuildHolds>
+    </HoldsImportChain>
+
+    <FinesImportChain>
+        <doRun>0</doRun>
+        <PreProcess>0</PreProcess>
+        <Build>0</Build>
+    </FinesImportChain>
+
+    <PatronsImportChain>
+        <!-- Processing datasets for database INSERTion -->
+        <doRun>0</doRun>
+        <PreProcess>0</PreProcess>
+        <BuildPatrons>0</BuildPatrons>
+	<!-- Should we censor the data or not? Used by the Patron-object . -->
+        <Censor>1</Censor>
+        <FreeSSNStoreIndex>120000</FreeSSNStoreIndex>
+    </PatronsImportChain>
+
+    <CheckOutsImportChain>
+        <!-- Processing datasets for database INSERTion -->
+        <doRun>1</doRun>
+        <PreProcess>1</PreProcess>
+        <BuildCheckOuts>1</BuildCheckOuts>
+    </CheckOutsImportChain>
+
+    <HistoryImportChain>
+        <!-- Processing datasets for database INSERTion -->
+        <doRun>0</doRun>
+        <PreProcess>0</PreProcess>
+        <BuildHistory>0</BuildHistory>
+    </HistoryImportChain>
+
+    <PreProcess>
+        <CharacterEncodings>
+            <DEFAULT>LATIN1</DEFAULT>
+            <lilcust.kir>LATIN1</lilcust.kir>
+            <licmarca.kir>ISO_6937-2</licmarca.kir>
+            <licinfoa.kir>ISO_6937-2</licinfoa.kir>
+            <licauthp.kir>ISO_6937-2</licauthp.kir>
+            <licauthc.kir>ISO_6937-2</licauthc.kir>
+            <licauths.kir>ISO_6937-2</licauths.kir>
+        </CharacterEncodings>
+    </PreProcess>
+
+    <SerialsImportChain>
+        <doRun>0</doRun>
+        <!-- <PreProcess>1</PreProcess> PreProcessing is performed in BibliosImportChain-->
+        <serialMotherFolder>Serials/</serialMotherFolder>
+        <serialMotherFile>serialmothers.marc</serialMotherFile>
+        <serialIssueFile>serials.marc</serialIssueFile>
+
+        <serialItemFolder>SerialItems/</serialItemFolder>
+        <serialItemFile>serials.item</serialItemFile>
+    </SerialsImportChain>
+
+</config>
