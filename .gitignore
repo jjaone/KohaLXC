@@ -21,6 +21,8 @@ callback_plugins/
 ## koha/mmt
 *.komodoproject
 *.metadata/
+.includepath
+.project
 
 ## Byte-compiled / optimized / DLL files
 __pycache__/
