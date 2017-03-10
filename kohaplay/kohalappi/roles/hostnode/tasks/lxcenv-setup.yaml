@@ -44,26 +44,35 @@
     - ansible/facts.d
 
 ## LXC-containers:
-# - retrieve list of all named LXCs to be provisioned
-- include_vars: lxcs/all_lxcs.yaml name=lxc_names
-#- debug: var=lxc_names
+# - retrieve (authorative) list of LXC names to be provisioned
+- include_vars: lxcs/all_lxcs.yaml name=lxcs
+- debug: var=lxcs
 # - retrieve defaults from 'roles/<role>/vars/lxcs/default'
 - include_vars: lxcs/default/config/default.yaml
 # LXCs: to be provisioned/running in inventory host in: $KOHALXC_SETUP
-# - 'kldev_dmdbks', 'kldev_mdbks', 'kltest_dmdb', 'kltest_mdbks'
-- include_vars: file=lxcs/kldev_dmdbks.weblxc/config/kldev_dmdbks.yaml name=kldev_dmdbks
-- include_vars: file=lxcs/kltest_dmdb.mdblxc/config/kltest_dmdb.yaml name=kltest_dmdb
-- include_vars: file=lxcs/kltest_mdbks.mdblxc/config/kltest_mdbks.yaml name=kltest_mdbks
+# - use what we have in 'lxc_names':
+- name: lxcenv - Read definitions for all named LXCs
+  include_vars:
+    file: "lxcs/{{ item }}/config/{{ item.split('.')[0] }}.yaml"
+    name: "{{ item.split('.')[0] }}"
+  with_items: lxcs.lxcs_names | d()
+  when:
+    - item is defined and item != ''
+    #- (item.split('.')[1] in inventory_hostname)
+#- debug: var=hostvars[inventory_hostname]
+# - manually like this:
+#- include_vars: file=lxcs/kldev_dmdbks.weblxc/config/kldev_dmdbks.yaml name=kldev_dmdbks
+#- include_vars: file=lxcs/kltest_dmdb.mdblxc/config/kltest_dmdb.yaml name=kltest_dmdb
+#- include_vars: file=lxcs/kltest_mdbks.mdblxc/config/kltest_mdbks.yaml name=kltest_mdbks
 
-## LXC-containers: factize defined LXCs
-- name: lxcenv - Collect all defined LXCs
+## LXC-containers: Combine defined LXCs as fact list
+# - if 'lxcs.lxcs_names' doesn't have any of these, the d() takes care of ignoring it
+- name: lxcenv - Combine all read LXC definitions
   set_fact:
     hostnode_lxcs:
-      - "{{ kldev_dmdbks }}"
-      - "{{ kltest_dmdb }}"
-# Comment out our 'testikoha' to protect it from being changed or deleted
-# - 2017-03-08: Keep this out from or tool-chain during 'testing' phase
-#      - "{{ kltest_mdbks }}"
+      - "{{ kldev_dmdbks|d() }}"
+      - "{{ kltest_dmdb|d() }}"
+      - "{{ kltest_mdbks|d() }}"
 
 #- debug: var=hostnode_lxcs,hostnode_kohalxc_tooldir,kohalxc_tooldir
 ## Extract the env enablements from lxc.group's in container_config
@@ -109,9 +118,40 @@
     - item.lxc is defined and item.lxc.name is defined
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
+## Get current date: yyyymmdd
+#- set_fact: kohalxc_date_full="{{lookup('pipe','date +%Y%m%d%H%M%S')}}"
+- set_fact: kohalxc_date_yyyymmdd="{{lookup('pipe','date +%Y%m%d')}}"
+## Get current date: day-of-week:
+- set_fact: kohalxc_date_dow="{{lookup('pipe','date +%u')}}"
+- debug: var=kohalxc_date_yyyymmdd,kohalxc_date_dow
+
+## Backup all managed LXCs now that they are stopped according to backup-schedule
+# - weekly for now: day-of-week == 5 (Friday)
+- name: lxcenv+backup - Weekly tar/rsync backup of managed LXC-containers to Backup-server
+  become: yes
+  environment:
+    KOHALXC_NAME: "{{ item.lxc.name }}"
+    KOHALXC_BACKUP_NAME: "lxcenv-backup_{{ kohalxc_date_yyyymmdd }}"
+  shell: |
+    [[ "{{ansible_host}}" == "{{hostnode_backupsrv}}" ]] && sudo su -l {{ hostnode_operuser }} -c "mkdir -p {{ hostnode_backup_backupdir }}/${KOHALXC_BACKUP_NAME}"
+    tar --numeric-owner -czf /tmp/${KOHALXC_NAME}.{{item.net.domain}}.tar.gz /var/lib/lxc/${KOHALXC_NAME} &&
+    [[ "{{ansible_host}}" != "{{hostnode_backupsrv}}" ]] && sudo su -l {{ hostnode_operuser }} -c "scp /tmp/${KOHALXC_NAME}.{{ item.net.domain }}.tar.gz {{ hostnode_operuser }}@{{ hostnode_backupsrv }}:{{ hostnode_backup_backupdir }}/${KOHALXC_BACKUP_NAME}/." ||
+    cp -v /tmp/${KOHALXC_NAME}.{{ item.net.domain }}.tar.gz {{ hostnode_backup_backupdir }}/${KOHALXC_BACKUP_NAME}/.;
+    rm -f -r /tmp/${KOHALXC_NAME}.{{item.net.domain}}.tar.gz
+  #export CN=koha_mdbks316 && kohalxc -n ${CN:-default} stop && sudo tar --numeric-owner -czf /tmp/${CN}.tar.gz /var/lib/lxc/${CN} && sudo rsync -avzhe ssh --progress --remove-source-files /tmp/${CN}.tar.gz jukka@roi2.netum.fi:/Backup/tes
+  args:
+    executable: /bin/bash
+  with_items: hostnode_lxcs | d()
+  when:
+    - (kohalxc_date_dow|int == 5)
+    - item is defined and item.net is defined
+    - item.net.domain is defined and item.net.domain in inventory_hostname
+    - item.lxc is defined and item.lxc.name is defined
+    - hostnode_backupsrv is defined and hostnode_backup_backupdir is defined
+
 - debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_kohalxc_works
-##  Use this to resolve need to manual mounts of devenv/convlog dirs
-# - for browsing and migration/LXCs (non 'dataenv' hostnodes)
+##  Use this to resolve need for manually mount devenv/convlog dirs
+# - for browsing and migration/LXCs (in non 'dataenv' hostnodes)
 - name: non-dataenv(sshfs) - Mount datenv hosts folders for 'kohadata'
   #become: yes
   environment:

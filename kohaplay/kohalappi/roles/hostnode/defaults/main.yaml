@@ -129,14 +129,16 @@ hostnode_origommtenv_importchains:
 hostnode_backup_enabled: false
 # KohaLXC/backup: server
 #hostnode_backupsrv:
-# KohaLXC/backup(sshfs): server
+# KohaLXC/backup(sshfs): backup server that support sshfs mounts to clients
 hostnode_backup_sshfssrv: "{{ hostnode_backupsrv }}"
-# KosaLXC/backup+data:  root dir [Backup-server]
+# KohaLXC/backup+data: root dir [Backup-server]
 hostnode_backup_rootdir: /vol
-# KosaLXC/backup+data:  backup-dir (symlinked) [Backup-server]
+# KohaLXC/backup+data: backup-dir (symlinked) [Backup-server]
 hostnode_backup_backupdir: /Backup
-# KosaLXC/backup:  mount path [Backup-client]
+# KohaLXC/backup: mount path [Backup-client]
 hostnode_backup_clientpath: /mnt/Backup@remote
+# KohaLXC/backup: date specs to make backup [Backup-client]
+hostnode_backup_interval: 7
 
 
 ## ###########################

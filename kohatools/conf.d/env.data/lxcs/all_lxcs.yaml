@@ -1,7 +1,6 @@
 ---
 lxcs_names:
-#  - koha_mdbks316.weblxc
   - kldev_dmdbks.weblxc
   - kltest_dmdb.mdblxc
-  - kltest_mdbks.mdblxc
+#  - kltest_mdbks.mdblxc
 
