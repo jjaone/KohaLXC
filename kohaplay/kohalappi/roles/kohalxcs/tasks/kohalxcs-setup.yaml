@@ -100,8 +100,6 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- fail:
-
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
 - name: mmtenv - Symlink conversion main script in container HOME/bin
   file: >
@@ -284,8 +282,6 @@
     - kohalxcs_mmtenv_enabled
     - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
     - ('biblios' in kohalxcs_ppmmtenv_importchains|lower)
-
-- fail:
 
 - debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index

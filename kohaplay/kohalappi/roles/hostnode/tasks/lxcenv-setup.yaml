@@ -143,7 +143,7 @@
     executable: /bin/bash
   with_items: hostnode_lxcs | d()
   when:
-    - (kohalxc_date_dow|int == 5)
+    - hostnode_backup_enabled and (kohalxc_date_dow|int == 5)
     - item is defined and item.net is defined
     - item.net.domain is defined and item.net.domain in inventory_hostname
     - item.lxc is defined and item.lxc.name is defined
