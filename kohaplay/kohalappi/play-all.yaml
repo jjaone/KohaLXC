@@ -7,25 +7,25 @@
 # Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
 # License: GNU General Public License version 3.
 # 
-# Description/notes/usage:
-# - requires Ansible version 2.2.0 (should be in /usr/local/bin/ansible using)
+# Description (usage):
+# - requires Ansible version 2.2.0+ (should be in /usr/local/bin/ansible)
 # - config file: $KOHALXC_ANSIBLE_PLAYBOOKS/ansible.cfg
-# - inventories: e.g -i inventory/localdev (set as default in 'ansible.cfg')
+# - inventories: -i inventory/{localdev,development,testing,preprod,production}
 #
-# [TODO: following gguide is outdated and should be updated]
+# [TODO/FIX: following guide is outdated and should be updated]
 #  1a) Basic use:
 #   "cd $KOHALXC_ANSIBLE_PLAYBOOKS; ansible-playbook play-all.yaml"
 #  1b) Basic use (sub-shell in $KOHALXC_ANSIBLE_PLAYBOOKS):
 #     (cd $KOHALXC_ANSIBLE_PLAYBOOKS; ansible-playbook play-all.yaml)
-#  2a) Run for "hostnode" srvs only (needs sudo-pass dev/host: 'kohadev@kohahost'):
+#  2a) Run "hostnode" srvs only (needs sudo-pass dev/host: 'kohadev@kohahost'):
 #    (cd $KOHALXC_ANSIBLE_PLAYBOOKS; \
 #     ansible-playbook -K -l hostnode play-all.yaml)"
 #  2b) Run for 'kohalxs' only (needs sudo-pass for dev/lxc: 'kohalxc_operuser@kohalxc_name'):
 #    (cd $KOHALXC_ANSIBLE_PLAYBOOKS; \
 #     ansible-playbook -K -l kohalxcs play-all.yaml)"
-# Also ad-hoc ansible commands work (cd here):
-#  3a) ansible -i localdev --vault-password-file .vault.pass.txt -m ping all
-#  3b) ansible -i testing --vault-password-file .vault.pass.txt -m ping hostnode
+# Also ad-hoc ansible commands work (in $KOHALXC_ANSIBLE_PLAYBOOKS):
+#  3a) ansible -i inventory/localdev --vault-password-file .vault.pass.txt -m ping all
+#  3b) ansible -i inventory/testing --vault-password-file .vault.pass.txt -m ping
 # ############################################################################
 
 ## Include Koha-hosts server plays: LXC-hostnodes with dev/srv/web/mdb/dataenv(s)

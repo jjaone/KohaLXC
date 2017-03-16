@@ -203,6 +203,12 @@ kohalxcs_kohaenv_staff_plugins: /var/lib/koha/plugins/
 kohalxcs_kohaenv_staff_errorlog: /var/log/koha/koha-error_log
 kohalxcs_kohaenv_staff_accesslog: /var/log/koha/koha-access_log
 
+## Koha/webapp: messaging (message_queue: emails and SMS etc,)
+#kohalxcs_kohaenv_messaging_smsuser:
+#kohalxcs_kohaenv_messaging_smspass:
+kohalxcs_kohaenv_messaging_smsreporturl: "https://{{ kohalxcs_kohaenv_srvname}}/api/v1/{messagenumber}/report/{{ kohalxcs_kohaenv_messaging_smsprovider | d('smsprovider') }}"
+kohalxcs_kohaenv_messaging_smssource: "{{ kohalxcs_organization | d(kohalxc_organization) }}"
+
 ## ###########################
 ## Server: updates/reboots/nic
 ## ###########################

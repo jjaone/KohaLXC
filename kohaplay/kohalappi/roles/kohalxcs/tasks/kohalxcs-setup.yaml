@@ -88,6 +88,19 @@
     - bin
     - log
 
+## Use templatized koha-conf.xml to configure this Koha-instance
+- name: kohaenv- Templitized Koha configuration
+  #become: yes
+  template: >
+    src="files/kohaenv/koha-conf.xml.j2"
+    dest="/etc/koha/koha-conf.xml"
+    mode="u=rw,g=r,o=r"
+    backup="yes"
+  when:
+    - kohalxcs_kohaenv_enabled
+
+- fail:
+
 ## Push/copy 'run_conversion' script to ConversionTools
 # - TODO: mode="u+rwx,g+rx,o-rwx"
 - name: mmtenv - Push containerized conversion main script to ConversionTools

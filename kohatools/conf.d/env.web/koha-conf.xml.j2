@@ -1,0 +1,238 @@
+<!-- Koha Main Configuration
+Koha/Lappi: koha-conf.xml
+{{ ansible_managed | comment('xml') }}
+-->
+
+<yazgfs>
+<!-- [scheme:]host[:port][/databaseName] -->
+<!-- scheme: tcp, ssl, unix, http, sru -->
+<!-- can run all servers on tcp, but the unix socket is faster -->
+
+<listen id="biblioserver" >unix:/var/run/koha/zebradb/bibliosocket</listen>
+<listen id="authorityserver" >unix:/var/run/koha/zebradb/authoritysocket</listen>
+<!-- uncomment these lines and comment out the above if running on MSWin32 -->
+<!--
+<listen id="biblioserver" >tcp:localhost:9998/bibliosocket</listen>
+<listen id="authorityserver" >tcp:localhost:9999/authoritysocket</listen>
+-->
+
+<!-- Uncomment the following entry if you want to run the public Z39.50 server.
+    Also uncomment the <server> and <serverinfo> sections for id 'publicserver' 
+    under PUBLICSERVER'S BIBLIOGRAPHIC RECORDS title-->
+<!--
+<listen id="publicserver" >tcp:@:9998</listen>
+-->
+
+<!-- Settings for special biblio server instance for PazPar2.
+     Because PazPar2 only connects to a Z39.50 server using TCP/IP,
+     it cannot use the Unix-domain socket that biblioserver uses.
+     Therefore, a custom server is defined. -->
+<!--
+<listen id="mergeserver">tcp:@:11001</listen>
+<server id="mergeserver"  listenref="mergeserver"> 
+    <directory>/var/lib/koha/zebradb/biblios</directory>
+    <config>/etc/koha/zebradb/zebra-biblios-dom.cfg</config>
+    <cql2rpn>/etc/koha/zebradb/pqf.properties</cql2rpn>
+</server>
+-->
+
+<!-- BIBLIOGRAPHIC RECORDS -->
+<server id="biblioserver"  listenref="biblioserver"> 
+    <directory>/var/lib/koha/zebradb/biblios</directory>
+    <config>/etc/koha/zebradb/zebra-biblios-dom.cfg</config>
+    <cql2rpn>/etc/koha/zebradb/pqf.properties</cql2rpn>
+    <xi:include href="/etc/koha/zebradb/retrieval-info-bib-dom.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="/etc/koha/zebradb/explain-biblios.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+</server>
+<serverinfo id="biblioserver">
+        <ccl2rpn>/etc/koha/zebradb/ccl.properties</ccl2rpn>
+        <user>kohauser</user>    
+        <password>zebrastripes</password>
+</serverinfo>
+
+<!-- AUTHORITY RECORDS -->
+<server id="authorityserver"  listenref="authorityserver" >
+    <directory>/var/lib/koha/zebradb/authorities</directory>
+    <config>/etc/koha/zebradb/zebra-authorities-dom.cfg</config>
+    <cql2rpn>/etc/koha/zebradb/pqf.properties</cql2rpn>
+    <xi:include href="/etc/koha/zebradb/retrieval-info-auth-dom.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="/etc/koha/zebradb/explain-authorities.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+</server>
+<serverinfo id="authorityserver">
+    <ccl2rpn>/etc/koha/zebradb/ccl.properties</ccl2rpn>
+    <user>kohauser</user>
+    <password>zebrastripes</password>
+</serverinfo>
+
+<!-- PUBLICSERVER'S BIBLIOGRAPHIC RECORDS -->
+<!--
+<server id="publicserver"  listenref="publicserver"> 
+    <directory>/var/lib/koha/zebradb/biblios</directory>
+    <config>/etc/koha/zebradb/zebra-biblios-dom.cfg</config>
+    <cql2rpn>/etc/koha/zebradb/pqf.properties</cql2rpn>
+    <xi:include href="/etc/koha/zebradb/retrieval-info-bib-dom.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+    <xi:include href="/etc/koha/zebradb/explain-biblios.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+</server>
+<serverinfo id="publicserver">
+        <ccl2rpn>/etc/koha/zebradb/ccl.properties</ccl2rpn>
+        <user>kohauser</user>    
+        <password>zebrastripes</password>
+</serverinfo>
+-->
+
+<!-- ADDITIONAL KOHA CONFIGURATION DIRECTIVE -->
+<!-- db_scheme should follow the DBD driver name --> 
+<!-- the DBD drivers supported by Koha are mysql and Pg -->
+<!-- port info: mysql:3306 Pg:5432 (5433 on Debian) -->
+<config>
+ <db_scheme>mysql</db_scheme>
+ <database>kohadata</database>
+ <hostname>localhost</hostname>
+ <port>3306</port>
+<!-- <mysql_socket>__put your non-default mysql/mariadb socket path here. eg /tmp/mysqld.sock__</mysql_socket> -->
+ <user>koha</user>
+ <pass>koha</pass>
+ <biblioserver>biblios</biblioserver>
+ <biblioservershadow>1</biblioservershadow>
+ <authorityserver>authorities</authorityserver>
+ <authorityservershadow>1</authorityservershadow>
+ <pluginsdir>/var/lib/koha/plugins</pluginsdir>
+ <enable_plugins>0</enable_plugins>
+ <intranetdir>/usr/share/koha/intranet/cgi-bin</intranetdir>
+ <opacdir>/usr/share/koha/opac/cgi-bin/opac</opacdir>
+ <opachtdocs>/usr/share/koha/opac/htdocs/opac-tmpl</opachtdocs>
+ <intrahtdocs>/usr/share/koha/intranet/htdocs/intranet-tmpl</intrahtdocs>
+ <includes>/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/includes/</includes>
+ <logdir>/var/log/koha</logdir>
+ <docdir>/usr/share/koha/doc</docdir>
+ <backupdir>/var/spool/koha</backupdir>
+ <!-- Enable the two following to allow superlibrarians to download
+      database and configuration dumps (respectively) from the Export
+      tool -->
+ <backup_db_via_tools>0</backup_db_via_tools>
+ <backup_conf_via_tools>0</backup_conf_via_tools>
+ <pazpar2url>http://koha_mdbks316:11002/search.pz2</pazpar2url>
+ <install_log>/usr/share/koha/misc/koha-install-log</install_log>
+ <useldapserver>0</useldapserver><!-- see C4::Auth_with_ldap for extra configs you must add if you want to turn this on -->
+ <zebra_bib_index_mode>dom</zebra_bib_index_mode>
+ <zebra_auth_index_mode>dom</zebra_auth_index_mode>
+ <zebra_lockdir>/var/lock/koha/zebradb</zebra_lockdir>
+ <queryparser_config>/etc/koha/searchengine/queryparser.yaml</queryparser_config>
+ <log4perl_conf>/etc/koha/log4perl.conf</log4perl_conf>
+
+ <!-- true type font mapping accoding to type from $font_types in C4/Creators/Lib.pm -->
+ <ttf>
+    <font type="TR" >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSerif.ttf</font>
+    <font type="TB" >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSerif-Bold.ttf</font>
+    <font type="TI" >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSerif-Italic.ttf</font>
+    <font type="TBI">/usr/share/fonts/truetype/ttf-dejavu/DejaVuSerif-BoldItalic.ttf</font>
+    <font type="C"  >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf</font>
+    <font type="CB" >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono-Bold.ttf</font>
+    <font type="CO" >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono-Oblique.ttf</font>
+    <font type="CBO">/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono-BoldOblique.ttf</font>
+    <font type="H"  >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf</font>
+    <font type="HO" >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans-Oblique.ttf</font>
+    <font type="HB" >/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans-Bold.ttf</font>
+    <font type="HBO">/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans-BoldOblique.ttf</font>
+ </ttf>
+
+ <testservers>
+    <opac>
+        <base_url>127.0.1.1:80</base_url>
+    </opac>
+    <staff>
+        <base_url>127.0.1.1:8080</base_url>
+    </staff>
+    <rest>
+        <base_url>http://localhost:444</base_url>
+    </rest>
+ </testservers>
+
+ <smsProviders>
+    <labyrintti>
+        <!-- Login details for SMS Gateway service
+        There are 3 options to configure this, 
+        first one is single branch login. This uses branchcode for defining client
+        <branchcode>
+            <user></user>
+            <passwd></passwd>
+        </branchcode>-->
+        <!-- Second one is library group login. This uses 3 first chars of branchcode for defining client
+        <branchprefix>
+            <user></user>x
+            <passwd></passwd>
+        </branchprefix>-->
+        <!-- And the third one is shared login for all messages.-->
+        <user>{{ kohalxcs_kohaenv_messaging_smsuser | d('smsuser') }}</user>
+        <passwd>{{ kohalxcs_kohaenv_messaging_smspass | d('smspass') }}</passwd>
+        <!-- Report URL is the page where your SMS Gateway provider will send a report
+             about the delivery of the message. Leave {messagenumber} as it is; it will
+             be replaced by message_id in your driver.
+
+             With REST API, it should be
+             http://mydomain.com/api/v1/messages/{messagenumber}/report/_your_gateway_
+                                                                                    -->
+        <reportUrl>{{ kohalxcs_kohaenv_messaging_smsreporturl | d() }}</reportUrl>
+        <!-- Use UTF-16. Note: with this encoding, maxlength of sms = 70 chars
+            To use UTF-16 when needed: yes
+            To disable and use GSM 03.38: leave blank -->
+        <Unicode></Unicode>
+        <sourceName>{{ kohalxcs_kohaenv_messaging_smssource | d('smssource') }}</sourceName> <!-- Displays as sender name in phones. Maxlength 11 chars -->
+    </labyrintti>
+    <arena>
+        <!-- Login details for SMS Gateway service -->
+        <user></user>
+        <passwd></passwd>
+        <!-- Send messages with separated billing. Uses 3 first chars of branchcode for defining clientid -->
+        <branchcode>
+            <clientid></clientid>
+        </branchcode>
+        <!-- Report URL is the page where your SMS Gateway provider will send a report
+             about the delivery of the message. Leave {messagenumber} as it is; it will
+             be replaced by message_id in your driver.
+
+             With REST API, it should be
+             http://mydomain.com/api/v1/messages/{messagenumber}/report/_your_gateway_
+                                                                                    -->
+        <reportUrl></reportUrl>
+        <!-- Use UTF-16. Note: with this encoding, maxlength of sms = 70 chars
+            To use UTF-16 when needed: yes
+            To disable and use GSM 03.38: leave blank -->
+        <Unicode></Unicode>
+    </arena>
+ </smsProviders>
+ <pos>
+    <CPU>
+        <!-- Delivered by CPU: -->
+        <source></source>                           <!-- Source id -->
+        <secretKey></secretKey>                     <!-- Secret key for generating SHA-256 hash -->
+        <url></url>                                 <!-- Address to the cash register server -->
+
+        <!-- Koha settings -->
+        <mode></mode>                               <!-- Use 2 for synchronized mode -->
+        <notificationAddress></notificationAddress> <!-- https://server/api/v1/pos/cpu/{invoicenumber}/report -->
+        <!-- Replace "server" with your server address, but keep {invoicenumber} as it is (it will be converted later into real id) -->
+
+        <!-- SSL certificates -->
+        <ssl_cert></ssl_cert>                       <!-- SSL certificate path -->
+        <ssl_key></ssl_key>                         <!-- SSL key path -->
+        <ssl_ca_file></ssl_ca_file>                 <!-- CA certificate path -->
+  </CPU>
+ </pos>
+ <online_payments>
+    <CPU>
+        <!-- Delivered by CPU: -->
+        <source></source>                           <!-- Source id -->
+        <secretKey></secretKey>                     <!-- Secret key for generating SHA-256 hash -->
+        <url></url>                                 <!-- Address to the online payments server -->
+
+        <mode></mode>                               <!-- Use 3 for online payments -->
+
+        <!-- Replace "server" with your server address, but keep {invoicenumber} as it is (it will be converted later into real id) -->
+        <notificationAddress></notificationAddress> <!-- https://server/api/v1/pos/cpu/{invoicenumber}/report -->
+        <returnAddress></returnAddress> <!-- Where to redirect user from CPU online shop after the payment is complete?
+                                            e.g. https://server/cgi-bin/koha/opac-paycollect.pl -->
+    </CPU>
+ </online_payments>
+</config>
+</yazgfs>
