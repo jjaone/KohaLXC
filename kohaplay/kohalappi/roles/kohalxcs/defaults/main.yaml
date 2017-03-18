@@ -159,6 +159,9 @@ kohalxcs_kohaenv_pckgs:
   - openssl
   - apache2
   - dnsutils
+  - mailutils
+  - postfix
+  - libsasl2-modules
 # Koha/webapp: server name (DNS)
 kohalxcs_kohaenv_srvname: "{{ hostnode_kohaenv_srvname }}"
 # Koha/webapp: server admin (email)

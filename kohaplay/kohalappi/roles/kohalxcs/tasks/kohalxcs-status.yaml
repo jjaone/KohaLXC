@@ -40,8 +40,11 @@
 
 # Load kohalxcs environment defaults as localized ansible facts
 - name: status - Reload default/custom facts (ansible_local.kohalxcs)
-  setup: filter=ansible_local
+  setup: >
+    fact_path="{{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{inventory_hostname}}/config"
+    filter="ansible_local"
 #- debug: var=ansible_host,inventory_hostname,ansible_local.kohalxcs.default,ansible_local.kohalxcs.default.devenv_enabled,ansible_local.kohalxcs.default.dataenv_enabled,ansible_local.kohalxcs.default.mmtenv_enabled,ansible_local.kohalxcs.default.mdbenv_enabled,ansible_local.kohalxcs.default.kohaenv_enabled
+- debug: var=ansible_local
 - debug: var=ansible_host,inventory_hostname,kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
 
 ## Extract the environment enablements from lxc.group(s)
@@ -56,22 +59,3 @@
 #- debug: var=hostnode_srvname
 #- debug: var=hostnode_lxcs
 #- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled
-
-
-## [TODO]: Do we need the below here? ##
-
-## List all the containers: lxc-ls
-#- name: List all containers in kohahosts_srvname={{ kohahosts_srvname }}
-#  become: yes
-#  command: lxc-ls -f
-
-##########################
-## Get the container IPs
-##########################
-#- name: Get LXC-containers info now that IPs should be available for {{ ansible_host }}
-#  become: yes
-#  lxc_container:
-#    name: "{{ item.key }}"
-#  with_dict: "{{ kohahosts_lxcs }}" 
-#  register: lxcs_info
-#  when: kohahosts_lxcs is defined

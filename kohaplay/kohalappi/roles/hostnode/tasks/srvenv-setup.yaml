@@ -22,9 +22,9 @@
 # - server monitoring and backups
 # ##############################################################################
 
-## Prevent install dialogs for select packages using debconf
-# [KohaLXC]: srvenv: dialogless package installation (if needed)
-- name: Prevent install dialogs for packages using debconf-set-selections
+## Pre-seed debconf (to prevent install dialogs) for select packages
+# [KohaLXC]: srvenv: preseeded and dialogless installation (for listed pckgs)
+- name: For select packages 'debconf' pre-seed installation settings
   become: yes
   debconf:
     name: "{{ item.name }}"

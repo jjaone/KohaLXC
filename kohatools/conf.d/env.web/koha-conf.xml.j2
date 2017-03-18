@@ -86,12 +86,12 @@ Koha/Lappi: koha-conf.xml
 <!-- port info: mysql:3306 Pg:5432 (5433 on Debian) -->
 <config>
  <db_scheme>mysql</db_scheme>
- <database>kohadata</database>
- <hostname>localhost</hostname>
- <port>3306</port>
+ <database>{{ kohalxcs_mdbenv_kohadb | d('kohadata') }}</database>
+ <hostname>{{ kohalxcs_mdbenv_dbhost | d('localhost') }}</hostname>
+ <port>{{ kohalxcs_mdbenv_dbport | d(3306) }}</port>
 <!-- <mysql_socket>__put your non-default mysql/mariadb socket path here. eg /tmp/mysqld.sock__</mysql_socket> -->
- <user>koha</user>
- <pass>koha</pass>
+ <user>{{ kohalxcs_mdbenv_kohauser }}</user>
+ <pass>{{ kohalxcs_mdbenv_kohapass }}</pass>
  <biblioserver>biblios</biblioserver>
  <biblioservershadow>1</biblioservershadow>
  <authorityserver>authorities</authorityserver>
@@ -111,7 +111,7 @@ Koha/Lappi: koha-conf.xml
       tool -->
  <backup_db_via_tools>0</backup_db_via_tools>
  <backup_conf_via_tools>0</backup_conf_via_tools>
- <pazpar2url>http://koha_mdbks316:11002/search.pz2</pazpar2url>
+ <pazpar2url>http://localhost:11002/search.pz2</pazpar2url>
  <install_log>/usr/share/koha/misc/koha-install-log</install_log>
  <useldapserver>0</useldapserver><!-- see C4::Auth_with_ldap for extra configs you must add if you want to turn this on -->
  <zebra_bib_index_mode>dom</zebra_bib_index_mode>

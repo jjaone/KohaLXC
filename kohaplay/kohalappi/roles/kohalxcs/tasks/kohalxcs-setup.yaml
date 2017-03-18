@@ -38,9 +38,23 @@
     kohalxcs_kohaenv_srvname: "{{ lxcn.kohaenv_srvname | d() }}" 
 #- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_origommtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
 
+## Pre-seed debconf (to prevent install dialogs) for select packages
+- name: koha - For select packges 'debconf' pre-seed installation settings
+  become: yes
+  debconf:
+    name: "{{ item.name }}"
+    setting: "{{ item.name }}/{{ item.q }}"
+    vtype: "{{ item.type }}"
+    value: "{{ item.value}}"
+  with_items:
+    - { name: postfix, q: mailname, type: string, value: "{{ kohalxcs_kohaenv_srvname }}" }
+    - { name: postfix, q: main_mailer_type, type: string, value: "Internet Site" }
+  when:
+    - kohalxcs_kohaenv_enabled
+
 #- debug: var=kohalxcs_devenv_pckgs,kohalxcs_dataenv_pckgs
 ## Ensure {dev,data}env.* pckgs are installed (if respective env is enabled)
-- name: devenv/dataenv - Ensure dev + data environment packages are installed
+- name: dev+data+koha - Ensure all needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -50,9 +64,64 @@
   with_flattened:
     - "{{ (kohalxcs_devenv_enabled) | ternary(kohalxcs_devenv_pckgs, '') }}"
     - "{{ (kohalxcs_dataenv_enabled) | ternary(kohalxcs_dataenv_pckgs, '' ) }}"
+    - "{{ (kohalxcs_kohaenv_enabled) | ternary(kohalxcs_kohaenv_pckgs, '' ) }}"
   when:
-    - kohalxcs_devenv_enabled or kohalxcs_dataenv_enabled
+    - kohalxcs_devenv_enabled or kohalxcs_dataenv_enabled or kohalxcs_kohaenv_enabled
     - item is defined and item != ''
+
+## Configure SMTP server for sending mail (postfix)
+#TODO: if needed specify relay host/sasl config at the end of '/etc/postfix/main.cf':
+#relayhost=smtp.gmail.com:587
+#smtp_use_tls = yes
+#smtp_sasl_auth_enable = yes
+#smtp_sasl_security_options =
+#smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+#smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt in '/etc/postfix/sasl_passwd':
+#[smtp.gmail.com]:587 user@gmail.com:passwd
+# - generate the lookup-db: "sudo postmap /etc/postfix/sasl_passwd
+- name: koha - Configure SMTP server for sending mail (postfix)
+  become: yes
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backrefs: yes
+    backup: no
+  with_items:
+    - { regexp: '^(myhostname =)(.*)', line: '\1 {{ kohalxcs_kohaenv_srvname }}' }
+    - { regexp: '^(inet_interfaces =)(.*)', line: '\1 localhost' }
+    #- { regexp: '^(#myorigin =)(.*)', line: '\1\2' }
+    #- { regexp: '^(relayhost =)(.*)', line: '\1 [smtp.gmail.com]:587' }
+  when:
+    - kohalxcs_kohaenv_enabled
+
+## Set the From/sender address fro SMTP/postfix
+- name: koha - Set SMTP server From(sender) address in canonical map
+  become: yes
+  shell: |
+    echo "@$(hostname) no-reply@{{ kohalxcs_kohaenv_srvname }}" > /etc/postfix/canonical;
+    postmap /etc/postfix/canonical;
+  when:
+    - kohalxcs_kohaenv_enabled
+
+## Configure SMTP/postifix to rewrite From/sender address to mails
+- name: koha - Configure SMTP server/postfix From(sender) address
+  become: yes
+  blockinfile:
+    dest: /etc/postfix/main.cf
+    insertafter: EOF
+    content: |
+      sender_canonical_maps = hash:/etc/postfix/canonical
+  when:
+    - kohalxcs_kohaenv_enabled
+  notify: Restart smtp
+
+## Test sending mail from container
+#- name: koha - Sending mail
+#  shell: |
+#    echo "Did you get it?" | mail -s "Subject: KohaLXC/Ansible testing" user@ex.fake
+#  when:
+#    - kohalxcs_kohaenv_enabled
 
 ## Ensure koha-group exists in the lXC
 - name: setup - Ensure we have a koha-user group
@@ -79,7 +148,7 @@
     - kohalxc_operid is defined
     - kohalxc_kohagrp_name is defined
 
-## Ensure kohalxc_operuser(khaoper/HOME) has required dirs
+## Ensure kohalxc_operuser(kohaoper/HOME) has required dirs
 - name: setup - Ensure LXC-user (ansible_user) has dirs for scripts and logs
   file: >
     path="/home/{{ ansible_user }}/{{ item }}"
@@ -88,8 +157,10 @@
     - bin
     - log
 
+- fail:
+
 ## Use templatized koha-conf.xml to configure this Koha-instance
-- name: kohaenv- Templitized Koha configuration
+- name: koha - Templatized Koha configuration
   #become: yes
   template: >
     src="files/kohaenv/koha-conf.xml.j2"
@@ -99,11 +170,9 @@
   when:
     - kohalxcs_kohaenv_enabled
 
-- fail:
-
 ## Push/copy 'run_conversion' script to ConversionTools
 # - TODO: mode="u+rwx,g+rx,o-rwx"
-- name: mmtenv - Push containerized conversion main script to ConversionTools
+- name: ppmmt - Push containerized conversion main script to ConversionTools
   #become: yes
   template: >
     src="files/dataenv/run_conversion-perl_import_pl.sh.j2"
@@ -114,7 +183,7 @@
     - kohalxcs_ppmmtenv_enabled
 
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
-- name: mmtenv - Symlink conversion main script in container HOME/bin
+- name: ppmmt - Symlink conversion main script in container HOME/bin
   file: >
     src="{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools/run_conversion.sh"
     dest="{{ '/home/'~ansible_user~'/bin/run_conversion' }}"
