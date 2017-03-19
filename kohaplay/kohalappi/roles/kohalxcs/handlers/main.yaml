@@ -1,0 +1,31 @@
+---
+# File: roles/kohalxcs/handlers/main.yml
+# #############################################################################
+# Code is part of KohaLXC/kohatools Ansible/Bash tooling environment  
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# Description:
+# Handlers for common LXC-environment notifications, called by other plays:
+# - [restart] ssh 
+# - [restart] www (Apache2)
+# - [restart] smtp (postfix)
+#
+# Docs: http://docs.ansible.com/playbooks_intro.html
+# #############################################################################
+
+## Restart SSH
+- name: Restart ssh
+  service: name=ssh state=restarted
+
+## Restart httpd/ www-server (Apache2)
+- name: Restart webserver
+  become: yes
+  service: name=apache2 state=restarted
+
+## Restart smpt server (postfix)
+- name: Restart smtp
+  become: yes
+  service: name=postfix state=restarted
+

@@ -1,5 +1,5 @@
 ---
-# File: roles/kohalxcs/defaults/main.yml
+# File: roles/kohalxcs/defaults/all/main.yml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -164,47 +164,53 @@ kohalxcs_kohaenv_pckgs:
   - libsasl2-modules
 # Koha/webapp: server name (DNS)
 kohalxcs_kohaenv_srvname: "{{ hostnode_kohaenv_srvname }}"
+# Koha/webapp: server title/org
+kohalxcs_kohaenv_srvtitle: "Lapin kirjasto"
 # Koha/webapp: server admin (email)
-kohalxcs_kohaenv_srvadmin: "webmaster@{{ kohalxcs_kohaenv_srvname | d('localhost')}}"
+kohalxcs_kohaenv_srvadmin: "webmaster@{{ kohalxcs_kohaenv_srvname | d('localhost') }}"
 # Koha/webapp: Koha configuration
 kohalxcs_kohaenv_kohaconf: /etc/koha/koha-conf.xml
 # Koha/webapp: Koha PERL5LIB location
 kohalxcs_kohaenv_perl5lib: /usr/share/koha/lib
-# Koha/webapp: Have support for https ?
+# Koha/webapp: Koha bin/scripts location
+kohalxcs_kohaenv_bindir: /usr/share/koha/bin
+# Koha/webapp: log directory
+kohalxcs_kohaenv_logdir: /var/log/koha
+# Koha/webapp: Have support for https?
 kohalxcs_kohaenv_https: true
 # Koha/webapp: Have support for LetsEncrypt-verified SSL-certificates?
 kohalxcs_kohaenv_sslle: false
 
 # Koha/webapp (OPAC): vhost port
 kohalxcs_kohaenv_opac_vhostport: 443
-# Koha/webapp (OPAC): server admin:
+# Koha/webapp (OPAC): server admin (email)
 kohalxcs_kohaenv_opac_srvadmin: "{{ kohalxcs_kohaenv_srvadmin }}"
 # Koha/webapp (OPAC): document root
 kohalxcs_kohaenv_opac_docroot: /usr/share/koha/opac/htdocs
 # Koha/webapp (OPAC): server name
 kohalxcs_kohaenv_opac_srvname: "{{ kohalxcs_kohaenv_srvname | d('localhost') }}"
-kohalxcs_kohaenv_opac_cgikoha: /usr/share/koha/opac/cgi-bin/opac/
+kohalxcs_kohaenv_opac_cgikoha: /usr/share/koha/opac/cgi-bin/opac
 kohalxcs_kohaenv_opac_cgiindex: /usr/share/koha/opac/cgi-bin/opac/opac-main.pl
 kohalxcs_kohaenv_opac_cgisearch: /usr/share/koha/opac/cgi-bin/opac/opac-search.pl
-kohalxcs_kohaenv_opac_errorlog: /var/log/koha/koha-opac-error_log
-kohalxcs_kohaenv_opac_accesslog: /var/log/koha/koha-opac-access_log
+kohalxcs_kohaenv_opac_errorlog: "{{ kohalxcs_kohaenv_logdir }}/koha-opac-error_log"
+kohalxcs_kohaenv_opac_accesslog: "{{ kohalxcs_kohaenv_logdir }}/koha-opac-access_log"
 
 # Koha/webapp (Staff): vhost port
 kohalxcs_kohaenv_staff_vhostport: 8080
-# Koha/webapp (Staff): server admin:
+# Koha/webapp (Staff): server admin (email)
 kohalxcs_kohaenv_staff_srvadmin: "{{ kohalxcs_kohaenv_srvadmin }}"
 # Koha/webapp (Staff): document root
 kohalxcs_kohaenv_staff_docroot: /usr/share/koha/intranet/htdocs
 # Koha/webapp (Staff): server name
 kohalxcs_kohaenv_staff_srvname: "{{ kohalxcs_kohaenv_srvname | d('localhost') }}"
-kohalxcs_kohaenv_staff_cgikoha: /usr/share/koha/intranet/cgi-bin/
-# Koha/webapp: Reverse Procxy paths for KOHA API DAEMON  (TODO:kohalappi??)
+kohalxcs_kohaenv_staff_cgikoha: /usr/share/koha/intranet/cgi-bin
+# Koha/webapp: Reverse Proxy paths for KOHA API DAEMON
 kohalxcs_kohaenv_staff_api: "{{ kohalxcs_kohaenv_staff_cgikoha }}/api/v1"
 kohalxcs_kohaenv_staff_cgiindex: /usr/share/koha/intranet/cgi-bin/mainpage.pl
 kohalxcs_kohaenv_staff_cgisearch: /usr/share/koha/intranet/cgi-bin/search.pl
-kohalxcs_kohaenv_staff_plugins: /var/lib/koha/plugins/
-kohalxcs_kohaenv_staff_errorlog: /var/log/koha/koha-error_log
-kohalxcs_kohaenv_staff_accesslog: /var/log/koha/koha-access_log
+kohalxcs_kohaenv_staff_plugins: /var/lib/koha/plugins
+kohalxcs_kohaenv_staff_errorlog: "{{ kohalxcs_kohaenv_logdir }}/koha-error_log"
+kohalxcs_kohaenv_staff_accesslog: "{{ kohalxcs_kohaenv_logdir }}/koha-access_log"
 
 ## Koha/webapp: messaging (message_queue: emails and SMS etc,)
 #kohalxcs_kohaenv_messaging_smsuser:

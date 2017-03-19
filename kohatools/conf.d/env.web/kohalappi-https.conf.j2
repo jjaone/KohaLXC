@@ -1,0 +1,277 @@
+#
+# Koha Apache Configuration Directives
+# Koha/Lappi: kohalappi-https.conf for OPAC/80+443 and Intranet/8080
+# {{ ansible_managed | comment }}
+
+# This is to prevent request header size errors, but i't not without problems
+LimitRequestFieldSize 32768
+LimitRequestLine 32768 
+
+#Redirect users from standard http to https
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L] 
+
+## OPAC
+<VirtualHost *:{{ kohalxcs_kohaenv_opac_vhostport | d(443) }}>
+   ServerAdmin {{ kohalxcs_kohaenv_opac_srvadmin }}
+   DocumentRoot {{ kohalxcs_kohaenv_opac_docroot }}
+   ServerName {{ kohalxcs_kohaenv_opac_srvname }}
+
+## SSL
+   SSLEngine On
+   SSLOptions +StrictRequire
+   
+   SSLHonorCipherOrder On
+   SSLProtocol All -SSLv2 -SSLv3
+   SSLCipherSuite ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH
+   
+   SSLCertificateFile /etc/apache2/ssl/server.crt
+   SSLCertificateKeyFile /etc/apache2/ssl/server.key
+   #SSLCertificateChainFile /etc/apache2/ssl/gd_bundle-g2-g1.crt
+
+   ScriptAlias /cgi-bin/koha/ {{ kohalxcs_kohaenv_opac_cgikoha }}/
+   ScriptAlias /index.html {{ kohalxcs_kohaenv_opac_cgiindex }}
+   ScriptAlias /opac-search.pl {{ kohalxcs_kohaenv_opac_cgisearch }}
+   ScriptAlias /search {{ kohalxcs_kohaenv_opac_cgisearch }}
+   ErrorLog {{ kohalxcs_kohaenv_opac_errorlog }} 
+   #CustomLog {{ kohalxcs_kohaenv_opac_accesslog }}
+   #TransferLog {{ kohalxcs_kohaenv_opac_accesslog }} combined  
+   SetEnv KOHA_CONF {{ kohalxcs_kohaenv_kohaconf }}
+   SetEnv PERL5LIB {{ kohalxcs_kohaenv_perl5lib }}
+
+   SetEnv MEMCACHED_SERVERS "127.0.0.1:11211"
+   SetEnv MEMCACHED_NAMESPACE "KOHA"
+
+   # This syntax allows you to override a system preference
+   # for a given virtual host. Use with caution!
+   # You should add all the system preferences you override
+   # in one or more vhosts to the environment variable
+   # OVERRIDE_SYSPREF_NAMES for your staff intranet vhost
+   # SetEnv OVERRIDE_SYSPREF_PrefName Value
+
+   <Directory "{{ kohalxcs_kohaenv_opac_docroot }}">
+      SSLRequireSSL
+      Options -Indexes
+   </Directory>
+
+   # Secure internal stuff:
+   <DirectoryMatch "{{ kohalxcs_kohaenv_opac_docroot }}/.*/(modules|xslt|includes)">
+      SSLRequireSSL
+      Order deny,allow
+      Deny from all
+   </DirectoryMatch>
+
+   <IfModule mod_gzip.c>
+     mod_gzip_on yes
+     mod_gzip_dechunk yes
+     mod_gzip_keep_workfiles No
+     mod_gzip_can_negotiate yes
+     mod_gzip_update_static No
+     mod_gzip_temp_dir /tmp
+     mod_gzip_minimum_file_size 512
+     mod_gzip_maximum_file_size 1000000
+     mod_gzip_maximum_inmem_size 1000000
+     mod_gzip_handle_methods GET POST
+     mod_gzip_item_exclude reqheader "User-Agent: .*Mozilla/4\..*\["
+     mod_gzip_item_exclude mime ^image/.*
+     mod_gzip_item_exclude rspheader Content-Type:image/*
+     mod_gzip_item_include file \.js$
+     mod_gzip_item_include mime ^application/javascript$
+     mod_gzip_item_include mime ^application/x-javascript$
+     mod_gzip_item_include file \.php$
+     mod_gzip_item_include mime ^text/html$
+     mod_gzip_item_include file \.css$
+     mod_gzip_item_include mime ^text/css$
+  </IfModule>
+
+  <IfModule mod_deflate.c>
+
+    # Compress content with type html, text, and css, ...
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css
+    AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript
+
+    DeflateCompressionLevel 9
+
+    # Properly handle old browsers that do not support compression
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+
+    DeflateFilterNote Input instream
+    DeflateFilterNote Output outstream
+    DeflateFilterNote Ratio ratio
+
+    LogFormat '"%r" %{outstream}n/%{instream}n (%{ratio}n%%)' deflate
+    <IfModule mod_headers.c>
+       #properly handle requests coming from behind proxies
+       Header append Vary User-Agent
+    </IfModule>
+  </IfModule>
+
+
+#  Repeat this virtualhost stanza changing the following environment vars to
+#  create multiple OPAC interfaces with custom css and/or search limits:
+#  SetEnv OPAC_CSS_OVERRIDE mystyle.css
+#  SetEnv OPAC_SEARCH_LIMIT branch:CODE
+#  SetEnv OPAC_LIMIT_OVERRIDE 1
+
+   Options +FollowSymLinks
+
+   ErrorDocument 400 /cgi-bin/koha/errors/400.pl
+   ErrorDocument 401 /cgi-bin/koha/errors/401.pl
+   ErrorDocument 403 /cgi-bin/koha/errors/403.pl
+   ErrorDocument 404 /cgi-bin/koha/errors/404.pl
+   ErrorDocument 500 /cgi-bin/koha/errors/500.pl
+
+   <IfModule mod_rewrite.c>
+     # Rewrite Rules
+     RewriteEngine On
+
+     # Uncomment to turn on rewrite logging
+     #RewriteLog /var/log/koha-opac-rewrite.log
+     #RewriteLog /home/koha/koha-dev/var/log/koha-opac-rewrite.log
+     #RewriteLogLevel 1
+
+     RewriteCond %{QUERY_STRING} (.*?)(?:[A-Za-z0-9_-]+)=&(.*)
+     #RewriteRule (.+) $1?%1%2 [N,R,NE]
+     RewriteRule ^/bib/([^\/]*)/?$ /cgi-bin/koha/opac-detail\.pl?bib=$1 [PT]
+     RewriteRule ^/isbn/([^\/]*)/?$ /search?q=isbn:$1 [PT]
+     RewriteRule ^/issn/([^\/]*)/?$ /search?q=issn:$1 [PT]
+   </IfModule>
+</VirtualHost>
+
+## Intranet
+<VirtualHost *:{{ kohalxcs_kohaenv_staff_vhostport | d(8080) }}>
+   ServerAdmin {{ kohalxcs_kohaenv_staff_srvadmin }}
+   DocumentRoot {{ kohalxcs_kohaenv_staff_docroot }}
+   ServerName {{ kohalxcs_kohaenv_staff_srvname }}
+
+## SSL
+   SSLEngine On
+   SSLOptions +StrictRequire
+ 
+   SSLHonorCipherOrder On
+   SSLProtocol All -SSLv2 -SSLv3
+   SSLCipherSuite ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH
+
+   SSLCertificateFile /etc/apache2/ssl/server.crt
+   SSLCertificateKeyFile /etc/apache2/ssl/server.key
+   #SSLCertificateChainFile /etc/apache2/ssl/gd_bundle-g2-g1.crt
+
+   ScriptAlias /cgi-bin/koha/ {{ kohalxcs_kohaenv_staff_cgikoha }}/
+   ScriptAlias /index.html {{ kohalxcs_kohaenv_staff_cgiindex }}
+   ScriptAlias /opac-search.pl {{ kohalxcs_kohaenv_staff_cgisearch }}
+   Alias /plugin/ {{ kohalxcs_kohaenv_staff_plugins }}/
+   ErrorLog {{ kohalxcs_kohaenv_staff_errorlog }}
+   #TransferLog {{ kohalxcs_kohaenv_staff_accesslog }}
+   SetEnv KOHA_CONF {{ kohalxcs_kohaenv_kohaconf }}
+   SetEnv PERL5LIB {{ kohalxcs_kohaenv_perl5lib }}
+
+   SetEnv MEMCACHED_SERVERS "127.0.0.1:11211"
+   SetEnv MEMCACHED_NAMESPACE "KOHA"
+
+   Options +FollowSymLinks
+
+   # If you are overriding any system preferences,
+   # list them in this variable so the preference editor
+   # knows that they have been overridden.
+   # SetEnv OVERRIDE_SYSPREF_NAMES "Pref1,Pref2,Pref3"
+
+   ErrorDocument 400 /cgi-bin/koha/errors/400.pl
+   ErrorDocument 401 /cgi-bin/koha/errors/401.pl
+   ErrorDocument 403 /cgi-bin/koha/errors/403.pl
+   ErrorDocument 404 /cgi-bin/koha/errors/404.pl
+   ErrorDocument 500 /cgi-bin/koha/errors/500.pl
+
+   ##REVERSE PROXY REQUESTS TO THE KOHA API DAEMON
+   ## TODO:kohalappi: where are the /api -contents in 'standard' installation?
+   # - the below has been copied directly from koha-http.conf
+   Alias /api/v1 {{ kohalxcs_kohaenv_staff_api }}
+   #Alias /api/v1 /home/koha/kohaclone/api/v1
+
+   ProxyRequests Off #Disable anonymous forward proxying
+   ProxyPreserveHost On
+   ProxyPass        /api/v1/doc !
+   ProxyPass        /api/v1/swagger.json !
+   ProxyPass        /api/v1/swagger !
+   ProxyPass        /api/v1/auth_examples !
+   ProxyPass        /api/v1/  http://localhost:8081/api/v1/ keepalive=On
+   ProxyPassReverse /api/v1/  http://localhost:8081/api/v1/
+   ##REVERSE PROXYING OK
+
+   <Directory "{{ kohalxcs_kohaenv_staff_docroot }}">
+      SSLRequireSSL
+      Options -Indexes
+   </Directory>
+
+   # Secure internal stuff
+   <DirectoryMatch "/{{ kohalxcs_kohaenv_staff_docroot }}/.*/(modules|xslt|includes)">
+      SSLRequireSSL
+      Order deny,allow
+      Deny from all
+   </DirectoryMatch>
+
+   <IfModule mod_gzip.c>
+     mod_gzip_on yes
+     mod_gzip_dechunk yes
+     mod_gzip_keep_workfiles No
+     mod_gzip_can_negotiate yes
+     mod_gzip_update_static No
+     mod_gzip_temp_dir /tmp
+     mod_gzip_minimum_file_size 512
+     mod_gzip_maximum_file_size 1000000
+     mod_gzip_maximum_inmem_size 1000000
+     mod_gzip_handle_methods GET POST
+     mod_gzip_item_exclude reqheader "User-Agent: .*Mozilla/4\..*\["
+     mod_gzip_item_exclude mime ^image/.*
+     mod_gzip_item_exclude rspheader Content-Type:image/*
+     mod_gzip_item_include file \.js$
+     mod_gzip_item_include mime ^application/javascript$
+     mod_gzip_item_include mime ^application/x-javascript$
+     mod_gzip_item_include file \.php$
+     mod_gzip_item_include mime ^text/html$
+     mod_gzip_item_include file \.css$
+     mod_gzip_item_include mime ^text/css$
+   </IfModule>
+
+   <IfModule mod_deflate.c>
+
+     # Compress content with type html, text, and css, ...
+     AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css
+     AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript
+
+     DeflateCompressionLevel 9
+
+     # Properly handle old browsers that do not support compression
+     BrowserMatch ^Mozilla/4 gzip-only-text/html
+     BrowserMatch ^Mozilla/4\.0[678] no-gzip
+     BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+
+     DeflateFilterNote Input instream
+     DeflateFilterNote Output outstream
+     DeflateFilterNote Ratio ratio
+
+     LogFormat '"%r" %{outstream}n/%{instream}n (%{ratio}n%%)' deflate
+     <IfModule mod_headers.c>
+       #properly handle requests coming from behind proxies
+       Header append Vary User-Agent
+     </IfModule>
+  </IfModule>
+
+   <IfModule mod_rewrite.c>
+     # Rewrite Rules
+     RewriteEngine On
+
+     # Uncomment to turn on rewrite logging
+     #RewriteLog /var/log/koha-intranet-rewrite.log
+     #RewriteLog /home/koha/koha-dev/var/log/koha-intranet-rewrite.log
+     #RewriteLogLevel 1
+
+     RewriteCond %{QUERY_STRING} (.*?)(?:[A-Za-z0-9_-]+)=&(.*)
+     #RewriteRule (.+) $1?%1%2 [N,R,NE]
+     RewriteRule ^/bib/([^\/]*)/?$ /cgi-bin/koha/detail\.pl?bib=$1 [PT]
+     RewriteRule ^/isbn/([^\/]*)/?$ /search?q=isbn:$1 [PT]
+     RewriteRule ^/issn/([^\/]*)/?$ /search?q=issn:$1 [PT]
+   </IfModule>
+</VirtualHost>

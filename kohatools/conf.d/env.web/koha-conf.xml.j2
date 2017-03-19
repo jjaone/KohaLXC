@@ -1,7 +1,7 @@
 <!-- Koha Main Configuration
-Koha/Lappi: koha-conf.xml
+     Koha/Lappi: koha-conf.xml
+     -->
 {{ ansible_managed | comment('xml') }}
--->
 
 <yazgfs>
 <!-- [scheme:]host[:port][/databaseName] -->
@@ -96,14 +96,14 @@ Koha/Lappi: koha-conf.xml
  <biblioservershadow>1</biblioservershadow>
  <authorityserver>authorities</authorityserver>
  <authorityservershadow>1</authorityservershadow>
- <pluginsdir>/var/lib/koha/plugins</pluginsdir>
+ <pluginsdir>{{ kohalxcs_kohaenv_staff_plugins }}</pluginsdir>
  <enable_plugins>0</enable_plugins>
- <intranetdir>/usr/share/koha/intranet/cgi-bin</intranetdir>
- <opacdir>/usr/share/koha/opac/cgi-bin/opac</opacdir>
- <opachtdocs>/usr/share/koha/opac/htdocs/opac-tmpl</opachtdocs>
- <intrahtdocs>/usr/share/koha/intranet/htdocs/intranet-tmpl</intrahtdocs>
+ <intranetdir>{{ kohalxcs_kohaenv_staff_cgikoha }}</intranetdir>
+ <opacdir>{{ kohalxcs_kohaenv_opac_cgikoha }}</opacdir>
+ <opachtdocs>{{ kohalxcs_kohaenv_opac_docroot }}/opac-tmpl</opachtdocs>
+ <intrahtdocs>{{ kohalxcs_kohaenv_staff_docroot }}/intranet-tmpl</intrahtdocs>
  <includes>/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/includes/</includes>
- <logdir>/var/log/koha</logdir>
+ <logdir>{{ kohalxcs_kohaenv_logdir }}</logdir>
  <docdir>/usr/share/koha/doc</docdir>
  <backupdir>/var/spool/koha</backupdir>
  <!-- Enable the two following to allow superlibrarians to download
@@ -159,7 +159,7 @@ Koha/Lappi: koha-conf.xml
         </branchcode>-->
         <!-- Second one is library group login. This uses 3 first chars of branchcode for defining client
         <branchprefix>
-            <user></user>x
+            <user></user>
             <passwd></passwd>
         </branchprefix>-->
         <!-- And the third one is shared login for all messages.-->

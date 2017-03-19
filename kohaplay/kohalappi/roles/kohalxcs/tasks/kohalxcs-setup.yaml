@@ -116,6 +116,20 @@
     - kohalxcs_kohaenv_enabled
   notify: Restart smtp
 
+## Cronjob(s) for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
+#  - "process_message_queue.pl -v"
+- name: Add cronjob(s) for Koha
+  become: yes
+  cron:
+    user: koha
+    name: "{{ item.name }}"
+    job: "$KOHA_CRONJOB_TRIGGER {{ kohalxcs_kohaenv_bindir }}/{{ item.job }}"
+    state: present
+  with_items:
+    - { name: "process message queue", job: "cronjobs/process_message_queue.pl -v" }
+  when:
+    - kohalxcs_kohaenv_enabled
+
 ## Test sending mail from container
 #- name: koha - Sending mail
 #  shell: |
@@ -157,18 +171,21 @@
     - bin
     - log
 
-- fail:
-
 ## Use templatized koha-conf.xml to configure this Koha-instance
-- name: koha - Templatized Koha configuration
-  #become: yes
+- name: koha - Templatized main Koha configuration
+  become: yes
   template: >
     src="files/kohaenv/koha-conf.xml.j2"
-    dest="/etc/koha/koha-conf.xml"
+    dest="{{ kohalxcs_kohaenv_kohaconf }}"
     mode="u=rw,g=r,o=r"
+    owner="koha"
+    group="koha"
     backup="yes"
   when:
     - kohalxcs_kohaenv_enabled
+  notify: Restart webserver
+
+- fail:
 
 ## Push/copy 'run_conversion' script to ConversionTools
 # - TODO: mode="u+rwx,g+rx,o-rwx"
@@ -245,7 +262,7 @@
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
-## Make Staff Accounts for PP//MMT-Patrons
+## Make Staff Accounts for PP/MMT-Patrons
 - name: data+pp+migrate - Make staff accounts for PatronsImportChain-conversion
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
@@ -443,14 +460,14 @@
   shell: ln -s -f /etc/koha/{{ kohalxc_organization|lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
   #shell: service apache stop && a2enmod ssl && a2dissite koha.conf && ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-enabled/koha-ssl.conf && service apache2 restart
   when:
-  - kohalxcs_kohaenv_enabled
-  - kohalxc_organization is defined
-  - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
+    - kohalxcs_kohaenv_enabled
+    - kohalxc_organization is defined
+    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
 
 ## Generate SSL-certificate (self-signed)
 - name: koha+ssl - Generate server.key and self-signed SSL-certificate for Koha/Apache2
   become: yes
-  shell: mkdir -p /etc/apache2/ssl && openssl genrsa -des3 -passout pass:x -out /tmp/server.pass.key 2048 && openssl rsa -passin pass:x -in /tmp/server.pass.key -out /tmp/server.key && rm -f /tmp/server.pass.key && openssl req -new -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization }}/O=Lapin kirjasto/OU={{ kohalxc_organization }} ({{ hostnode_environment | d('local') }})/CN={{ kohalxcs_kohaenv_srvname | d('localhost') }}" -key /tmp/server.key -out /tmp/server.csr && openssl x509 -req -sha256 -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /etc/apache2/ssl/server.crt && cp -vpf /tmp/server.key /etc/apache2/ssl/. && rm -f /tmp/server.*
+  shell: mkdir -p /etc/apache2/ssl && openssl genrsa -des3 -passout pass:x -out /tmp/server.pass.key 2048 && openssl rsa -passin pass:x -in /tmp/server.pass.key -out /tmp/server.key && rm -f /tmp/server.pass.key && openssl req -new -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization }}/O={{ kohalxcs_kohaenv_srvtitle | d('Koha Library') }}/OU={{ kohalxc_organization }} ({{ hostnode_environment | d('local') }})/CN={{ kohalxcs_kohaenv_srvname | d('localhost') }}" -key /tmp/server.key -out /tmp/server.csr && openssl x509 -req -sha256 -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /etc/apache2/ssl/server.crt && cp -vpf /tmp/server.key /etc/apache2/ssl/. && rm -f /tmp/server.*
   args:
     executable: /bin/bash
     chdir: /tmp
@@ -462,10 +479,11 @@
 
 - name: koha+ssl - Enable SSL (switch to https) restart Koha/Apache2
   become: yes
-  shell: service apache2 stop && a2dissite koha.conf && a2enmod ssl && a2ensite koha-ssl.conf && service apache2 restart
+  shell: service apache2 stop && a2dissite koha.conf && a2enmod ssl && a2ensite koha-ssl.conf
   when:
-  - kohalxcs_kohaenv_enabled
-  - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
+  notify: Restart webserver
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:
