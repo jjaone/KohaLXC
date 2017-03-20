@@ -185,8 +185,6 @@
     - kohalxcs_kohaenv_enabled
   notify: Restart webserver
 
-- fail:
-
 ## Push/copy 'run_conversion' script to ConversionTools
 # - TODO: mode="u+rwx,g+rx,o-rwx"
 - name: ppmmt - Push containerized conversion main script to ConversionTools
