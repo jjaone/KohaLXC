@@ -23,6 +23,7 @@ callback_plugins/
 *.metadata/
 .includepath
 .project
+Usemarcon/
 
 ## Byte-compiled / optimized / DLL files
 __pycache__/

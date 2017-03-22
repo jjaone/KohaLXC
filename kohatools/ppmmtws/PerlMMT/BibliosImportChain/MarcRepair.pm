@@ -1,0 +1,885 @@
+package BibliosImportChain::MarcRepair;
+
+use strict;
+use warnings;
+use utf8;
+use Switch;
+
+use CommonRoutines;
+use MARC::Field;
+use MARC::Subfield;
+use LiteLogger;
+use BibliosImportChain::MarcRepair::MaterialTypeRepair;
+
+my $log;
+my $statistics;
+
+our $organization003Identifier = '';
+our $municipalArchives003Identifier = '';
+
+sub init {
+    $log = LiteLogger->new({package => 'BibliosImportChain::MarcRepair', thread => shift()});
+    if ($CFG::CFG->{organization} eq 'pielinen') {
+        $organization003Identifier = 'PIELINEN';
+        $municipalArchives003Identifier = 'KOIVI';
+    }
+    elsif ($CFG::CFG->{organization} eq 'jokunen') {
+        $organization003Identifier = 'JOKUNEN';
+        $municipalArchives003Identifier = 'KOIVI';
+    }
+}
+
+sub run {
+    my $records = shift;
+    my $chunkSuffix = shift;
+    my $t = shift;
+
+    $log->info('Starting MarcRepair for chunk '.$chunkSuffix."\n");
+
+    #init statistics
+    $statistics = {};
+    $statistics->{removeExtraFields} = 0;
+    $statistics->{field100IndicatorsRepaired} = 0;
+    $statistics->{electronicMaterialMadeVisible} = 0;
+    $statistics->{merged041a} = 0;
+    $statistics->{removedExtra021} = 0;
+    $statistics->{split745a} = 0;
+    $statistics->{capitalizedFirstLetter} = 0;
+    $statistics->{movedDateFrom65Xy_to_z} = 0;
+    $statistics->{fixedTypeOfLiterature} = 0;
+    $statistics->{mergedField} = 0;
+    $statistics->{leader07Fixed} = 0;
+    $statistics->{callNumberRepaired} = 0;
+    $statistics->{'008_23_for_vi'} = 0;
+    $statistics->{'forceProperFinMARCStructureFromPPMaterialType'} = 0;
+    $statistics->{'repairPublicationYearFrom260c'} = 0;
+    $statistics->{removeTitlelessRecords} = 0;
+    $statistics->{verifiedSerialMotherness} = 0;
+    $statistics->{enforcedField003} = 0;
+    $statistics->{kirjavalitusDoubleURL} = 0;
+    $statistics->{dedup856yz} = 0;
+    $statistics->{mergeSeparate260} = 0;
+    $statistics->{itemlessBibliosDeleted} = 0;
+    $statistics->{serial245aMerged} = 0;
+
+    my $rowNumber = 0;
+    for my $key (sort {$a <=> $b} keys %$records) { #These keys need to be sorted for some repair algorithms to work. Component children are in the end of this keys list!
+        my $r = $records->{$key};
+    
+        if ($r->isDeleted()) {
+            next;
+        }
+
+        if ($r->docId() == 10036645) {
+            my $break;
+        }
+
+        mergeSeparate260($r);
+
+        # Skip component parts.
+        if ($r->isComponentPart()) {
+            repairPublicationYearFrom260c($r, $t);
+            enforceF003($r, $t);
+            next();
+        }
+
+        if ( $CFG::CFG->{organization} eq 'pielinen' && $CFG::CFG->{DEBUGAuthoritiesCountLimit} < 0 ) { #The Biblio actually might have Items, but if you debug with partial repositories loaded, then the Item might not be found from the partial repository, marking this Biblio deleted unnecessarily
+            ##DESTROY the Biblio if it has no Items.
+            unless (my $availableItems = $t->{liccopy}->fetch( $r->docId() )) {
+                $statistics->{itemlessBibliosDeleted}++;
+                $log->info('Record "'.$r->docId().'" has no Items. Deleting it.');
+                delete $records->{ $r->docId() };
+                $r->DESTROY();
+                next();
+            }
+        }
+
+        if ($r->isASerial()) {
+            my $f245 = $r->getUnrepeatableField('245');
+            my $err = $f245->mergeAllSubfields('a',' ') if $f245;
+            if (!$err) {
+                #Nothing hapened, no fields to merge
+            }
+            elsif ($err eq 'OK') {
+                $statistics->{serial245aMerged}++;
+            }
+            elsif ($err eq 'NOSUBFIELD') {
+                #We could throw a warning.
+            }
+        }
+
+        #Some/most serials are missing the publication date. We can try to reconstruct that from the serial enumeration.
+        get260cFrom245aForSerials($r);
+
+        #># EGDATA-151 Block obsolete fields
+        my @obsoleteFields;
+        if ($CFG::CFG->{organization} eq 'pielinen') {
+            @obsoleteFields = ('872','889','986','987','988','989','980','990','991','992');
+        }
+        elsif ($CFG::CFG->{organization} eq 'jokunen') {
+            @obsoleteFields = ("097","090","085","081","080","064","060","058","057","053",'872','889','986','987','988','989','980','990','991','992');
+        }
+        foreach (@obsoleteFields) {
+            if ($r->fields($_)) {
+                $r->deleteFields($_);
+                $statistics->{removeExtraFields}++;
+            }
+        }
+        #<#
+
+        #>#EGDATA-147
+        doUsemarconsJobForField300($r);
+        #<#
+
+        #>#  EGDATA-55 : Sanitizing field 100  ###
+        if (my $fia = $r->fields('100')) {
+            foreach my $fi (@$fia) {
+                if ($fi->indicator1 eq " ") {
+                    $fi->setIndicator1('1');
+                    $statistics->{field100IndicatorsRepaired}++;
+                }
+                if ($fi->indicator2 eq " ") {
+                    $fi->setIndicator2('0');
+                    $statistics->{field100IndicatorsRepaired}++;
+                }
+            }
+        }
+        #<#
+
+        #>#  EGDATA-50  &&  EGDATA-146  &&  EGDATA-154
+        if (my $fia = $r->fields('856')) {
+            foreach my $fi (@$fia) {
+                #># EGDATA-50 : Making electronic material visible in EG, by adding 856$9 = JOKUNEN where 856$u exists  ###
+                #># EGDATA-154
+                if ( (my $sfu = $fi->getUnrepeatableSubfield('u')) ) {
+                    if (  $sfu->content() =~ /kirjavalitys.fi/  ) {
+                        $r->deleteField( $fi );
+                        $statistics->{kirjavalitusDoubleURL}++;
+                        next;
+                    }
+                }
+                #<#
+                if (my $sia = $fi->subfields('u') ) {
+                    foreach my $si (@$sia) {
+                        if (my $sf9 = $fi->getUnrepeatableSubfield('9') ) {
+                            $sf9->content('PIELINEN');
+                        }
+                        else {
+                            $fi->addSubfield('9','PIELINEN');
+                        }
+                        $statistics->{electronicMaterialMadeVisible}++;
+                    }
+                }
+                #<#
+                #># EGDATA-146
+                if ( (my $sfz = $fi->getUnrepeatableSubfield('z')) &&
+                     (my $sfy = $fi->getUnrepeatableSubfield('y')) ) {
+                    
+                    if (  $sfz->content() eq $sfy->content()  ) {
+                        $fi->deleteSubfield( $sfz );
+                        $statistics->{dedup856yz}++;
+                    }
+                }
+                #<#
+            }
+        }
+        #<#
+
+        #Päivi requested the following \/   it has become redundant now as the program automatically skips empty subfields
+            #>#  Fixing empty 773$7 to contain "nn"  ###
+=head        if (my $fia = $r->fields('773') ) {
+                foreach my $fi (@$fia) {
+                    if (my $sia = $fi->subfields('7') ) {
+                        foreach my $si (@$sia) {
+                            if (! $biblio->{subfieldsContent}->[$fi]->[$si]) {
+                                $biblio->{subfieldsContent}->[$fi]->[$si] = "nn";
+                    print "n$bibkey"; #notify that this fix appeared
+                            }
+                        }
+                    }
+                }
+                
+            }#<#
+=cut
+
+            #>#  Merge separate 041$a instances to one concatenated instance  ###
+            #for ex. 041a finsweengger, not 041a fin 041a swe 041a eng
+            if (my $fia = $r->fields('041')) {
+                if (scalar(@$fia) > 1) { #if we have more than one 041-field, we need to merge
+                    
+                    my $newA = ''; #used to gather all a-subfields
+                    my $firstField; #used to preserve the first marc-field, the rest are removed
+                    
+                    foreach my $fi (@$fia) {
+                
+                        if (! defined $firstField) { #checks if this is the first run to $firstField-flag
+                            $firstField = $fi;       #if so preserves this 1st field and appends the rest subfield a repetitions inside this field
+                        }
+                        else {
+                            if (my $sia = $fi->subfields('a') ) {
+                                foreach my $si (@$sia) {
+                                    $newA .= $si->content(); #Find all subfield a and append them to $newA
+                                    $statistics->{merged041a}++;
+                                }
+                            }
+                            $r->deleteField($fi); #remove field as unnecessary
+                        }
+                    }
+                    my $sf041a = $r->getUnrepeatableSubfield('041','a');
+                    $sf041a .= $newA; #Append the gathered language codes to the last remaining field 041
+                }
+            }#<#
+            
+            #>#  Repeated subfield 021$c, keep one and remove repetitions  ###
+            if (my $fia = $r->fields('021') ) {
+                foreach my $fi (@$fia) {
+                    if (my $sia = $fi->subfields('c') ) {
+                        
+                        my $firstSubfield; #used to preserve the first marc-subfield, the rest are removed
+                        
+                        foreach my $si (@$sia) {
+                            if ($si->content()) {
+                                if (! (defined $firstSubfield)) { #checks if this is the first run to $firstField-flag
+                                    $firstSubfield = $si;       #if so preserves this 1st field
+                                }
+                                else {
+                                    $fi->deleteSubfield($si);
+                                    $statistics->{removedExtra021}++;
+                                }
+                            }
+                            else {  $fi->deleteSubfield($si);   }
+                        }
+                    }
+                }
+            }#<#
+            
+            #>#  Split all subfield a (745$a) repetitions to separate fields with subfield a:  ###
+            if (my $fia = $r->fields('745') ) {
+                foreach my $fi (@$fia) {
+                    if (my $sia = $fi->subfields('a') ) {
+                        
+                        my $firstSubfield; #used to preserve the first marc-subfield, the rest are removed
+                        
+                        foreach my $si (@$sia) {
+                            
+                            if (! defined $firstSubfield) { #checks if this is the first run to $firstField-flag
+                                $firstSubfield = $fi;       #if so preserves this 1st field
+                            }
+                            else {
+                                #add a field with a subfield
+                                my $newField = MARC::Field->new('745');
+                                $newField->addSubfield('a', $si->content());
+                                $r->addField($newField);
+                    
+                                $fi->deleteSubfield($si);
+                    
+                                $statistics->{split745a}++;
+                            }
+                        }
+                    }
+                }
+            }#<#
+    
+        #>#  deCAPITALIZE subject words in 65X$*
+=head DISABLING THIS FOR TESTING ONKI
+        foreach (650..659) {
+            if (my $fia = $r->fields($_) ) {
+            foreach my $fi (@$fia) {
+                if (my $sia = $fi->getAllSubfields() ) {
+                foreach my $si (@$sia) {
+                    
+                    my $sicode = $si->code();
+                    #manage subject word cAsINg
+                    if ((  ($_ == 652 || $_ == 653 || $_ == 654) && $sicode eq 'y'  )   ||
+                        (  $_ == 655 && ( $sicode eq 'a' ||  $sicode eq 'y' ||  $sicode eq 'b')            )) {
+                        $si->content(  ucfirst( lc($si->content()) ) );
+                        $statistics->{capitalizedFirstLetter}++;
+                    }
+                    else {
+                        $si->content(  lc $si->content()  );
+                    }
+                    
+                    #Fix dates from wrong $65Xy -> $65Xz
+                    if (  $sicode eq 'y'  &&  $si->content =~ /\d{4}/) {
+                        $si->code('z');
+                        $statistics->{movedDateFrom65Xy_to_z}++;
+                    }
+                }
+                }
+            }
+            }
+        }
+        #<#
+=cut
+        
+        #>#  Sanitize call numbers as they are CRAZY!
+        if (my $f852a = $r->fields('852')) {
+            foreach my $f852 (@$f852a) {
+                if (my $sfha = $f852->subfields('h')) {
+                    foreach my $sfh (@$sfha) {
+                        sanitizeCallNumber($sfh, $r);
+                    }
+                }
+            }
+        }
+        if (my $f098a = $r->fields('098')) {
+            foreach my $f098 (@$f098a) {
+                if (my $sfaa = $f098->subfields('a')) {
+                    foreach my $sfa (@$sfaa) {
+                        sanitizeCallNumber($sfa, $r);
+                    }
+                }
+            }
+        }
+        else {
+            my $fixed;
+            if (my $first852 = $r->getUnrepeatableField('852')) {
+                if (my $sf = $first852->getUnrepeatableSubfield('h')) {
+                    my $f098 = MARC::Field->new('098', $sf->content());
+                    $r->addField($f098);
+                    $fixed = $first852;
+                }
+                else {
+                    $log->warning('Record "'.$r->docId().'" has field 852 without subfield h. Impossible!');
+                }
+            }
+            $log->warning('Record "'.$r->docId().'" doesn\'t have Field 098! This is the default field used in Koha.'.
+                          (($fixed) ? ' Using call number "'.$fixed->getUnrepeatableSubfield('h')->content() .'" from "'.$fixed->getUnrepeatableSubfield('a')->content().'"'
+                                   : '')
+                         );
+        }
+        
+        #>#  Check the type of literature in 008/33, if it is undefined, use either b for fiction or w for non-fiction.  ###
+        #    The point is to fool Usemarcon to put these Records to unspecified fiction if the Record's call number is in range of 80-85.
+        #    0-79 && 86-99 call numbers stand for non-fiction.
+        if ((! ($r->isComponentPart())) && (my $f008a = $r->getUnrepeatableSubfield('008','a')) &&  (!($r->isASerial()))  ) {
+            if (length $f008a->content() < 40) {
+                $log->error("Controlfield 008 '".$f008a->content()."' is too short for docId:".$r->docId());	
+            }
+            else {
+                my $f008c33 = substr($f008a->content(), 33, 1);
+                if (defined $f008c33 && $f008c33 eq ' ') {
+                    #Field 008, character 33 is undefined, so we create it according to call number
+    
+                    #make sure the call number is treated as a number. Call number can have values like 84.5OP or 84.JÄN. We are interested in 84				
+                    my $callNumberClass = $r->getCallNumberClass();
+                    if (! $callNumberClass) {
+                        $log->warning('No call number class for call number "'.($r->getCallNumber() || '').'" or not a number for non-component record "'.$r->docId().'"');
+                    }
+                    else {
+                        my $content = $f008a->content();
+                        
+                        if ($callNumberClass < 86 && $callNumberClass > 79) {
+                            $content = substr($content, 0, 33).'1'.substr($content, 34);
+                            $f008a->content(  $content  );
+                        }
+                        else {
+                            $content = substr($content, 0, 33).'0'.substr($content, 34);
+                            $f008a->content(  $content  );
+                        }
+                        $statistics->{fixedTypeOfLiterature}++;
+                    }
+                }
+            }
+        }
+        #<#
+        
+        #>#  Build the bibliographic level, eg '07'. We need to put component parts to their correct level, so their records become more full and it might help us deal with them more easily in Evergreen
+        if (my $leader = $r->leader()) {
+            if (my $c07 = substr $leader, 7, 1) {
+                    
+                if ($c07 eq ' ') {
+                    #See if this record is a component part. We can tell because $773w points to the parent component part
+                    if ($r->getUnrepeatableSubfield('773','w')) { #in reality 773 could be repeated but it should not in our db.
+                        if ($r->isASerial() == 1) { #Serial component parts get 'b'
+                            $c07 = 'b';
+                        }
+                        else {
+                            $c07 = 'a';
+                        }
+                        $r->leader(  substr($leader,0,7).$c07.substr($leader,8)  );
+                        $statistics->{leader07Fixed}++;
+                    }
+                }
+            }	
+        }
+    
+        #>#  Set missing $008/23, for item type 'vi', to 'n'  EGDATA-97 ###
+        if ($r->materialType() eq 'vi') {
+            if (my $f008 = $r->getUnrepeatableSubfield('008','a') ) {
+                if (  substr( $f008->content(),23,1 ) eq ' '  ) {
+                    
+                    if ( $f008->content =~ /^(.{23}).(.+)$/ ) {
+                        $f008->content( $1 . 'n' . $2 );
+                        $statistics->{'008_23_for_vi'}++;
+                    }
+                    else {
+                        $log->info('Couldn\'t parse field 008 in docId:'.$r->docId().'. It is less than 24 characters long.');
+                    }
+                }
+            }
+            else {
+                $log->error('Missing Field 008 in docId:'.$r->docId());
+            }
+        }
+        #<#
+        
+        #>#  Merge all instances of the given field. Append subfields separated by ". - "  ###
+        foreach (500..509) {
+            mergeFields($r, $_, ". - ");
+        }#<#
+            
+        #>#  EGDATA-116
+        BibliosImportChain::MarcRepair::MaterialTypeRepair::forceProperFinMARCStructureFromPPMaterialType($r, $log, $statistics);
+        #<#
+        
+        #># EGDATA-120
+        repairPublicationYearFrom260c($r, $t);
+        #<#
+        
+        #># EGDATA-121
+        removeTitlelessRecords($r, $records);
+        #<#
+        
+        #># EGDATA-??? Making sure there is a space between "K15" => "K 15" So Koha can understand it.
+        #Maybe better to make Koha understand K15 for better interoperability.
+        #spacify044cAgeLimits($r); #not using this option, since our national MARC repositories use the existing format "K15" instead of "K 15"
+        #<#
+        
+        verifySerialMotherness($r);
+        
+        forceTranscribingAgencyTo040c($r);
+        
+        enforceF003($r, $t);
+        
+        
+    }
+    printStatistics($chunkSuffix);
+}
+
+=head USAGE
+Merges all instances of given field to one field, separates subfieldContents with the given separator
+param 0 : pointer to marc-record
+param 1 : marc-field -instances to merge (eg. "773")
+param 2 : subfields content separator (eg. ". - " results in "$content1. - $content2. - $content3")
+=cut
+sub mergeFields {
+    my $r = shift;
+    my $fieldCode = shift;
+    my $separator = shift;
+    
+    if (my $fia = $r->fields($fieldCode) ) {
+        
+        my $firstField; #used to preserve the first marc-field, the rest are removed
+        
+        foreach my $fi (@$fia) {
+            
+            if (! defined $firstField) { #checks if this is the first run to $firstField-flag
+                $firstField = $fi;       #if so preserves this 1st field and appends the contents from other fields to it
+            }
+            else {
+                foreach my $si (@{$fi->getAllSubfields()}) {
+
+                    if (! $firstField->subfields($si->code())) {
+                        $firstField->addSubfield( $si->code(), $si->content() );
+                    }
+                    else {
+                        my $target_sf = $firstField->subfields( $si->code() )->[0];
+                        $target_sf->content(  $target_sf->content . $separator . $si->content()  )
+                    }
+                    $statistics->{mergedField}++;
+                }
+                
+                $r->deleteField($fi);
+            }
+        }
+    }
+}
+
+
+sub enforceF003 {
+    my $r = shift;
+    my $t = shift;
+
+    my $f003a = $r->getUnrepeatableSubfield('003','a');
+    unless ($f003a) {
+        #Items in Kotiseutukokoelma are labeled as KOIVI
+        my $liccopyHash = $t->{liccopyloc}->fetchWithoutWarning( $r->docId() );
+        if ((exists $liccopyHash->{homeloc}) && (exists $liccopyHash->{homedep})) {
+            my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => substr($liccopyHash->{homeloc},0,1), locid => $liccopyHash->{homeloc}, depid => $liccopyHash->{homedep} }  );
+            my $shelvingLocation = $licloqde->[2];
+
+            if($shelvingLocation && $shelvingLocation eq 'KOT') {
+                $r->addUnrepeatableSubfield('003', 'a', $municipalArchives003Identifier);
+                $statistics->{enforcedField003}++;
+            }
+
+        #Otherwise label as JOKUN|PIELINEN|...
+            else {
+                $r->addUnrepeatableSubfield('003', 'a', $organization003Identifier);
+                $statistics->{enforcedField003}++;
+            }
+        }
+        else {
+            $r->addUnrepeatableSubfield('003', 'a', $organization003Identifier);
+            $statistics->{enforcedField003}++;
+        }
+    }
+}
+
+
+##EGDATA-120
+sub repairPublicationYearFrom260c {
+    my $r = shift;
+    my $t = shift;
+    
+=head trying to catch some breakpoints
+    if ($r->isComponentPart()) {
+        if ($r->getComponentParentDocid() eq '111439') {
+            my $break = 0;
+        }
+    }
+    if ($r->docId() eq '111439') {
+        my $break = 0;
+    }
+=cut
+    
+    
+    sub repair008 {
+        my $year = shift;
+        my $sf008 = shift;
+        my $r = shift;
+        
+        if ($r->materialType() eq 'va') { #verkkoaineisto has no publication dates so using 1000
+            $year = '1000';
+            #$log->warning('Record docid '.$r->docId().' is verkkoainesto (va) and has no publication date. Using 1000.');
+        }
+        
+        if ($sf008->content() =~ /^(.{7}).{4}(.+)$/) {
+            $sf008->content( $1.$year.$2 );
+            $statistics->{'repairPublicationYearFrom260c'}++;
+        }
+        else {
+            $log->error('repairPublicationYearFrom260c(): Record docid '.$r->docId().' has malformed field 008!');
+        }
+    }
+    
+    sub checkParentForPublicationDate {
+        my $r = shift;
+        my $t = shift;
+        my $sf008 = shift; #ComponentChild Record's field 008.
+        
+        my $parentDocid = $r->getComponentParentDocid();
+        if (my $parent = $t->findRecord($parentDocid)) {
+            if (my $parent_sf008a = $parent->getUnrepeatableSubfield('008','a')) {
+                if ($parent_sf008a->content() =~ /^.{7}(\d{4})/) {
+                    repair008($1, $sf008, $r);
+                    return 1; #operation success!
+                }
+            }
+        }
+        else {
+            $log->warning( "Component part docId ".$r->docId()." doesn't have a parent with docId $parentDocid!\n" );
+        }
+        return 0; #Even the parent doesn't have a proper publication date wtf?
+    }
+
+    
+    if (my $sf008 = $r->getUnrepeatableSubfield('008','a') ) {
+        
+        if ($sf008->content() =~ /^.{7}\d{4}/) {
+            #All is as it should be, so no repairing needed.
+        }
+        else {
+            if (my $sf260c = $r->getUnrepeatableSubfield('260','c') ) {
+                if ($sf260c->content() =~ /(\d{4})/) {
+                    repair008($1, $sf008, $r);
+                }
+                #Trying to get somekind of a year out of this, usually 260c seems to be like [198-?] or [19-?] etc.
+                elsif ($sf260c->content() =~ /(\d{2,4})/) {
+                    my $year = $1;
+                    
+                    while (length $year < 4) { #this created a length 4 string, as full length is reached on last loop iteration
+                        $year .= '0';
+                    }
+                    #$log->warning('Record docid '.$r->docId().'\'s publication date couldn\'t be completely pulled from 260c, but repairing the year from '.$sf260c->content().' => '.$year);
+                    repair008($year, $sf008, $r);
+                }
+                else {
+                    #Component parts can check their parent for publication date
+                    if ($r->isComponentPart() &&
+                          checkParentForPublicationDate($r, $t, $sf008)) {
+                        #Publication date succesfully extracted from the parent record!
+                        return 1;
+                    }
+
+                    my $cpText = ($r->isComponentPart() ? '(Component Part)': '');
+                    $log->warning('Docid '.$r->docId().$cpText.'\'s 260c couldnt be parsed. No year found from 260c => '.$sf260c->content().'. Using 1899.');
+                    repair008('1899', $sf008, $r);
+                }
+            }
+            else {
+                #Component parts can check their parent for publication date
+                if ($r->isComponentPart() &&
+                      checkParentForPublicationDate($r, $t, $sf008)) {
+                    #Publication date succesfully extracted from the parent record!
+                    return 1;
+                }
+
+                my $cpText = ($r->isComponentPart() ? '(Component Part)': '');
+                $log->warning('Docid '.$r->docId().$cpText.' has no publication date in field 008 and no 260c to pull it from! Using 1899.');
+                repair008('1899', $sf008, $r);
+            }
+        }
+    }
+    else {
+        $log->error('Record docid '.$r->docId().' has no field 008!');
+    }
+}
+##EO EGDATA-120
+
+##EGDATA-121
+sub removeTitlelessRecords {
+    my $r = shift;
+    my $records = shift; #the records-hash that contains all the records built from this chunk
+    
+    foreach (210,222,240,242,245,246) {
+        if (my $fia = $r->fields($_) ) {
+            return; #Looking for records with none of these fields, eg titleless records. Happy to have found a title!
+        }
+    }
+    #No title found so DESTROYING this bastard!
+    $log->warning('Record docid '.$r->docId().' has no title, so removing it.');
+    
+    delete $records->{ $r->docId() };
+    $r->DESTROY();
+
+    $statistics->{removeTitlelessRecords}++;
+}
+##EO EGDATA-121
+
+sub forceTranscribingAgencyTo040c {
+    my $r = shift;
+    
+    if (my $f008a = $r->getUnrepeatableSubfield('040','c')) {
+        ;
+    }
+    else {
+        $r->addUnrepeatableSubfield('040','c','PIELINEN');
+    }
+}
+
+sub verifySerialMotherness {
+    my $r = shift;
+    
+    if (my $f008a = $r->getUnrepeatableSubfield('008','a')) {
+        if (my $content = $f008a->content()) {
+            #example serial mother which is not marked as a serial mother. Field 008:
+            #"080303d2008    fi    p                  "
+            my $timeIndicator = substr($content,6,1);
+            #my $serialSomething = substr($content,21,1);
+            if ($timeIndicator eq 'd') {
+                $r->isASerialMother(1);
+                $statistics->{verifiedSerialMotherness}++;
+            }
+            
+        }
+        else {
+            $log->warning('Record docid '.$r->docId().' has field 008 but no content in it?');
+        }
+    }
+    else {
+        #already enough alerts about missing field 008, so no alert this time
+    }
+}
+
+sub spacify044cAgeLimits {
+    my $r = shift;
+    
+    if (my $f044c = $r->getUnrepeatableSubfield('044','c')) {
+        if (my $content = $f044c->content()) {
+            
+            if ($content =~ m/(K)(\d\d)/ || $content =~ m/(K) (\d\d)/) {
+                $f044c->content($1.' '.$2);
+            }
+            else {
+                $log->warning('Record docid '.$r->docId().' subfield 044c containing "'.$content.'" is mumbojumbo. Should be like K15.');
+            }
+            
+            
+        }
+        else {
+            $log->warning('Record docid '.$r->docId().' has field 044c but no content in it?');
+        }
+    }
+    else {
+        #It is ok if $044c is missing because it is not mandatory :)
+    }
+}
+
+=head
+In usemarcon this ends up with $300a being overwritten by $300z no matter what code trick I try.
+Doing the conversion here, because figured no way to make this work in usemarcon.
+300I1           | 300I1           | ' '
+300I2           | 300I2           | ' '
+300$a           | <F30$a          | If (Not Exists ($z)) Then S
+300$z           | <F30$a          | S
+300$a           | <F30$a          | + If (Exists ($z) And (RegFind('^\\(.*\\)\$') >= 0)) Then ' ' + S Else If (Exists ($z)) Then ' (' + S + ')'
+
+The following part still works in usemarcon as supposed to.
+300$b           | <F30$b          | S
+300$c           | <F30$c          | S
+300$d           | <F30$e          | S
+F30             | 300             | If (RegFind('[\\)\\.]\$') < 0) Then S + '.' Else S;
+                                    ReplaceOcc ('$b' By ', ','>1', Strict);
+                                    Replace ('$b' By ' :$b', Strict);
+                                    Replace ('$c' By ' ;$c', Strict);
+                                    ReplaceOcc ('$e' By ', ','>1', Strict);
+                                    Replace ('$e' By ' +$e', Strict)
+=cut
+sub doUsemarconsJobForField300 {
+    my $r = shift;
+
+    if (my $f300 = $r->getUnrepeatableField('300')) {
+
+        my $sf300a = $f300->getUnrepeatableSubfield('a');
+        my $contentA = ($sf300a) ? $sf300a->content() : undef;
+        my $sf300z = $f300->getUnrepeatableSubfield('z');
+        my $contentZ = ($sf300z) ? $sf300z->content() : undef;
+        my $marc21ContentA;
+
+        if (!(defined $contentZ) || length $contentZ <= 1) {
+            $marc21ContentA = $contentA;
+        }
+        elsif (defined $contentA && $contentA =~ m/\(.*\)/) {
+            $marc21ContentA = $contentZ . ' ' . $contentA;
+        }
+        elsif (defined $contentA) {
+            $marc21ContentA = "$contentZ ($contentA)";
+        }
+        else {
+            $marc21ContentA = $contentZ;
+        }
+
+        #Not all Records have the 300$z, so let's not needlessly create such.
+        if ($marc21ContentA) {
+            if (! $sf300a) {
+                $f300->addSubfield('a', $marc21ContentA);
+            }
+            else {
+                $sf300a->content($marc21ContentA);
+            }
+        }
+        $f300->deleteSubfield($sf300z);
+    }
+}
+sub mergeSeparate260 {
+    my $record = shift;
+
+    if (my $fia = $record->fields('260') ) {
+        my $first260 = $fia->[0]; #Store the first field 260 so we can move other's values there.
+
+        for (my $i=1 ; $i<scalar(@$fia) ; $i++) { #Starting from 1, since index 0 is the $first260
+
+            my $f260 = $fia->[$i];
+            $first260->mergeField( $f260 );
+            $record->deleteField($f260);
+            $statistics->{mergeSeparate260}++;
+            $i--; #Compensate for the deleted Item
+        }
+    }
+}
+
+sub sanitizeCallNumber {
+    my ($subfield, $record) = @_;
+    my $sfContent = $subfield->content();
+
+    if (! (defined $sfContent)) {
+        $log->warning('No Call number for Record "'.$record->docId().'" even if field "'.$subfield->code().'" exists!');
+        return; 
+    }
+
+    if ( ( length $sfContent < 3 && $sfContent !~ /^\d\d?$/ ) ||
+         ( length $sfContent > 2 && $sfContent !~ /^\d\d?\.\d*\D*$/) ) {
+        $sfContent =~ s/[ '\*#\[\]]//g; #remove nasty characters, as somehow they intrude here as well
+        $sfContent =~ s/,/./g; #replace , with .
+        $sfContent =~ s/\.\./\./; #replace .. with .
+        if (length $sfContent > 2) {
+            if ($sfContent =~ /^(\d\d?).?(\d*\D*)$/) { #create a dot for call numbers missing one
+                $sfContent = $1.'.'.$2;
+            }
+        }
+        
+        if ( ( length $sfContent < 3 && $sfContent !~ /^\d\d?$/ ) ||  #maybe sanitating resolves this error?
+           ( length $sfContent > 2 && $sfContent !~ /^\d\d?\.\d*\D*$/) ) {
+            
+            if ($sfContent =~ /^(\s|\D)+$/) { #If content is only text
+                #Get a reference to the MARC::Record-object and delete the parent field completely.
+                #Make no noise.
+                my $field = $subfield->parent();
+                $record->deleteField(  $field  ) if $field;
+                return;
+            }
+            $log->warning('Bad Call number format for Record "'.$record->docId().'" using Call number "'.$sfContent.'"');
+        }
+        else {
+            $subfield->content( $sfContent );
+            $statistics->{callNumberRepaired}++;
+        }
+    }
+}
+
+sub get260cFrom245aForSerials {
+    my $r = shift;
+    return unless $r->isASerial();
+    my $error = get260cFrom245a($r);
+    if ($error) {
+        if ($error eq 'NO245A_NUMBER') {
+            $log->warning("Serial '".$r->docId()."' has no 260c, and 245a doesn't have a valid serial enumeration!");
+        }
+        elsif ($error eq 'NO245A') {
+            $log->warning("Serial '".$r->docId()."' has no 260c, and no 245a to pull it from!");
+        }
+    }
+}
+#This method should be called only after 260s have been merged
+sub get260cFrom245a {
+    my $record = shift;
+
+    my $error = 0;
+    if (my $f260c = $record->getUnrepeatableSubfield('260', 'c') ) {
+        #All is OK!
+    }
+    else {
+        if (my $f245a = $record->getUnrepeatableSubfield('245', 'a') ) {
+            if ($f245a->content() =~ /(\d{4})/) { #Get the year from enumeration if available
+                my $pub_year = $1;
+                my $newF260 = $record->getUnrepeatableField('260') || MARC::Field->new('260');
+                $newF260->addSubfield('c', $pub_year);
+                $record->addField($newF260) unless $record->getUnrepeatableField('260');
+            }
+            else {
+                $error = "NO245A_NUMBER";
+            }
+        }
+        else {
+            $error = "NO245A";
+        }
+    }
+    return $error;
+}
+
+sub printStatistics {
+    my $chunkSuffix = shift;
+    my $count = 0;
+    my $report = 'MarcRepair statistics for chunk '.$chunkSuffix.':'."\n";
+    for my $action (sort keys %$statistics) {
+        $report .= $action.':'.$statistics->{$action}.'   ';
+        
+        $count += $statistics->{$action};
+    }
+    $log->info($report . 'TOTAL:' . $count);
+}
+
+
+return 1; #to make compiler happy happy

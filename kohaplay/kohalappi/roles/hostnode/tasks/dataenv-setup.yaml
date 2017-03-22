@@ -152,7 +152,7 @@
 # [KohaLXC]:dataenv(control),ppmtenv
 # - liqlocde_translation.csv  for 'liqlocde_translation.pm' (PP/MMT)
 # - staffaccounts.csv for 'makeStaffAccounts' (PP/MMT)
-# - 'File id' and 'Sheet id (gid)' equired
+# - 'File id' and 'Sheet id (gid)' required
 - name: dataenv(control)/ppmmt - Extract CSVs for TranslationTables/{liqlocde_translation,staffaccounts} from G-spreadsheet(s)
   vars:
     org: "{{ hostnode_kohalxc_organization }}"

@@ -118,7 +118,7 @@
 
 ## Cronjob(s) for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
 #  - "process_message_queue.pl -v"
-- name: Add cronjob(s) for Koha
+- name: koha - Add cronjob(s) for Koha
   become: yes
   cron:
     user: koha
@@ -130,25 +130,20 @@
   when:
     - kohalxcs_kohaenv_enabled
 
-## Test sending mail from container
-#- name: koha - Sending mail
-#  shell: |
-#    echo "Did you get it?" | mail -s "Subject: KohaLXC/Ansible testing" user@ex.fake
-#  when:
-#    - kohalxcs_kohaenv_enabled
-
 ## Ensure koha-group exists in the lXC
-- name: setup - Ensure we have a koha-user group
+# - TODO: should ensure we have 'koha' user in LXC w/ appropriate group
+- name: koha/data/ppmmt - Ensure we have a koha-user group
   become: yes
   group: >
     name={{ kohalxc_kohagrp_name }}
     gid={{ kohalxc_kohagrp_id }}
     state=present
   when:
+    - kohalxcs_kohenv_enabled or kohalxcs_dataenv_enabled or kohalxcs_ppmmtenv_enabled
     - kohalxc_kohagrp_name is defined
     - kohalxc_kohagrp_id is defined
 
-## Ensure kohaoper (default: 'ubuntu') belongs to koha-group and has ssh-keys
+## Ensure kohaoper (i.e. 'ansible_user') belongs to koha-group and has ssh-keys
 - name: setup - Ensure LXC-user (ansible_user) has ssh-keys and belongs to koha-group
   become: yes
   user: >
@@ -179,7 +174,7 @@
     dest="{{ kohalxcs_kohaenv_kohaconf }}"
     mode="u=rw,g=r,o=r"
     owner="koha"
-    group="koha"
+    group="{{ kohalxc_kohagrp_name }}"
     backup="yes"
   when:
     - kohalxcs_kohaenv_enabled
@@ -260,14 +255,15 @@
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
-## Make Staff Accounts for PP/MMT-Patrons
-- name: data+pp+migrate - Make staff accounts for PatronsImportChain-conversion
+## Make 'Staffaccounts' in addition to PP/MMT-Patrons
+# - only if 'Patrons' converted and "kohlxcs_mmtenv_migrateme" has 'staffaccounts'
+- name: data+ppmmt+(migrate) - Make Staff accounts for Koha (in addition to normal PatronsImportChain-conversion)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
-    echo "== ansible-kohalxc: For now, don't generate new staffaccouns (07.03.2017)"
-    #echo && ./makeStaffAccounts.sh > /dev/null;
+    echo && echo "== ansible-kohalxc: Comment out below 'makeStaffAccouns.sh' (to ensure not overwriting 'testikoha' staffaccounts since 07.03.2017)"
+    echo && ./makeStaffAccounts.sh Staffaccounts > /dev/null;
   args:
     executable: /bin/bash
     chdir: "{{ kohalxcs_kohalxc_tooldir }}/ppmmtws/ConversionTools"
@@ -276,19 +272,19 @@
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
-    - ('patrons' in kohalxcs_mmtenv_migrateme|lower)
+    - ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
-## Run conversion: build '{Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme' files
-- name: data+ppmmt - Build '*.migrateme' files for insertion to Koha
+## Generate '{Staffaccounts,Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme's
+- name: data+ppmmt - Build '*.migrateme' from conv targets for migrating them to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
-    #ls -1sh && for d in "Patrons Biblios Items Holds Checkouts Fines"
-    ls -1sh && for d in "{{ kohalxcs_ppmmtenv_importchains | d() }}"
+    #ls -1sh && for d in "Staffaccounts Patrons Biblios Items Holds Checkouts Fines"
+    ls -1sh && for d in "Staffaccounts {{ kohalxcs_ppmmtenv_importchains | d() }}"
     do
-       #echo ${d,,}.migrateme
-       ([[ -d $d ]] && cd $d && echo && echo "== $d: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && find */ -maxdepth 1 -name '*.migrateme' -exec cp -vp {} . \; 2>/dev/null; ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo);
+       ([[ -d $d ]] && cd $d && echo && echo "== $d: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo);
+       #([[ -d $d ]] && cd $d && echo && echo "== $d: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && find */ -maxdepth 1 -name '${d,,}.migrateme' -exec cp -vp {} . \; 2>/dev/null; ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo);
     done
   args:
     executable: /bin/bash
@@ -308,15 +304,14 @@
 #    target: /tmp/mdbenv-dump_{{ inventory_hostname }}_all-ddmmyyy.sql
 
 ## Database/status: 'patrons' and staffaccounts
-# - USE {{ kohalxcs_mdbenv_kohadb }}
-# - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> 'S';
-# - SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = 'S';
+# - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
 - name: koha+mdb - Show converted Patrons and generated Staff accounts, if any are in the db
   become: yes
   shell: |
-    pwd && ls -1shl Patrons && echo
+    [[ -d Patrons ]] && ls -1shl Patrons && echo
     [[ -f Patrons/patrons.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> "S" LIMIT 15;'
-    [[ -f Patrons/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'
+    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo
+    [[ -f Staffaccounts/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'
     exit 0
   args:
     executable: /bin/bash
@@ -324,7 +319,7 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mdbenv_enabled
-    - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Push/copy KohaLXC/kohalxcs migration environment (mmtenv) customization scripts to target
 - name: koha+mmt - Templatize bulkImport scripts and settings for migration LXCs
@@ -341,36 +336,36 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
+    - kohalxc_kohagrp_name
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate: 'patrons' (and staffaccounts)
-# TODO: Do we want to ensure some Patron-related data will be emptied?
-# - DELETE FROM borrowers WHERE borrowernumber <> 1;
-# - DELETE FROM borrowers WHERE categorycode <> 'S';
-- name: koha+mmt - Migrate newly converted Patrons and Staff accounts
+# TODO: Do we want to empty some Patron-related data before migrating?
+# - DELETE FROM borrowers WHERE categorycode <> 'S' AND borrowernumber <> 1;
+- name: koha+mmt - Migrate newly converted Patrons and/or Staff accounts
   become: yes
   shell: |
-    pwd && ls -1shl Patrons
-    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme
-    [[ -f Patrons/patrons.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate"
-    #[[ -f Patrons/staffaccounts.migrateme ]] && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/staffaccounts.migrateme &> log/bulkPatronImport-20170307_1505.log"
     #su -l koha -c "bulkPatronImport.pl --help"
+    [[ -d Patrons ]] && ls -1shl Patrons && echo
+    [[ -f Patrons/patrons.migrateme ]] && head -9 Patrons/patrons.migrateme && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate &> log/bulkPatronImport-patrons.log"
+    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo
+    #[[ -f Staffaccounts/staffaccounts.migrateme ]] && head -9 Staffaccounts/staffaccounts.migrateme && su -l koha -c "bulkPatronImport    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Staffaccounts/staffaccounts.migrateme &> log/bulkPatronImport-staffaccounts.log"
     exit 0
   args:
     executable: /bin/bash
     chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
-    #creates: Patrons/.patrons.migrateme
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
-    - ('patrons' in kohalxcs_mmtenv_migrateme|lower)
+    - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate: 'biblios'
 - name: koha+mmt - Migrate newly converted Biblios
   become: yes
   shell: |
-    pwd && ls -1sh Biblios
+    [[ -d Biblios ]] && ls -1shl Biblios && echo
+    [[ -f Biblios/biblios.migrateme ]] && head -18 Biblios/biblios.migrateme
   args:
     executable: /bin/bash
     chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
@@ -403,7 +398,7 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('biblios' in kohalxcs_mmtenv_migrateme)
+    - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
 
 - debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
 ## Zebra rebuild: check whether we are finished
@@ -418,7 +413,7 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('biblios' in kohalxcs_mmtenv_migrateme)
+    - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
 
 ##
 ## Koha/webapp-setup after this point => should be moved to kohaenv-setup.yaml ##
@@ -474,6 +469,7 @@
     - kohalxcs_kohaenv_enabled
     - kohalxc_organization is defined
     - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
+    - (kohalxcs_kohaenv_sslle is not defined) or (not kohalxcs_kohaenv_sslle)
 
 - name: koha+ssl - Enable SSL (switch to https) restart Koha/Apache2
   become: yes
