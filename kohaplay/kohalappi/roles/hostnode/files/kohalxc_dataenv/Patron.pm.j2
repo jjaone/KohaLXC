@@ -830,6 +830,11 @@ sub buildABarcode {
     my $patronId = $_[2]->[0];
     my $cuident = $_[2]->[1];
 
+    # DEBUG/TODO:KohaLappi; to find out more abt the barcode-length issue
+    if ($CFG::CFG->{organization} eq 'kohalappi') {
+	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:patronId='.$patronId.', cuident='.$cuident);
+    }
+
     ##If the borrower has an alternate identification, which is not the !!!!SSN!!!!, use that instead.
     #Also make sure that it is a presumed barcode instead of other craziness what typically is put to the cuident-field.
     if ($cuident && $cuident =~ m/(\d{10,})/) { #If the cuident has more than 10 digits, use that as barcode.
@@ -883,11 +888,10 @@ sub buildABarcode {
         $_[0]->separateItemAsVolatile("\buildABarcode(): No CountyNumber present for patron borrowernumber : $patronId", 1);
     }
 
-    # TODO: DEBUG
-    #if ($CFG::CFG->{organization} eq 'kohalappi') {
-    #	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:countyNumber='.$countyNumber.', identifyingNumber='.$identifyingNumber.', barcode='.$barcode.'.');
-    #	#my $break;
-    #}
+    # DEBUG/TODO:KohaLappi; to find out more abt the barcode-length issue
+    if ($CFG::CFG->{organization} eq 'kohalappi') {
+	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:patronId='.$patronId.', cuident='.$cuident.', createdLocationId='.$createdLocationId.', countyNumber='.$countyNumber.', identifyingNumber='.$identifyingNumber.', barcode='.$barcode.'.');
+    }
 
     return $barcode;
 }

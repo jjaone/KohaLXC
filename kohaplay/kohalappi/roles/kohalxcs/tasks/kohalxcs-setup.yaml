@@ -54,7 +54,7 @@
 
 #- debug: var=kohalxcs_devenv_pckgs,kohalxcs_dataenv_pckgs
 ## Ensure {dev,data}env.* pckgs are installed (if respective env is enabled)
-- name: dev+data+koha - Ensure all needed packages are installed
+- name: dev/data/koha - Ensure all needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -124,9 +124,11 @@
     user: koha
     name: "{{ item.name }}"
     job: "$KOHA_CRONJOB_TRIGGER {{ kohalxcs_kohaenv_bindir }}/{{ item.job }}"
+    minute: "{{ item.minute | d('*') }}"
     state: present
   with_items:
-    - { name: "process message queue", job: "cronjobs/process_message_queue.pl -v" }
+    - { name: "process_message_queue", job: "cronjobs/process_message_queue.pl -v" }
+    - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/2" }
   when:
     - kohalxcs_kohaenv_enabled
 
@@ -139,7 +141,7 @@
     gid={{ kohalxc_kohagrp_id }}
     state=present
   when:
-    - kohalxcs_kohenv_enabled or kohalxcs_dataenv_enabled or kohalxcs_ppmmtenv_enabled
+    - kohalxcs_kohaenv_enabled or kohalxcs_dataenv_enabled or kohalxcs_ppmmtenv_enabled
     - kohalxc_kohagrp_name is defined
     - kohalxc_kohagrp_id is defined
 
@@ -336,7 +338,7 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - kohalxc_kohagrp_name
+    - kohalxc_kohagrp_name is defined
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate: 'patrons' (and staffaccounts)
@@ -464,7 +466,7 @@
   args:
     executable: /bin/bash
     chdir: /tmp
-    #creates: /etc/apache2/ssl/server.crt
+    creates: /etc/apache2/ssl/server.crt
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxc_organization is defined

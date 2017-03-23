@@ -126,7 +126,7 @@ hostnode_origommtenv_importchains:
   - acquisitions
 
 # KohaLXC/backup: enable support for each server
-hostnode_backup_enabled: false
+hostnode_backup_enabled: true
 # KohaLXC/backup: server
 #hostnode_backupsrv:
 # KohaLXC/backup(sshfs): backup server that support sshfs mounts to clients
