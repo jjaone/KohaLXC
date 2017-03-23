@@ -42,7 +42,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -90,9 +89,6 @@ instance/
 # Sphinx documentation
 docs/_build/
 
-# PyBuilder
-target/
-
 # IPython Notebook
 .ipynb_checkpoints
 
@@ -102,10 +98,8 @@ target/
 # celery beat schedule file
 celerybeat-schedule
 
-# dotenv
+# environments
 .env
-
-# virtualenv
 venv/
 ENV/
 
