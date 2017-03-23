@@ -14,7 +14,7 @@
 
 ## Ensure env.* pckgs are installed
 # [KohaLXC]: lxcenv: Packages for LXC-environment(s)
-- name: lxcenv - Ensure all needed packages are installed
+- name: lxc - Ensure all needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -30,7 +30,7 @@
 - debug: var=hostnode_lxcenv_enabled,hostnode_lxcenv_pckgs,hostnode_lxcenv_networking,hostnode_lxcenv_domain
 
 ## Create directory with correct permissions for custom localized facts
-- name: lxcenv - Create default directory for custom Ansible/LXC-related facts
+- name: lxc - Create default directory for custom Ansible/LXC-related facts
   become: yes
   file: |
     path=/etc/{{ item }}
@@ -51,7 +51,7 @@
 - include_vars: lxcs/default/config/default.yaml
 # LXCs: to be provisioned/running in inventory host in: $KOHALXC_SETUP
 # - use what we have in 'lxc_names':
-- name: lxcenv - Read definitions for all named LXCs
+- name: lxc - Read definitions for all named LXCs
   include_vars:
     file: "lxcs/{{ item }}/config/{{ item.split('.')[0] }}.yaml"
     name: "{{ item.split('.')[0] }}"
@@ -67,7 +67,7 @@
 
 ## LXC-containers: Combine defined LXCs as fact list
 # - if 'lxcs.lxcs_names' doesn't have any of these, the d() takes care of ignoring it
-- name: lxcenv - Combine all read LXC definitions
+- name: lxc - Combine all read LXC definitions
   set_fact:
     hostnode_lxcs:
       - "{{ kldev_dmdbks|d() }}"
@@ -85,7 +85,7 @@
 #  when:
 #    - item.net.domain is defined and item.net.domain in inventory_hostname
     
-- name: lxcenv - Extract LXC-environments facts from lxc.group in 'container_config'
+- name: lxc - Extract LXC-environments facts from lxc.group in 'container_config'
   template: >
     src="files/kohalxc_lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
     dest="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
@@ -95,7 +95,7 @@
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
 ## Show all LXC-containers
-- name: lxcenv - Show all defined LXCs (provisionable/running in inventory host)
+- name: lxc - Show all defined LXCs (provisionable/running in inventory host)
   debug: var=item.net.domain,item.lxc.name,item.lxc.state
   with_items: hostnode_lxcs | d()
   changed_when: false
@@ -105,7 +105,7 @@
     - item.net.domain is defined and item.net.domain in inventory_hostname
 
 ## Ensure that LXCs to be provisioned are stopped (if they exists already)
-- name: lxcenv - Ensure provisionable LXCs are stopped (if they are present)
+- name: lxc - Ensure provisionable LXCs are stopped (if they are present)
   become: yes
   shell: "lxc-ls -f --active | grep -q {{ item.lxc.name }} && lxc-stop -n {{ item.lxc.name }} || echo 'Nothing to stop.'"
   args:
@@ -127,7 +127,7 @@
 
 ## Backup all managed LXCs now that they are stopped according to backup-schedule
 # - weekly for now: day-of-week == 5 (Friday)
-- name: lxcenv+backup - Weekly tar/rsync backup of managed LXC-containers to Backup-server
+- name: lxc+backup - Weekly tar/rsync backup of managed LXC-containers to Backup-server
   become: yes
   environment:
     KOHALXC_NAME: "{{ item.lxc.name }}"
@@ -152,7 +152,7 @@
 - debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_kohalxc_works
 ##  Use this to resolve need for manually mount devenv/convlog dirs
 # - for browsing and migration/LXCs (in non 'dataenv' hostnodes)
-- name: non-dataenv(sshfs) - Mount datenv hosts folders for 'kohadata'
+- name: non-data(sshfs) - Mount datenv hosts folders for 'kohadata'
   #become: yes
   environment:
     SSHPASS: "{{hostnode_operpass}}"
@@ -168,7 +168,7 @@
   when:
     - not hostnode_dataenv_enabled
 
-- name: Mount access for Koha-staff to dump4default-convsources (if any)
+- name: non-data - Mount access for Koha-staff to dump4default-convsources (if any)
   become: yes
   shell: |
     [[ -d {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource ]] && ( rm -f /home/koha/{dumpdefault,konversiolokit,virkailijakirjeet} &&
@@ -184,7 +184,7 @@
 
 ## Create/re-configure and enable all LXCs
 # - do this only in remote 'development' and 'testing'
-- name: lxcenv - Create/re-configure all defined LXCs
+- name: lxc - Create/re-configure all defined LXCs
   become: yes
   lxc_container:
     "{{ item.lxc }}"
@@ -199,7 +199,7 @@
 
 #- debug: var=cmd_lxccreate.results
 ## TODO: Ensure that hostnode ssh-key has been copied to provisioned LXC
-- name: lxcenv - Ensure host is authorized to PK-access in LXC
+- name: lxc - Ensure host is authorized to PK-access in LXC
   environment:
     LXCHOST: "{{ item.lxc_container.name }}.{{ item.item.net.domain }}"
     LXCUSER: "{{ item.item.net.user | d('ubuntu') }}"
@@ -213,7 +213,7 @@
     - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
 
 ## Check whether we have auth/host-key for sshing to LXCs
-- name: lxcenv - Has control host auth/host-key for jump-sshing to remote LXCs
+- name: lxc - Has control host auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
   environment:
     LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
@@ -231,7 +231,7 @@
 # - relevant parts copied from kohahosts/lxcenv-setup.yaml (222)
 # - above check based on 'known_hosts' entry in control host, not the key in LXCS
 # - pass only to runnning LXCs (in respective hosts) whose keys are missing
-- name: lxcenv - Pass control host/user auth-key for jump-sshing to remote LXCs
+- name: lxc - Pass control host/user auth-key for jump-sshing to remote LXCs
   environment:
     LXCHOST: "{{ item.stdout }}"
     LXCUSER: "{{ item.item.item.net.user | d(kohalxc_operuser) }}"
@@ -249,7 +249,7 @@
   delegate_to: localhost
 
 ## Show the status of existing LXCs..
-- name: lxcenv - status/setup - List status of running/stopped LXCs..
+- name: lxc - status/setup - List status of running/stopped LXCs..
   become: yes
   shell: lxc-ls -f
 

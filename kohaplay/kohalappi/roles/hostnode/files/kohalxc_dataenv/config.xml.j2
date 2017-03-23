@@ -73,7 +73,7 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
         <BuildPatrons>1</BuildPatrons>
         <!-- Should we censor the data or not? Used by the Patron-object . -->
         <Censor>0</Censor>
-        <FreeSSNStoreIndex>{{ item.patrons_ssnindex | d(120000) }}</FreeSSNStoreIndex>
+        <FreeSSNStoreIndex>{{ patrons_ssnindex | d(120000) }}</FreeSSNStoreIndex>
     </PatronsImportChain>
 
     <CheckOutsImportChain>
@@ -86,7 +86,7 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
     <HistoryImportChain>
         <!-- Processing datasets for database INSERTion -->
         <doRun>{{ history | d(0) }}</doRun>
-        <PreProcess> {{ preproc | d(1) }}</PreProcess>
+        <PreProcess> {{ preprocess | d(1) }}</PreProcess>
         <BuildHistory>1</BuildHistory>
     </HistoryImportChain>
 

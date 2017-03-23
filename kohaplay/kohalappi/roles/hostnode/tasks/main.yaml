@@ -20,16 +20,16 @@
 
 ## srvenv-{status,setup}
 - include: srvenv-status.yaml
-  tags: hostnode,hostnode:status,hostnode:srvenv-status
+  tags: hostnode, hostnode:status, hostnode:srvenv-status
 - include: srvenv-setup.yaml
-  tags: hostnode,hostnode:setup,hostnode:srvenv-setup
+  tags: hostnode:setup, hostnode:srvenv-setup
   when: hostnode_srvenv_enabled
 
 ## dataenv-{status,setup}
 #- include: dataenv-status.yaml
 #  tags: hostnode,hostnode:status,hostnode:dataenv-status
 - include: dataenv-setup.yaml
-  tags: hostnode,hostnode:setup,hostnode:dataenv-setup
+  tags: hostnode:setup, hostnode:dataenv-setup
   when: hostnode_dataenv_enabled
 
 ## secure-{status,setup}
@@ -44,7 +44,7 @@
 #  tags: hostnode, hostnode:lxcenv, hostnode:lxcenv-status
 - include: lxcenv-setup.yaml
   when: hostnode_lxcenv_enabled
-  tags: hostnode, hostnode:lxcenv, hostnode:lxcenv-setup
+  tags: hostnode:lxcenv, hostnode:lxcenv-setup
 
 ## mdbenv-{status,setup}
 

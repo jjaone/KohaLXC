@@ -16,24 +16,24 @@
 # ##############################################################################
 
 ## Show server lsb and os release and kernel details
-- name: Show server lsb and os release details
+- name: status - Show server lsb and os release details
   shell: lsb_release -d && cat /etc/os-release && uname -a
   changed_when: false
 
 ## Localizations: timezone
-- name: Show server timezone
+- name: status - Show server timezone
   become: yes
   shell: timedatectl || dpkg-reconfigure -f noninteractive tzdata
   changed_when: false
 
 ## Filesystem devices and disks
-- name: Show server filesystem  and disks info
+- name: status - Show server filesystem  and disks info
   become: yes
   shell: fdisk -l
   changed_when: false
 
 ## Show: LVM Physical Volume (PV) attributes 
-- name:  Show attributes of LVM-Physical volumes (PV), if any
+- name:  status - Show attributes of LVM-Physical volumes (PV), if any
   become: yes
   command: pvdisplay -m -v
   when:
@@ -41,14 +41,14 @@
   changed_when: false
 
 ## Show: ZFS and zpool status and attributes 
-- name:  Show status of server support for ZFS/zpools
+- name:  status - Show status of server support for ZFS/zpools
   become: yes
   shell: zpool list && zpool status && zpool get all && zfs list
   when: hostnode_zfs_enabled
   changed_when: false
 
 ## Show filesystems support: btrfs
-- name: Show server filesystem support for 'btrfs'
+- name: status - Show server filesystem support for 'btrfs'
   shell: btrfs help | grep -A1 "btrfs help" 2>&1
   register: cmd_btrfs
   when: hostnode_btrfs_enabled | d()
@@ -56,23 +56,23 @@
   changed_when: false
   
 ## Show: networking settings
-- name: Show specified server network interface
+- name: status - Show specified server network interface
   debug: msg="Using interface '{{ hostnode_network_interface }}' for networking."
 
 ## Show: iptables rules
-- name: Show server/host iptables rules
+- name: status - Show server/host iptables rules
   become: yes
   command: iptables -L -v -n -t nat
   register: cmd_iptables
   changed_when: false
 
 ## Packages: update/upgrade server settings
-- name: Show server packages auto update & unattended upgrades settings
+- name: status - Show server packages auto update & unattended upgrades settings
   shell: echo "== /etc/apt/apt.conf.d/20auto-upgrades ==" && cat /etc/apt/apt.conf.d/20auto-upgrades | grep -v "//\|#"; echo "== /etc/apt/apt.conf.d/50unattended-upgrades ==" && cat /etc/apt/apt.conf.d/50unattended-upgrades | grep -v "//\|#"
   changed_when: false
 
 ## Packages that are upgradable
-- name: List what is updateable/upgradable (sans held/ignored packages)
+- name: status - List what is updateable/upgradable (sans held/ignored packages)
   shell:  apt list --upgradable 2>/dev/null | grep -v "{{ hostnode_upgrade_pckgsignore | d()}}" | grep -s "upgradable"
   register: cmd_aptlist_upgrades
   failed_when: cmd_aptlist_upgrades.stderr != ""
@@ -85,4 +85,4 @@
 #- debug: var=ansible_port,hostnode_sshport
 
 ## More Backup-system related info
-- debug: var=hostnode_backupsrv,hostnode_backup_backupdir,hostnode_backup_rootdir,hostnode_backup_sshfssrv,hostnode_backup_clientpath
+- debug: var=hostnode_backup_enabled,hostnode_backupsrv,hostnode_backup_backupdir,hostnode_backup_rootdir,hostnode_backup_sshfssrv,hostnode_backup_clientpath
