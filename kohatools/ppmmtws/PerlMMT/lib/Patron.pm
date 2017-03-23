@@ -1,7 +1,3 @@
-# KohaLXC/kohatools (data+mmtenv); PP/MMT-configuration: lib (line numbers of by -6)
-# file: $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/lib/{{ item.name }}
-{{ ansible_managed | comment }}
-
 package Patron;
 
 use warnings;
@@ -341,30 +337,18 @@ sub set_branchcode {
     my $libid;
     my $culocid = $_[2]->[0];
 
-    # TODO: DEBUG
-    #if ($CFG::CFG->{organization} eq 'kohalappi') {
-    #	$log->warning('DEBUG[Patron.pm.j2/set_branchcode()]:culocid='.$culocid.'.');
-    #	#my $break;
-    #}
-
-    if(length $culocid == 5) {
+    if(length $culocid == 5) { #If Eno is involved 
         $libid = substr $culocid, 0, 2;
     }
     else {
         $libid = substr $culocid, 0, 1;
     }
-
-    # TODO: DEBUG
-    #if ($CFG::CFG->{organization} eq 'kohalappi') {
-#	$log->warning('DEBUG[Patron.pm.j2/set_branchcode()]:libid='.$libid.', culocid='.$culocid.'.');
-    #    }
-
     my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $culocid }  );
     my $oldLocName = $licloqde->[0];
     my $branchcode = $licloqde->[1];
     my $shelvingLocation = $licloqde->[2];
 
-    if ($shelvingLocation eq 'POIS') { # line 361
+    if ($shelvingLocation eq 'POIS') {
         return 'KILL MEE!';
     }
     if (! $branchcode) {
@@ -856,18 +840,6 @@ sub buildABarcode {
             $nochecknumber = 0;
         }
     }
-    elsif ($CFG::CFG->{organization} eq 'jokunen') {
-        if ($createdLocationId == 2) {
-            $countyNumber = "422";
-        }
-        elsif ($createdLocationId == 9) {
-            $nochecknumber = 1;
-        }
-    }
-    # [TODO/FIX]:Kohalappi; don't check number to not add additional checksum to end
-    elsif ($CFG::CFG->{organization} eq 'kohalappi') {
-	$nochecknumber = 1;
-    }
 
     unless ($countyNumber) {
         my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $createdLocationId }  );
@@ -882,12 +854,6 @@ sub buildABarcode {
     if (! $countyNumber) {
         $_[0]->separateItemAsVolatile("\buildABarcode(): No CountyNumber present for patron borrowernumber : $patronId", 1);
     }
-
-    # TODO: DEBUG
-    #if ($CFG::CFG->{organization} eq 'kohalappi') {
-    #	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:countyNumber='.$countyNumber.', identifyingNumber='.$identifyingNumber.', barcode='.$barcode.'.');
-    #	#my $break;
-    #}
 
     return $barcode;
 }
