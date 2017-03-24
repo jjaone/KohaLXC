@@ -128,7 +128,7 @@
     state: present
   with_items:
     - { name: "process_message_queue", job: "cronjobs/process_message_queue.pl -v" }
-    - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/2" }
+    - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/1" }
   when:
     - kohalxcs_kohaenv_enabled
 
