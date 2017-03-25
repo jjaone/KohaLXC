@@ -87,11 +87,9 @@ hostnode_zfs_enabled: True
 ## ###############
 ## LXC-environment
 ## ###############
-# Koha/hosts LXC/LXD-environment: false/true
-# - enabled by group default only for 'testing' and 'production'
+# Koha/hosts LXC-environment:
+# - enabled by default (in group_vras) only for 'testing' and 'production'
 hostnode_lxcenv_enabled: True
-# - disabled here for LXD 2.0 having serious issues with zpool/ZFS
-#hostnode_lxdenv_enabled: False
 
 ## LXC-networking: manual (configured) / dynamic (dhcp)
 # - by default 'dhcp' for 'testing'

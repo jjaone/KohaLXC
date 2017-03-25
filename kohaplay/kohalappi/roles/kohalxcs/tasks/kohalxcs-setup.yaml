@@ -116,8 +116,9 @@
     - kohalxcs_kohaenv_enabled
   notify: Restart smtp
 
-## Cronjob(s) for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
-#  - "process_message_queue.pl -v"
+## Cronjobs for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
+#  - "cronjobs/process_message_queue.pl -v"
+#  - "migration_tools/rebuild_zebra.pl -a -b -x -z -v"
 - name: koha - Add cronjob(s) for Koha
   become: yes
   cron:
