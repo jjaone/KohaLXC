@@ -46,10 +46,12 @@ hostnode_dataenv_enabled: True
 # Data/sets for MMT: migration dataset name(s) that are in this server
 #hostnode_dataenv_dataset: {}
 hostnode_dataenv_dataset:
+  - "Axiell-20161019-Lappi_PallasPro"
   - "Axiell-20170228-Lappi_PallasPro"
   - "Axiell-20161230-Kemi_Origo"
 hostnode_dataenv_datasets:
-  - { name: "Axiell-20170228-Lappi_PallasPro", default: yes }
+  - { name: "Axiell-20161019-Lappi_PallasPro", default: yes }
+  - { name: "Axiell-20170228-Lappi_PallasPro" }
   - { name: "Axiell-20161230-Kemi_Origo" }
 hostnode_dataenv_fixsource:
 

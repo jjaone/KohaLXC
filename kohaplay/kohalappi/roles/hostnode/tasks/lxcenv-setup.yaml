@@ -184,11 +184,6 @@
   when:
     - not hostnode_dataenv_enabled
 
-#- name: debug - Just test var/list filters
-#  vars:
-#    h: "dump4mmt-{{ hostnode_dataenv_datasets | selectattr('default', 'defined' ) | map(attribute='name') | first | d('default') }}"
-#  debug: var=hostnode_dataenv_datasets,h
-
 ## Create/re-configure and enable all LXCs
 # - do this only in remote 'development' and 'testing'
 - name: lxc - Create/re-configure all defined LXCs
