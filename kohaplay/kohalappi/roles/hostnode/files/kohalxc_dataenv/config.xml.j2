@@ -103,7 +103,7 @@ file: $KOHALXC_TOOLDIR/ppmmtws/{{ item.name }}.xml
     </PreProcess>
 
     <SerialsImportChain>
-        <doRun>{{ serials | d(0) }}</doRun>
+        <doRun>{{ serials | d(1) }}</doRun>
         <!-- <PreProcess>1</PreProcess> PreProcessing is performed in BibliosImportChain-->
         <serialMotherFolder>Serials/</serialMotherFolder>
         <serialMotherFile>serialmothers.marc</serialMotherFile>
