@@ -72,10 +72,10 @@ hostnode_srvenv_pckgs:
 # Environment main configuration directory: Shell/kohasetup + Ansible/plays
 hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
 
-## ##########################
-## KohaLXC/datasets (dataenv)
-## ##########################
-## KohaLXC/dataenv: role default
+## #########################
+## KohaLXC/dataenv: datasets
+## #########################
+# Enablement: (data for MMT)
 hostnode_dataenv_enabled: true
 # Packages needed for dataenv setup/config/tools
 hostnode_dataenv_pckgs:
@@ -85,8 +85,7 @@ hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
 hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
 # KohaLXC/dataenv: datasets name(s) for MMT-migration:
 hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
-# KohaLXC/dataenv: dataset source dir(s) for MMT
-# - TODO/FIX-obsolete: 'hostnode_dataenv_datasrc: "source"'
+hostnode_dataenv_datasets:
 # KohaLXC/dataenv: default dataset with latest fix source dir(s) for MMT
 hostnode_dataenv_fixssource:
   - { name: "default", src: "source" }
@@ -125,6 +124,9 @@ hostnode_origommtenv_importchains:
   - rotatingCollections
   - acquisitions
 
+## ###################################################
+## KohaLXC/lxcenv+backup: server, client etc. settings
+## ###################################################
 # KohaLXC/backup: enable support for each server
 hostnode_backup_enabled: true
 # KohaLXC/backup: server
@@ -237,10 +239,10 @@ hostnode_zfs_zpool: "{{ hostnode_lvmlv_tank_fs | d('zfstank') }}"
 # ZFS LXC-root filesystem in LV-'tank'/zpool for LXC-containers'
 hostnode_zfs_rootdir: lxc
 
-## ###############
-## LXC-environment
-## ###############
-## Koha/hosts LXC-environment: false/true
+## ##############
+## KohaLXC/lxcenv
+## ##############
+## Enablement (pckgs+paths): Koha/hosts LXC-environment:
 hostnode_lxcenv_enabled: true
 # Packages needed for LXC-environment
 hostnode_lxcenv_pckgs:
@@ -285,13 +287,14 @@ hostnode_lxcenv_loglevel: DEBUG
 ## ##########################
 
 ## LXC: mount entries
-#- end-part of LXC mount entries: specs: no opts, bind, create dirs, no fs checks
+# - end-part of LXC mount entries: specs: no opts, bind, create dirs, no fs checks
 hostnode_lxc_mount_post: none bind,create=dir 0 0
 # - kohatools
 hostnode_lxc_mount_kohatools_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/KohaLXC/kohatools
 hostnode_lxc_mount_kohatools: "{{ hostnode_lxc_mount_kohatools_pre }} home/{{ kohalxc_operuser }}/KohaLXC/kohatools {{ hostnode_lxc_mount_post }}"
 # - kohadata: dump4mmt-[dataset]/default
-hostnode_lxc_mount_kohadata_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }}
+hostnode_lxc_mount_kohadata_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_datasets | selectattr('default','defined') | map(attribute='name') | first | d('default') }}
+#hostnode_lxc_mount_kohadata_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohadata/dump4mmt-{{ hostnode_dataenv_dataset.0 | d('default') }}
 hostnode_lxc_mount_kohadata: "{{ hostnode_lxc_mount_kohadata_pre }} home/{{ kohalxc_operuser }}/{{ kohalxc_organization }}/kohadata {{ hostnode_lxc_mount_post }}"
 # - kohadata: dump4mmt-convsource:
 hostnode_lxc_mount_convsource_pre: lxc.mount.entry = /home/{{ hostnode_operuser }}/Works/{{ kohalxc_organization }}/kohaconv }}
@@ -323,7 +326,7 @@ hostnode_lxc_container_command: |
   chown -R 1000:1000 $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logdir }}
   echo "== kohalxc [ansible:lxc_create]: Playbook:'kohalappi' in roles/hostnode/defaults/main.yaml)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
   echo "== kohalxc [ansible:lxc_create]: `date`" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
-  env | grep KOHA | $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
+  env | grep KOHA | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
   echo "== kohalxc [ansible:lxc_create]: Use '{{ hostnode_lxcenv_networking }}' scheme for IP-addresses in LXC-net.." | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }}
   [[ "manual" == "{{ hostnode_lxcenv_networking }}" ]] && sed -i "s/iface eth0 inet dhcp/iface eth0 inet manual/" /etc/network/interfaces
   [[ "dhcp" == "{{ hostnode_lxcenv_networking }}" ]] && sed -i "s/iface eth0 inet manual/iface eth0 inet dhcp/" /etc/network/interfaces
@@ -351,11 +354,17 @@ hostnode_kohaenv_setup: |
   echo "== kohalxc [ansible:kohaenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }};
   id && pwd && ls -la
 
-## Koha/webapp-environment ##
-# - Koha/webapp: server name (DNS)
+## ###############
+## Koha/webapp env
+## ###############
+hostnode_kohaenv_srvdomain: localdomain
+# Koha/webapp: server name (DNS)
 hostnode_kohaenv_srvname: localhost
-hostnode_kohaenv_ssl_acmechallenge: _acme-challenge.localhost TXT "blabloh"
+#hostnode_kohaenv_ssl_acmechallenge:
 
+## ########################
+## LXCs: defaults/templates
+## ########################
 ## LXC: template
 # - template (distro): Ubuntu
 hostnode_lxc_tmpl: ubuntu
@@ -366,14 +375,12 @@ hostnode_lxc_tmpl_pckgs: "wget,joe,nano,python2.7-minimal,git,tig"
 # - template/auth_key:
 hostnode_lxc_tmpl_authkey: ".ssh/id_rsa.pub"
 
-## LXC: lists of containers
+# LXC (list of): containers
 # Default LXCs (list-of-dicts), leave undefined for now:
 #hostnode_lxc_defaults:
-
-# All LXCs (how to empty the lists/dicts here):
+# All LXCs
+# - TODO: how to empty the lists/dicts here):
 #hostnode_lxcs: {} # empty dict, flow mapping (with_dict)
 #hostnode_lxcs: [] # empty hash, block mapping (with_items)
-
-# How to define a list of containers at role/defaults level:
+# - TODO: how to define a list of containers at role/defaults level:
 #hostnode_lxcs:
-#  - "{{ kldev_dmdbks }}"

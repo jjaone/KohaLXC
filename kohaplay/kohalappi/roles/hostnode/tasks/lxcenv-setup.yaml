@@ -117,8 +117,6 @@
     - item.lxc is defined and item.lxc.name is defined
     - item.net.domain is defined and item.net.domain in hostnode_lxcenv_domain
 
-- fail:
-
 ## Get current date: yyyymmdd
 #- set_fact: kohalxc_date_full="{{lookup('pipe','date +%Y%m%d%H%M%S')}}"
 - set_fact: kohalxc_date_yyyymmdd="{{lookup('pipe','date +%Y%m%d')}}"
@@ -126,6 +124,7 @@
 - set_fact: kohalxc_date_dow="{{lookup('pipe','date +%u')}}"
 - debug: var=kohalxc_date_yyyymmdd,kohalxc_date_dow
 
+#- debug: var=hostnode_backup_enabled,hostnode_backupsrv,hostnode_kohaenv_srvname,hostnode_lxcenv_networking,hostnode_lxcenv_domain
 ## Backup all managed LXCs now that they are stopped according to backup-schedule
 # - weekly for now: day-of-week == 2=Tuesday or 4=Thursday or 7=Sunday)
 - name: lxc+backup - Weekly (Tue, Thu, Sun) tar/rsync backup of managed LXC-containers to Backup-server (if not already)
@@ -148,14 +147,14 @@
     - hostnode_backup_enabled
     - (kohalxc_date_dow|int == 2) or (kohalxc_date_dow|int == 4) or (kohalxc_date_dow|int == 7)
     - item is defined and item.net is defined
-    - item.net.domain is defined and item.net.domain in inventory_hostname
+    - item.net.domain is defined and item.net.domain in hostnode_lxcenv_domain
     - item.lxc is defined and item.lxc.name is defined
     - hostnode_backupsrv is defined and hostnode_backup_backupdir is defined
 
 - debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_kohalxc_works
 ##  Use this to resolve need for manually mount devenv/convlog dirs
 # - for browsing and migration/LXCs (in non 'dataenv' hostnodes)
-- name: non-data(sshfs) - Mount datenv hosts folders for 'kohadata'
+- name: nodata - Mount datenv hosts folders for 'kohadata'
   #become: yes
   environment:
     SSHPASS: "{{hostnode_operpass}}"
@@ -171,7 +170,7 @@
   when:
     - not hostnode_dataenv_enabled
 
-- name: non-data - Mount access for Koha-staff to dump4default-convsources (if any)
+- name: nodata - Mount access for Koha-staff to dump4default-convsources (if any)
   become: yes
   shell: |
     [[ -d {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource ]] && ( rm -f /home/koha/{dumpdefault,konversiolokit,virkailijakirjeet} &&
@@ -184,6 +183,11 @@
     executable: /bin/bash
   when:
     - not hostnode_dataenv_enabled
+
+#- name: debug - Just test var/list filters
+#  vars:
+#    h: "dump4mmt-{{ hostnode_dataenv_datasets | selectattr('default', 'defined' ) | map(attribute='name') | first | d('default') }}"
+#  debug: var=hostnode_dataenv_datasets,h
 
 ## Create/re-configure and enable all LXCs
 # - do this only in remote 'development' and 'testing'
@@ -198,35 +202,37 @@
     - item.lxc is defined
     - item.net is defined
     - item.lxc.container_config is defined
-    - item.net.domain is defined and item.net.domain in inventory_hostname
+    - item.net.domain is defined and item.net.domain in hostnode_lxcenv_domain
 
-#- debug: var=cmd_lxccreate.results
-## TODO: Ensure that hostnode ssh-key has been copied to managed LXC
+- debug: var=cmd_lxccreate.results
+## Ensure that hostnode ssh-key has been copied to managed LXC
 - name: lxc - Ensure host is authorized to PK-access in managed LXCs
   environment:
     LXCHOST: "{{ item.lxc_container.name }}.{{ item.item.net.domain }}"
     LXCUSER: "{{ item.item.net.user | d('ubuntu') }}"
     SSHPASS: "{{ kohalxc_operpass }}"
-  shell: sshpass -e ssh-copy-id -i .ssh/id_rsa.pub $LXCUSER@$LXCHOST
+  shell: sshpass -e ssh-copy-id -f -i .ssh/id_rsa.pub $LXCUSER@$LXCHOST
   no_log: True
   with_items: cmd_lxccreate.results
+  register: cmd_sshcopy
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
     - item.item.net is defined
-    - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
+    - item.item.net.domain is defined and item.item.net.domain in hostnode_lxcenv_domain
 
+- debug: var=cmd_sshcopy.results
 ## Check whether we have auth/host-key for sshing to LXCs
 - name: lxc - Has control host auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
   environment:
     LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
   shell: ssh-keygen -l -F "$LXCHOST" > /dev/null || echo "$LXCHOST"
-  with_items: cmd_lxccreate.results
+  with_items: cmd_sshcopy.results
   register: cmd_sshkeys_missing
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
     - item.item.net is defined
-    - item.item.net.domain is defined and item.item.net.domain in inventory_hostname
+    - item.item.net.domain is defined and item.item.net.domain in hostnode_lxcenv_domain
   delegate_to: localhost
 
 #- debug: var=cmd_sshkeys_missing.results,kohalxc_operuser,hostnode_sshport

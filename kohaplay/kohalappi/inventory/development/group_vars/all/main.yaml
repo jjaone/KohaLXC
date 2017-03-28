@@ -1,5 +1,5 @@
 ---
-# File: inventory/development/group_vars/all/main.yaml
+# File: inventory/development/group_vars/all
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -45,10 +45,9 @@ ansible_user: "{{ hostnode_operuser | d('kohaoper') }}"
 # Asible_become_pass:
 ansible_become_pass: "{{ hostnode_operpass }}"
 
-## #######################
-## Server: KohaLXC tooling
-## #######################
-# - override role/inventory groups_vars/defaults here
+## ###############
+## KohaLXC/dataenv
+## ###############
 ## KohaLXC/dataenv:
 # MMT/data-enabled
 hostnode_dataenv_enabled: False
@@ -72,10 +71,10 @@ hostnode_dataenv_fixsource:
 hostnode_reboot_enabled: False
 # Upgradable server:
 hostnode_upgrade_enabled: True
-# List of (wildcareded) package names to be ignored from upgrades
+# List of (wildcarded) package names to be ignored from upgrades
 hostnode_upgrade_pckgsignore: "bacula-"
-# Network interface: (use 'vault' to define this)
-#hostnode_network_interface:
+# Network interface:
+hostnode_network_interface: bond0
 
 ## ############
 ## Storage: LVM
@@ -91,33 +90,35 @@ hostnode_lvmvg_main: roi-vg
 ## ZFS support: false/true (not in group for 'development' override for hosts)
 hostnode_zfs_enabled: False
 
-## ###############
-## LXC-environment
-## ###############
-# Koha/hosts LXC/LXD-environment:
+## ##############
+## KohaLXC/lxcenv
+## ##############
+## Enablement (pckgs+paths): Koha/hosts LXC/LXD-environment:
 # - enabled by default (here) only for 'testing' and 'production'
 hostnode_lxcenv_enabled: False
 # - disabled here for LXD 2.0 having serious issues with zpool/ZFS
 hostnode_lxdenv_enabled: False
+#hostnode_lxcenv_pckgs:
+#hostnode_lxcenv_confdir:
+#hostnode_lxcenv_setupdir:
 
 ## LXC-networking: manual (configured) / dynamic (dhcp)
-# - by default 'dhcp' for 'testing'
 hostnode_lxcenv_networking: manual
-# LXC-network domain name: none, lxc, kohalxc, weblxc, mdblxc
+# LXC-networking: domain name: none, lxc, kohalxc, weblxc, mdblxc
 hostnode_lxcenv_domain: "{{ (hostnode_lxcenv_networking == 'dhcp') | ternary('kohalxc','lxc') }}"
 
-## ################
-## Koha-environment
-## ################
+## ###############
+## Koha/webapp env
+## ###############
+# Koha/webapp: server domain (DNS)
+hostnode_kohaenv_srvdomain: lapinkirjasto.fi
 # Koha/webapp: server name (DNS)
-# - defined in secure file: './vault.yaml' 
-#hostnode_kohaenv_srvname:
-# - TODO: only for LetsEncrypt-based dns-01 challange implementations
+#hostnode_kohaenv_srvname: *.lapinkirjasto.fi
 #hostnode_kohaenv_ssl_acmechallenge:
 
-## ###########################
-## LXCs: defaults/provisioning
-## ###########################
-# List can contain both web and db-related LXCs for all hosts
+## ########################
+## LXCs: defaults/templates
+## ########################
+# LXC (list of):
+# - can contain both web and db-related LXCs for all hosts
 hostnode_lxcs:
-#  - "{{ kldev_dmdbks }}"

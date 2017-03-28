@@ -44,7 +44,7 @@
 
 ## Show common KohaLXC-related settings (for all roles)
 - name: debug - Show common (KohaLXC-) environment settings
-  debug: var=local_home,hostnode_environment,kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_rootdir,kohalxc_tooldir,kohalxc_organization,kohalxc_setupdir,kohalxc_datadir,kohalxc_dataset,kohalxc_devenv,kohalxc_srvenv,kohalxc_mdbenv,kohalxc_webenv
+  debug: var=local_home,hostnode_environment,kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_rootdir,kohalxc_tooldir,kohalxc_organization,kohalxc_setupdir,kohalxc_datadir,kohalxc_dataset,kohalxc_datasets,kohalxc_devenv,kohalxc_srvenv,kohalxc_mdbenv,kohalxc_webenv
   tags: common:debug
 
 ## Show Ansible-related settings

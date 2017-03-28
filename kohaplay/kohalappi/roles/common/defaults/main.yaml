@@ -43,17 +43,18 @@ kohalxc_works: "{{ lookup('env', 'KOHALXC_WORKS') }}"
 # KohaLXC-root directory (kohalxc_root): 
 kohalxc_rootdir: "{{ lookup('env', 'KOHALXC_ROOTDIR') | d(kohalxc_works~'/KohaLXC', true) }}"
 # KohaLXC-kohatools directory (kohalxc_tools):
-kohalxc_tooldir: "{{ lookup('env', 'KOHALXC_TOOLDIR') | d(kohalxc_rootdir~'/kohatools' ,true) }}"
+kohalxc_tooldir: "{{ lookup('env', 'KOHALXC_TOOLDIR') | d(kohalxc_rootdir~'/kohatools', true) }}"
 # KohaLXC-organization (kohalxc_org): KohaSuomi, KohaLappi, ect.
 kohalxc_organization: "{{ lookup('env', 'KOHALXC_ORGANIZATION') | d('KohaSuomi', true) }}"
 # KohaLXC-setup directory (kohalxc_setups):
 kohalxc_setupdir: "{{ lookup('env', 'KOHALXC_SETUPDIR') | d(kohalxc_works~'/'~kohalxc_organization~'/kohalxc', true) }}"
 # Database/data directory (kohalxc_datas):
 kohalxc_datadir: "{{ lookup('env', 'KOHALXC_DATADIR') | d(kohalxc_works~'/'~kohalxc_organization~'/kohadata', true) }}"
-# Database dataset (kohalxc_dataset: name, date, content of the dump)
-kohalxc_dataset: "{{ lookup('env', 'KOHALXC_DATASET') | d({},true) }}"
-#kohalxc_dataset:
+# Database dataset(s): (kohalxc_dataset: name, date, content of the dump)
+kohalxc_dataset: "{{ lookup('env', 'KOHALXC_DATASET') | d({}, true) }}"
 # - "{{ lookup('env', 'KOHALXC_DATASET') | d([], true) }}"
+kohalxc_datasets:
+- { name: "{{ lookup('env', 'KOHALXC_DATASET') | d({}, true) }}" }
 
 ## KohaLXC-devenv: developer env config files and setup scripts
 kohalxc_devenv: "{{ kohalxc_tooldir }}/conf.d/env.dev"

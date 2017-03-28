@@ -96,6 +96,7 @@ kohalxcs_dataenv_pckgs:
 #hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
 # KohaLXC/dataenv: datasets name(s) for MMT-migration:
 #hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
+#hostnode_dataenv_datasets: "{{ kohalxc_datasets }}"
 
 ## #########################################################################
 ## KohaLXC/MMT(PP/Origo): mmtenv=ppmmtenv+origommtenv conversions/migrations

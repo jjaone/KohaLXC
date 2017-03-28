@@ -77,8 +77,9 @@
     - hostnode_kohagrp_name is defined
     - hostnode_kohagrp_id is defined
 
-- debug: var=kohalxc_datadir,kohalxc_dataset
-- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_dataenv_fixsource
+- debug: var=kohalxc_datadir,kohalxc_dataset,kohalxc_datasets
+- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_dataenev_datasets,hostnode_dataenv_fixsource
+- fail:
 ## Pull/extract any uploads of dataset dumps from datasrv/'koha'
 # [KohaLXC]:dataenv(control)
 # -from: srv:/home/koha/Works/KohaLappi/{{item}}
@@ -100,7 +101,7 @@
     - hostnode_dataenv_dataset is defined
     - hostnode_dataenv_dataset != ""
 
-- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_fixsource
+- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_dataenv_fixsource
 ## Ensure dataset extraction/conv sources have subdirs (in control host)
 # [KohaLXC]:dataenv(control)
 - name: dataenv(control) - Dirs/perms for dataset extraction/conversion sources (PallasPro+Origo)

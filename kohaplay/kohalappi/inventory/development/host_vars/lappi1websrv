@@ -21,53 +21,45 @@ hostnode_testvar: inventory_development_host_vars_roiweblxc
 ## #########################
 ## General: facts & handlers
 ## #########################
-# Facts gathering: False/True
 #gather_facts: False
-# Force all handlers always (also in case play fails..)
 #force_handlers: False
 
 ## ########################
 ## General: Ansible-related
 ## ########################
-## - set here to override inventory or playbook-level 'group_vars/all'
-# Python interpreter:
-# - set for distros that do not have Python 2 in path (e.g 'Ubuntu 16.04')
+# - set here to override inventory or playbook-level 'group_vars/all'
 #ansible_python_interpreter: /usr/bin/python2.7
-# Ansible_connection: ssh/local
 #ansible_connection: ssh
-# Ansible_port:
 #ansible_port: "{{ hostnode_sshport | d('22') }}"
-# Ansible become method:
 #ansible_become_method: sudo
-# Ansible_user:
 #ansible_user: "{{ hostnode_operuser | d('kohaoper') }}"
-# Asible_become_pass:
 #ansible_become_pass: "{{ hostnode_operpass }}"
 
-## ##############################
-## Server: KohaLXC tooling + envs
-## ##############################
-# - override role/inventory groups_vars/defaults here
-## KohaLXC/dataenv:
-# MMT/data-enabled
+## ###############################
+## KohaLXC/dataenv: datasets+fixes
+## ###############################
+# Enablement: (data for MMT)
 hostnode_dataenv_enabled: True
-# Data/sets for MMT: migration dataset name (that are in this server)
+#hostnode_dataenv_pckgs:
+#hostnode_dataenv_confdir:
+#hostnode_dataenv_datadir:
+# Data/sets for MMT: migration dataset name(s) that are in this server
 #hostnode_dataenv_dataset: {}
 hostnode_dataenv_dataset:
-  - "Axiell-20161019-Lappi_PallasPro"
-  - "Axiell-20161230-Kemi_Origo"
   - "Axiell-20170228-Lappi_PallasPro"
+  - "Axiell-20161230-Kemi_Origo"
+hostnode_dataenv_datasets:
+  - { name: "Axiell-20170228-Lappi_PallasPro", default: yes }
+  - { name: "Axiell-20161230-Kemi_Origo" }
+hostnode_dataenv_fixsource:
 
 ## ##########################
 ## Server updates/reboots/nic
 ## ##########################
 # Rebootable server:
 hostnode_reboot_enabled: True
-# Upgradable server:
 #hostnode_upgrade_enabled: True
-# List of (wildcarded) package names to be ignored from upgrades
 #hostnode_upgrade_pckgsignore: "bacula-"
-# Network interface:
 #hostnode_network_interface:
 
 ## ############
@@ -84,26 +76,23 @@ hostnode_lvmvg_main: roi1-vg
 ## ZFS support: false/true (overrifding group default for this server)
 hostnode_zfs_enabled: True
 
-## ###############
-## LXC-environment
-## ###############
-# Koha/hosts LXC-environment:
-# - enabled by default (in group_vras) only for 'testing' and 'production'
+## ##############
+## KohaLXC/lxcenv
+## ##############
+## Enablement/paths (pckgs+paths): Koha/hosts LXC-environment:
+# - enabled by default (in group_vars) only for 'testing' and 'production'
 hostnode_lxcenv_enabled: True
+#hostnode_lxcenv_pckgs:
+#hostnode_lxcenv_confdir:
+#hostnode_lxcenv_setupdir:
 
-## LXC-networking: manual (configured) / dynamic (dhcp)
-# - by default 'dhcp' for 'testing'
+# LXC-networking: manual (configured) / dynamic (dhcp)
 hostnode_lxcenv_networking: dhcp
 # LXC-network domain name: none, lxc, kohalxc, weblxc, mdblxc
 hostnode_lxcenv_domain: "{{ (hostnode_lxcenv_networking == 'dhcp') | ternary('weblxc','lxc') }}"
 
-## ##########################
-## LXC: defaults/provisioning
-## ##########################
+## #######################
+## LXC: defaults/templates
+## #######################
 # List can contain both web and db-related LXCs for all hosts
 hostnode_lxcs:
-#  - "{{ kldev_dmdbks }}"
-#  - "{{ kltest_dmdb }}"
-#  - "{{ klprod_mdbks }}"
-#  - "{{ klprod_mdb }}"
-#  - "{{ klprod_ks }}"
