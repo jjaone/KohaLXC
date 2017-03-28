@@ -151,7 +151,7 @@
     - item.lxc is defined and item.lxc.name is defined
     - hostnode_backupsrv is defined and hostnode_backup_backupdir is defined
 
-- debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_kohalxc_works
+- debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_kohalxc_works
 ##  Use this to resolve need for manually mount devenv/convlog dirs
 # - for browsing and migration/LXCs (in non 'dataenv' hostnodes)
 - name: nodata - Mount datenv hosts folders for 'kohadata'
@@ -206,13 +206,17 @@
 
 - debug: var=cmd_lxccreate.results
 ## Ensure that hostnode ssh-key has been copied to managed LXC
-- name: lxc - Ensure host is authorized to PK-access in managed LXCs
+- name: lxc - Ensure host(node) is authorized to ssh-access in managed LXCs
   environment:
     LXCHOST: "{{ item.lxc_container.name }}.{{ item.item.net.domain }}"
     LXCUSER: "{{ item.item.net.user | d('ubuntu') }}"
     SSHPASS: "{{ kohalxc_operpass }}"
-  shell: sshpass -e ssh-copy-id -f -i .ssh/id_rsa.pub $LXCUSER@$LXCHOST
-  no_log: True
+  shell: |
+    [[ -z $(ssh-keygen -F $LXCUSER@$LXCHOST) ]] && ssh-keyscan -H $LXCUSER@$LXCHOST >> ~/.ssh/known_hosts
+    sshpass -e ssh-copy-id -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -i ~/.ssh/id_rsa.pub $LXCUSER@$LXCHOST
+  args:
+    executable: /bin/bash
+  #no_log: True
   with_items: cmd_lxccreate.results
   register: cmd_sshcopy
   when:
@@ -220,14 +224,14 @@
     - item.item.net is defined
     - item.item.net.domain is defined and item.item.net.domain in hostnode_lxcenv_domain
 
-- debug: var=cmd_sshcopy.results
+#- debug: var=cmd_sshcopy.results
 ## Check whether we have auth/host-key for sshing to LXCs
 - name: lxc - Has control host auth/host-key for jump-sshing to remote LXCs
   #debug: var=item.lxc_container.name,item.item.net.domain,item.lxc_container.state
   environment:
     LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
   shell: ssh-keygen -l -F "$LXCHOST" > /dev/null || echo "$LXCHOST"
-  with_items: cmd_sshcopy.results
+  with_items: cmd_lxccreate.results
   register: cmd_sshkeys_missing
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
@@ -237,7 +241,6 @@
 
 #- debug: var=cmd_sshkeys_missing.results,kohalxc_operuser,hostnode_sshport
 ## Ensure control host/user auth key is present for jump-sshing to remote LXCs
-# - relevant parts copied from kohahosts/lxcenv-setup.yaml (222)
 # - above check based on 'known_hosts' entry in control host, not the key in LXCS
 # - pass only to runnning LXCs (in respective hosts) whose keys are missing
 - name: lxc - Pass control host/user auth-key for jump-sshing to remote LXCs
@@ -255,6 +258,8 @@
     - item.stdout is defined and item.stdout != ''
     - item.item is defined and item.item.item is defined and item.item.item.net is defined
     - item.item.item.net.user is defined
+    - item.item.item.net.domain is defined
+    - item.item.item.net.domain in hostnode_lxcenv_domain
   delegate_to: localhost
 
 ## Show the status of existing LXCs..
