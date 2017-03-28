@@ -54,7 +54,7 @@ kohalxc_datadir: "{{ lookup('env', 'KOHALXC_DATADIR') | d(kohalxc_works~'/'~koha
 kohalxc_dataset: "{{ lookup('env', 'KOHALXC_DATASET') | d({}, true) }}"
 # - "{{ lookup('env', 'KOHALXC_DATASET') | d([], true) }}"
 kohalxc_datasets:
-- { name: "{{ lookup('env', 'KOHALXC_DATASET') | d({}, true) }}" }
+- { name: "{{ lookup('env', 'KOHALXC_DATASET') | d({}, true) }}" } 
 
 ## KohaLXC-devenv: developer env config files and setup scripts
 kohalxc_devenv: "{{ kohalxc_tooldir }}/conf.d/env.dev"

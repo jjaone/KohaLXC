@@ -78,7 +78,7 @@
     - hostnode_kohagrp_id is defined
 
 - debug: var=kohalxc_datadir,kohalxc_dataset,kohalxc_datasets
-- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_dataenev_datasets,hostnode_dataenv_fixsource
+- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_dataenv_fixsource
 - fail:
 ## Pull/extract any uploads of dataset dumps from datasrv/'koha'
 # [KohaLXC]:dataenv(control)
