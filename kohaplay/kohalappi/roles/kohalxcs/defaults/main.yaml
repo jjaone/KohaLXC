@@ -339,15 +339,3 @@ hostnode_lxc_tmpl_release: trusty
 hostnode_lxc_tmpl_pckgs: "wget,joe,nano,python2.7-minimal,git,tig"
 # - template/auth_key:
 hostnode_lxc_tmpl_authkey: ".ssh/id_rsa.pub"
-
-## LXC: lists of containers
-# Default LXCs (list-of-dicts), leave undefined for now:
-#hostnode_lxc_defaults:
-
-# All LXCs (how to empty the lists/dicts here):
-#hostnode_lxcs: {} # empty dict, flow mapping (with_dict)
-#hostnode_lxcs: [] # empty hash, block mapping (with_items)
-
-# How to define a list of containers at role/defaults level:
-#hostnode_lxcs:
-#  - "{{ kldev_dmdbks }}"

@@ -1,0 +1,60 @@
+---
+# File: lxcs/kldev_mdbks.weblxc/config/kldev_mdbks.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# Description:
+# - LXC-name: 'kldev_mdbks.weblxc'
+# - kltest: KohaLappi/development, Ubuntu/Trusty, dir, lxcbr0/NAT
+# - mdbks: MariaDB + Koha-dev (KohaSuomi_3.16)
+# - weblxc: deploy to host serving '*weblxc'-domains
+# - network: (web)app[OPAC]-port=89, (web)int[staff]-port=8089
+# #############################################################################
+
+## network LXC/host port mappings + domain:
+# - (web/mdb)lxc => host: 89/8089 => 80/8080
+net:
+  app_port: 89
+  int_port: 8089
+  domain: weblxc
+  srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
+  user: kohaoper
+##  lxc: MariaDb (mdbenv), MMT/migration (mmtenv), Apache2+KS316 (kohaenv)
+# - for MMT/migration and Koha-testing etc. (testing, dhcp/webblxc)
+lxc:
+  name: kldev_mdbks
+  state: started
+  backing_store: "{{ lxc_default.backing_store }}"
+  container_log: "{{ lxc_default.container_log }}"
+  container_log_level: "{{ lxc_default.container_log_level }}"
+  container_config: 
+    # lxc/mounts
+    - "{{ hostnode_lxc_mount_kohatools_pre }} home/kohaoper/KohaLXC/kohatools {{ hostnode_lxc_mount_post }}"
+    - "{{ hostnode_lxc_mount_kohadata_pre }} home/kohaoper/{{kohalxc_organization}}/kohadata {{ hostnode_lxc_mount_post }}"
+    #- "{{ hostnode_lxc_mount_convsource_pre }} home/kohaoper/{{kohalxc_organization}}/kohaconv {{ hostnode_lxc_mount_post }}"
+    #- "lxc.mount.entry = /home/koha/dumpdefault/target home/kohaoper/{{kohalxc_organization}}/kohadata/target {{ hostnode_lxc_mount_post }}"
+    # lxc/group
+    #- lxc.group = {{ hostnode_environment | d('local') }}
+    - lxc.group = development
+    - lxc.group = dev
+    - lxc.group = mdb
+    - lxc.group = mmt
+    - lxc.group = koha
+    # lxc/start
+    - lxc.start.auto = 1
+    - lxc.start.delay = 0
+    - lxc.start.order = 0
+    # lxc/network
+    - lxc.network.veth.pair = Vkldev_mdbks
+    - lxc.network.type = veth
+    - lxc.network.link = lxcbr0
+    - lxc.network.flags = up
+  template: "{{ lxc_default.template }}"
+  template_options: >
+    --user kohaoper
+    {{ lxc_default.template_options }}
+  container_command:
+    "{{ lxc_default.container_command + hostnode_mdbenv_pckginstall + hostnode_kohaenv_setup }}"

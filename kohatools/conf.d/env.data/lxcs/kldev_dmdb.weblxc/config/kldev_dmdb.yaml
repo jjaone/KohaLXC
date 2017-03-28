@@ -1,5 +1,5 @@
 ---
-# File: roles/hostnode/vars/lxcs/lxc-kldev_dmdbks.yaml
+# File: roles/hostnode/vars/lxcs/lxc-kldev_dmdb.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -7,9 +7,9 @@
 # License: GNU General Public License version 3.
 #
 # Description:
-# - LXC-name: 'kldev_dmdbks.weblxc'
+# - LXC-name: 'kldev_dmdb.weblxc'
 # - kldev: KohaLappi/development, Ubuntu/Trusty, dir, lxcbr0/NAT
-# - dmdbks: data/MMT-conversion + MariaDB + Apache2/Koha-devKohaSuomi_3.16
+# - dmdb: data/MMT-conversion + MariaDB (later  "+ Apache2")
 # - weblxc: deploy to host serving '*weblxc'-domains
 # - network: app(OPAC)-port=88, int(staff)-port=8088
 # #############################################################################
@@ -24,7 +24,7 @@ net:
 ## lxc: MariaDb (mdbenv), data (dataenv), Apache2/KS316 (webaenv)
 # - for MMT/conversion & Koha-deployment (development, dhcp/weblxc)
 lxc:
-  name: kldev_dmdbks
+  name: kldev_dmdb
   state: started
   backing_store: "{{ lxc_default.backing_store }}"
   container_log: "{{ lxc_default.container_log }}"
@@ -44,7 +44,7 @@ lxc:
     - lxc.start.delay = 0
     #- lxc.start.order = 0
     # lxc_network:
-    - lxc.network.veth.pair = Vkldev_dmdbks
+    - lxc.network.veth.pair = Vkldev_dmdb
     - lxc.network.type = veth
     - lxc.network.link = lxcbr0
     - lxc.network.flags = up

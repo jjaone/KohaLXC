@@ -68,7 +68,7 @@
 - name: lxc - Combine all read LXC definitions
   set_fact:
     hostnode_lxcs:
-      - "{{ kldev_dmdbks|d() }}"
+      - "{{ kldev_dmdb|d() }}"
       - "{{ kldev_mdbks|d() }}"
       - "{{ kltest_dmdb|d() }}"
       - "{{ kltest_mdbks|d() }}"

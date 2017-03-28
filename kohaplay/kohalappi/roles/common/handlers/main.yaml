@@ -1,0 +1,16 @@
+---
+# File: roles/common/handlers/main.yml
+# Handlers for common notifications. Handlers are called by other plays.
+# Docs: http://docs.ansible.com/playbooks_intro.html for more information about handlers.
+
+## Restart NTP
+- name: ntp restart
+#  debug: msg="NTP restarting"
+  service: name=ntp state=restarted
+
+
+## Disable/stop LXD
+- name: lxd stop
+  become: yes
+# debug: msg="LXD disabling and stopping"
+  service: name=lxd state=stopped enabled=no
