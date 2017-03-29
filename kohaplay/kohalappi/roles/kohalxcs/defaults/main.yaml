@@ -103,8 +103,7 @@ kohalxcs_dataenv_pckgs:
 ## #########################################################################
 # KohaLXC/(pp/o)mmtenv: support creation of data+MMT-aware LXCs
 
-# KohaLXC/ppmmtenv: PP/MMT-tool environment
-#hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
+## KohaLXC/ppmmtenv: PP/MMT-tool environment
 kohalxcs_ppmmtenv_enabled: false
 ## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
 # - which import chains should we run (empty means none)
@@ -118,11 +117,8 @@ kohalxcs_ppmmtenv_checkdelay: 60
 # - check this many times (minutes) conversion run status (default: 120 times/mins):
 # - 120 * 60 s = 7200 s (= 2 hours)
 kohalxcs_ppmmtenv_checkfinished: "{{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
-# KohaLXC/mmtenv: Origo/MMT-tool environment (enabled when ppmmtenv is not)
-#hostnode_origommtenv_enabled: "{{ hostnode_ppmmtenv_enabled | ternary('false', 'true') }}"
 
-# KohaLXC/ommtenv: Origo/MMT-tool environment
-#hostnode_ommtenv_enabled: "{{ hostnode_mmtenv_enabled | d('false') }}"
+## KohaLXC/ommtenv: Origo/MMT-tool environment
 kohalxcs_ommtenv_enabled: false
 
 # Koha/mmtenv: migration phase of the comversion

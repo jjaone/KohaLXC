@@ -20,8 +20,8 @@
 # ##############################################################################
 
 ## Ensure env.* pckgs are installed
-# [KohaLXC]: dataenv: Packages for data/MMT environment(s)
-- name: dataenv - Ensure all needed packages are installed
+# [KohaLXC]:data: Packages for data/MMT environment(s)
+- name: data - Ensure all needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -34,8 +34,7 @@
     - hostnode_dataenv_enabled
 
 ## Ensure 'koha'-user (rssh) exists (by default: koha/1001)
-# [KohaLXC]:dataenv
-- name: dataenv - Ensure user 'koha' (rssh) exists for Koha-data & transfers
+- name: data - Ensure user 'koha' (rssh) exists for Koha-data & transfers
   become: yes
   user: >
     name="{{ hostnode_kohagrp_name }}"
@@ -51,10 +50,10 @@
     - hostnode_kohagrp_id is defined
 
 ## Setup remote data environment rssh.conf (dataenv/rssh settings)
-# [KohaLXC]:dataenv(!local) 
+# [KohaLXC]:data(not-local)
 # - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
 # - kohalxc_dataenv == kohalxc_tooldir/conf.d/env.data
-- name: dataenv - Setup system-wide rssh config for remote KohaLXC/dataenv
+- name: data(not-local) - Setup system-wide rssh config for remote KohaLXC/dataenv
   become: yes
   template: >
     src="files/kohalxc_dataenv/rssh.conf.j2"
@@ -65,8 +64,8 @@
     - hostnode_environment != "localdev"
 
 ## Ensure 'koha'-group exists (by default: koha/1001)
-# [KohaLXC]:dataenv
-- name: dataenv - Ensure group 'koha' exists for Koha-data & transfers
+# [KohaLXC]:data
+- name: data - Ensure group 'koha' exists for Koha-data & transfers
   become: yes
   group: >
     name="{{ hostnode_kohagrp_name }}"
@@ -77,15 +76,13 @@
     - hostnode_kohagrp_name is defined
     - hostnode_kohagrp_id is defined
 
-- debug: var=kohalxc_datadir,kohalxc_dataset,kohalxc_datasets
-- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_dataenv_fixsource
-- fail:
+#- debug: var=kohalxc_datadir,kohalxc_dataset,kohalxc_datasets,hostnode_dataenv_enabled
 ## Pull/extract any uploads of dataset dumps from datasrv/'koha'
-# [KohaLXC]:dataenv(control)
+# [KohaLXC]:data(control)
 # -from: srv:/home/koha/Works/KohaLappi/{{item}}
 # -to: local:{{ kohalxc_works }}/{{ kohalxc_organization }}/kohadata/"
-# -item(hostnode_dataenv_datasets): "Axiell-20161019-Lappi_PallasPro"
-- name: dataenv(control) - Pull (rsync) listed dataset dumps from server
+# -item(hostnode_dataenv_datasets): e.g. "Axiell-20161019-Lappi_PallasPro"
+- name: data(control) - Pull (rsync) listed dataset dumps from server
   synchronize: >
     mode="pull"
     src="/home/{{ hostnode_kohagrp_name | d('koha') }}/Works/{{ hostnode_kohalxc_organization }}/dump4mmt-{{ item }}"
@@ -94,17 +91,17 @@
     perms="yes"
     recursive="yes"
     delete="no"
-  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  with_items: "{{ hostnode_dataenv_datasets | map(attribute='name') | list }}"
   when:
     - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
-    - hostnode_dataenv_dataset is defined
-    - hostnode_dataenv_dataset != ""
+    - hostnode_dataenv_datasets is defined
+    - hostnode_dataenv_datasets | map(attribute='name') | first | d() != ""
 
-- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_dataenv_fixsource
+- debug: var=hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_dataenv_fixsource
 ## Ensure dataset extraction/conv sources have subdirs (in control host)
-# [KohaLXC]:dataenv(control)
-- name: dataenv(control) - Dirs/perms for dataset extraction/conversion sources (PallasPro+Origo)
+# [KohaLXC]:data(control)
+- name: data(control) - Dirs/perms for dataset extraction/conversion sources (PallasPro+Origo)
   file: >
     path="{{ kohalxc_datadir }}/dump4mmt-{{ item.0 }}/source/{{ item.1 }}"
     state="directory"
@@ -112,7 +109,7 @@
     group="{{ hostnode_kohagrp_id }}"
     mode="u=rwx,g=rwxs,o-rwx"
   with_nested:
-    - "{{ hostnode_dataenv_dataset | d({}) }}"
+    - hostnode_dataenv_datasets | map(attribute='name') | list
     - [ 'TranslationTables', 'preprocessed', 'scripts', 'target', 'logs', 'valid', 'complete' ]
   when:
     - kohalxc_datadir is defined
@@ -121,40 +118,39 @@
     - item is defined
   delegate_to: localhost
 
-- debug: var=hostnode_ppmmtenv_enabled,hostnode_origommtenv_enabled
-## Extract/uncompress listed dataset(s) from pulled archives for PallasPro
+- debug: var=hostnode_mmtdata_enabled,hostnode_ppmmtenv_enabled,hostnode_origommtenv_enabled
+## Extract/uncompress listed dataset(s) from pulled archives for 'PallasPro'
 # [KohaLXC]:dataenv(control),ppmtenv("PallasPro")
 # - must use local action/gunzip cause no Ansible module for "uncompress" exists
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
-- name: dataenv(control)/ppmmt - Extract datasets/table data from pulled dumps
+- name: data(control)+ppmmt - Extract datasets (source dbtable data) from dumps
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.gz; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .gz); ( cd $d/source && test ! -f $t && gunzip -vc $f > $t || echo -n "$t," ); done
-  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  with_items: "{{ hostnode_dataenv_datasets | map(attribute='name') | list }}"
   when:
-    - item is defined and ("PallasPro" in item)
+    - kohalxc_datadir is defined
     - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
-    - kohalxc_datadir is defined
+    - item is defined and ("PallasPro" in item)
 
 ## Extract/uncompress listed dataset(s) from pulled archives for 'Origo'
 # [KohaLXC]:dataenv(control),origommtenv("Origo")
 # - must use local action/gunzip cause no Ansible module for "uncompress" exists
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
-- name: dataenv(control)/origommt - Extract datasets/table data from pulled dumps
+- name: data(control)+origommt - Extract datasets (source dbtable data) from dumps
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.zip; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .zip); ( cd $d/source && unzip $f || exit 0); done
-  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  with_items: "{{ hostnode_dataenv_datasets | map(attribute='name') | list }}"
   when:
-    - item is defined and ("Origo" in item)
     - hostnode_dataenv_enabled
     - hostnode_origommtenv_enabled
     - kohalxc_datadir is defined
+    - item is defined and ("Origo" in item)
 
-- debug: var=kohalxc_datadir,hostnode_dataenv_enabled,hostnode_dataenv_dataset,hostnode_ppmmtenv_enabled
-## Extract source CSV from Google-docs/spreadsheet:
-# [KohaLXC]:dataenv(control),ppmtenv
+## Extract source CSV from Google-docs/spreadsheet
+# [KohaLXC]:data(control)/ppmt[default]
 # - liqlocde_translation.csv  for 'liqlocde_translation.pm' (PP/MMT)
 # - staffaccounts.csv for 'makeStaffAccounts' (PP/MMT)
 # - 'File id' and 'Sheet id (gid)' required
-- name: dataenv(control)/ppmmt - Extract CSVs for TranslationTables/{liqlocde_translation,staffaccounts} from G-spreadsheet(s)
+- name: data(control)+ppmmt[default] - Extract CSVs for TranslationTables/{liqlocde_translation,staffaccounts} from G-spreadsheet
   vars:
     org: "{{ hostnode_kohalxc_organization }}"
     gDocsUrl: "https://docs.google.com/spreadsheets/d"
@@ -166,10 +162,9 @@
     body_format: raw
     return_content: yes
   with_nested:
-    - "{{ hostnode_dataenv_dataset | d({}) }}"
+    - hostnode_dataenv_datasets | selectattr('default', 'defined') | map(attribute='name') | list
     - [ { name: 'liqlocde_translation', gid: "{{ kohalxc_dataenv_liqlocde_gid }}" },
-        { name: 'staffaccounts', gid: "{{ kohalxc_dataenv_staffaccounts_gid }}" }
-      ]
+        { name: 'staffaccounts', gid: "{{ kohalxc_dataenv_staffaccounts_gid }}" } ]
   when:
     - kohalxc_dataenv_gfileid is defined
     - hostnode_dataenv_enabled
@@ -179,12 +174,12 @@
   delegate_to: localhost
 
 ## For 'liqlocde_translation.pm' (PP/MMT) split source CSV from Google-docs/spreadsheet:
-# [KohaLXC]:dataenv(local),ppmtenv
-- name: dataenv/ppmmt - Fix delimiters and split source CSV by library id (first field)
+# [KohaLXC]:data(controls),ppmmt
+- name: data(control)+ppmmt[default] - Fix delimiters and split source CSV by libraryid
   vars:
     srcName: liqlocde_translation
   local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/source/TranslationTables && rm -f {{ srcName }}-*.csv && cat {{ srcName }}.csv | tr ',' ';' | awk -F, 'NR>1 {print>"{{ srcName }}-" sprintf("%02d", $1) ".csv"}' && rm -f {{ kohalxc_tooldir }}/ppmmtws/PerlMMT/TranslationTables/{{ srcName }}.pm-map
-  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | map(attribute='name') | list }}"
   when:
     - kohalxc_datadir is defined
     - kohalxc_tooldir is defined
@@ -193,9 +188,9 @@
     - item is defined and ("PallasPro" in item)
 
 ## Run in control host the kohatools/ppmmtws/ConversionTools/makeliqlocde.sh
-# [KohaLXC]:dataenv(control),ppmtenv
+# [KohaLXC]:data(control),ppmmt
 # - to generate the liqlocde_translation map for $org_unitsLappi (TranslationTable)
-- name: dataenv/ppmmt - Generate '$org_Units' mapping for MMT (TranslationTables/licloqde_translation.pm-map)
+- name: data(control)+ppmmt[default] - Generate '$org_Units' mapping for TranslationTables/licloqde_translation.pm-map)
   vars:
     srcName: liqlocde_translation
   environment:
@@ -205,7 +200,7 @@
   args:
     chdir: "{{ kohalxc_tooldir }}/ppmmtws/ConversionTools"
     creates: "../PerlMMT/TranslationTables/{{ srcName }}.pm-map"
-  with_items: "{{ hostnode_dataenv_dataset | d({}) }}"
+  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | map(attribute='name') | list }}"
   when:
     - kohalxc_datadir is defined
     - kohalxc_tooldir is defined
@@ -221,41 +216,41 @@
 # - can use '--force-handler' to ensure handler is called (atleast in the end)
 #- meta: flush_handlers
 
+- debug: var=hostnode_dataenv_datasets
 ## Push possible dataset dump fixes to each source scripts forlder
-# [KohaLXC]:dataenv(control)
-- name: dataenv(control) - Push templetized dump/dataset fixes to source/scripts folder
+# [KohaLXC]:data(control)
+- name: data(control)[default] - Push templetized dump/dataset fixes to source/scripts folder
   template: >
     src="files/kohalxc_dataenv/{{item.script}}.j2"
     dest="{{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}}"
     mode="u+rwx,g+rx,o-rwx"
-  with_items: "{{ hostnode_dataenv_fixsource | d({}) }}"
+  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
   when:
-    - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
-    - item.name is defined and item.script is defined
+    - hostnode_dataenv_enabled
+    - item.name is defined and item.src is defined and item.script is defined
   delegate_to: localhost
 
-- debug: var=kohalxc_datadir,hostnode_dataenv_dataset,hostnode_dataenv_fixsource
 ## Run dataset fix scripts for those MMT-envs and sources that need them
-# [KohaLXC]:dataenv(control)
-- name: dataenv(control) - Run dataset fixes for specified sources
+# [KohaLXC]:data(control)
+- name: data(control)[default] - Run dataset fixes for specified sources
   environment:
     KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
     KOHALXC_DATASET: "{{ item.name | d('default') }}"
   local_action: shell pwd && echo "== " && ls -l {{ kohalxc_datadir }} && echo "== " && {{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}} {{item.src}}
-  with_items: "{{ hostnode_dataenv_fixsource | d({}) }}"
-  register: cmd_fixsource
+  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
+  register: cmd_fixsources
   when:
-    - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
+    - hostnode_dataenv_enabled
     - item.name is defined and item.src is defined and item.script is defined
-#- debug: var=cmd_fixsource.results
+#- debug: var=cmd_fixsources.results
 
-- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_kohalxc_organization,hostnode_dataenv_dataset
+- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_dataenv_datasets
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
-# [KohaLXC]:dataenv
+# [KohaLXC]:data
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
-- name: dataenv/mmt - Push KohaLXC lxc-setups & org datasets to operuser/Works 
+- name: data - Push KohaLXC lxc-setups & dumped datasets to operuser/Works
   synchronize: >
     mode="push"
     src="{{ item }}"
@@ -273,8 +268,9 @@
     - "{{ kohalxc_datadir }}"
   when:
     - hostnode_dataenv_enabled
-    - hostnode_dataenv_dataset is defined
-    - hostnode_dataenv_dataset != ""
+    - hostnode_dataenv_datasets is defined
+
+- fail:
 
 - debug: var="hostnode_kohalxc_tooldir,hostnode_ppmmtenv_enabled,hostnode_dataenv_datadir"
 ## Push/copy KohaLXC/mmtenv tools and templated default config.xml to target

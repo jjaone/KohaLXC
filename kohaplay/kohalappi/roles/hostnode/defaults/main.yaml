@@ -95,14 +95,14 @@ hostnode_dataenv_fixssource:
 ## #########################################################################
 # KohaLXC/(pp/o)mmtenv: support creation of data+MMT-aware LXCs
 
-## KohaLXC/mmtenv: support creation of data+mmt-aware LXCs
-# - by default enable here if any dataset(s) have been defined (for the host)
-hostnode_mmtenv_enabled: "{{ (hostnode_dataenv_dataset is defined and hostnode_dataenv_dataset.0 is defined) | ternary('true','false') }}"
+## KohaLXC/data+(origo/pp)mmtenv: support creation of data+MMT-aware LXCs
+# - enable here if any convertable dataset(s) have been defined (for the host)
+hostnode_mmtdata_enabled: "{{ hostnode_dataenv_datasets is defined and (hostnode_dataenv_datasets | map(attribute='name')) | first is defined }}"
 
 # KohaLXC/ppmmtenv: PP/MMT-tool environment  (enabled when 'PallasPro' datasets exist)
-hostnode_ppmmtenv_enabled: "{{ hostnode_mmtenv_enabled and (hostnode_dataenv_dataset | join(' ') | match('.*PallasPro.*')) }}"
+hostnode_ppmmtenv_enabled: "{{ hostnode_mmtdata_enabled and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*PallasPro.*')) }}"
 ## KohaLXC/ppmmtenv: PP/MMT-conversion settings
-# - import chains: Preprocess Patrons Biblios Items Checkouts Holds Fines 
+# - import chains: Preprocess Patrons Biblios Items Checkouts Holds Fines Serials
 # - not defined or empty means 'all'
 hostnode_ppmmtenv_importchains:
   - Preprocess
@@ -110,7 +110,8 @@ hostnode_ppmmtenv_importchains:
 #  - Biblios
 
 # KohaLXC/origommtenv: Origo/MMT-tool environment (enabled when 'Origo' datasets exist)
-hostnode_origommtenv_enabled: "{{ hostnode_mmtenv_enabled and (hostnode_dataenv_dataset | join(' ') | match('.*Origo.*')) }}"
+hostnode_origommtenv_enabled: "{{ hostnode_mmtdata_enabled and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*Origo.*')) }}"
+#hostnode_origommtenv_enabled: "{{ hostnode_mmtdata_enabled and (hostnode_dataenv_dataset | join(' ') | match('.*Origo.*')) }}"
 ## KohaLXC/origommtenv: PP/MMT-conversion settings
 # - import chains: Preprocess Patrons Biblios Items Checkouts Holds Fines
 hostnode_origommtenv_importchains:

@@ -52,15 +52,12 @@ ansible_become_pass: "{{ hostnode_operpass }}"
 # MMT/data-enabled
 hostnode_dataenv_enabled: False
 # KohaLXC/dataenv: dataset name(s) and fixes in source dir(s) for MMT-migration:
-hostnode_dataenv_dataset:
-#hostnode_dataenv_dataset: {}
+#hostnode_dataenv_dataset:
 hostnode_dataenv_datasets:
 hostnode_dataenv_fixsource:
 
-# KohaLXC/dataenv+mmtenv: support creation of data+mmt-aware LXCS
-# - hostnode-role enables this when dataenv_dataset(s) have been defined for host
-#hostnode_mmtenv_enabled: False
-# KohaLXC/mmtenv: PP/MMT-tool environment
+# KohaLXC/dataenv+(origo/pp)mmtenv: support creation of data+mmt-aware LXCs
+# KohaLXC/ppmmtenv: PP/MMT-tool environment
 #hostnode_ppmmtenv_enabled: False
 # KohaLXC/mmtenv: Origo/MMT-tool environment
 #hostnode_origommtenv_enabled: False
