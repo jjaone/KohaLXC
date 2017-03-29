@@ -59,7 +59,7 @@ hostnode_devenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.dev"
 ## ############################
 ## KohaLXC/server/host (srvenv)
 ## ############################
-## KohaLXC/srvenv: role default
+## KohaLXC/srvenv:
 hostnode_srvenv_enabled: true
 # Packages needed for srvenv setup/config/tools
 hostnode_srvenv_pckgs:
@@ -72,21 +72,21 @@ hostnode_srvenv_pckgs:
 # Environment main configuration directory: Shell/kohasetup + Ansible/plays
 hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
 
-## #########################
-## KohaLXC/dataenv: datasets
-## #########################
-# Enablement: (data for MMT)
+## ############################
+## KohaLXC/data: datasets+fixes
+## ############################
+## Data and dumps for MMT
 hostnode_dataenv_enabled: true
 # Packages needed for dataenv setup/config/tools
 hostnode_dataenv_pckgs:
-# Environment main configuration directory: Shell/kohasetup + Ansible/plays
+# Config directory: Shell/kohasetup + Ansible/plays
 hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
-# KohaLXC/dataenv: datadir
+# Directory for organization-related datasets/dumps
 hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
-# KohaLXC/dataenv: datasets name(s) for MMT-migration:
+# Dataset name(s) for MMT-migration:
 hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
 hostnode_dataenv_datasets:
-# KohaLXC/dataenv: default dataset with latest fix source dir(s) for MMT
+# Default dataset with all fix source dir(s) for MMT
 hostnode_dataenv_fixssource:
   - { name: "default", src: "source" }
 
@@ -240,12 +240,13 @@ hostnode_zfs_zpool: "{{ hostnode_lvmlv_tank_fs | d('zfstank') }}"
 # ZFS LXC-root filesystem in LV-'tank'/zpool for LXC-containers'
 hostnode_zfs_rootdir: lxc
 
-## ##############
-## KohaLXC/lxcenv
-## ##############
-## Enablement (pckgs+paths): Koha/hosts LXC-environment:
+## ############################################
+## KohaLXC/lxcenv: host systems LXC-environment
+## ############################################
+## Server/host LXC/LXD packages and paths
 hostnode_lxcenv_enabled: true
-# Packages needed for LXC-environment
+hostnode_lxdenv_enabled: false
+# Server/host LXC-environment packages
 hostnode_lxcenv_pckgs:
  - lxc
  - lxc-templates
@@ -355,12 +356,14 @@ hostnode_kohaenv_setup: |
   echo "== kohalxc [ansible:kohaenv]: Installing Koha/ILS (Kohasuomi_3.16 Git-master)" | tee -a $KOHALXC_OPERHOME/{{ hostnode_lxcenv_logfile }};
   id && pwd && ls -la
 
-## ###############
-## Koha/webapp env
-## ###############
+## ############################
+## KohaLXC/kohaenv: Koha/webapp
+## ############################
+# Koha/webapp server domain (DNS):
 hostnode_kohaenv_srvdomain: localdomain
 # Koha/webapp: server name (DNS)
 hostnode_kohaenv_srvname: localhost
+# Koha/webapp SSL/DNS-01 challange
 #hostnode_kohaenv_ssl_acmechallenge:
 
 ## ########################

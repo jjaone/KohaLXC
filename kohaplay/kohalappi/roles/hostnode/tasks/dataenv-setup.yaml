@@ -98,7 +98,7 @@
     - hostnode_dataenv_datasets is defined
     - hostnode_dataenv_datasets | map(attribute='name') | first | d() != ""
 
-- debug: var=hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_dataenv_fixsource
+- debug: var=hostnode_dataenv_dataset,hostnode_dataenv_datasets
 ## Ensure dataset extraction/conv sources have subdirs (in control host)
 # [KohaLXC]:data(control)
 - name: data(control) - Dirs/perms for dataset extraction/conversion sources (PallasPro+Origo)

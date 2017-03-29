@@ -6,23 +6,22 @@
 # Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
 # License: GNU General Public License version 3.
 # 
-# Description:
+# Description: group_vars defauls @ 'development' inventory 
 # - defaults for 'development' inventory vars: hostnodes and LXCs
 # - overrides role-settings
 # - will be overwritten by playbook-level 'group_vars/all/{main,vault}.yaml'
 # - settings in 'hosts, 'vault.yaml', 'host_vars' here override all these
 # #############################################################################
 
-## Name of this inventory: 'development'                                 :
-# - localdev, development, testing, production, ..
+## #####################################
+## General: facts & handlers + inventory
+## #####################################
+# Inventory: localdev, development, testing, production, ..
 hostnode_environment: "{{ inventory_dir | basename }}"
-## Just to test the inheritance in ansible playbooks:
+# Testing/debugging vars inheritance in ansible:
 hostnode_testvar: inventory_development_group_vars_all
 
-## #########################
-## General: facts & handlers
-## #########################
-# Facts gathering: False/True
+# Facts gathering:
 gather_facts: False
 # Force all handlers always (also in case play fails..)
 #force_handlers: False
@@ -30,9 +29,8 @@ gather_facts: False
 ## ########################
 ## General: Ansible-related
 ## ########################
-## - set here unless overriden in playbook-level 'group_vars/all'
 # Python interpreter:
-# - set for distros that do not have Python 2 in path (e.g 'Ubuntu 16.04')
+# - for distros not having Python 2 in path (e.g 'Ubuntu 16.04')
 #ansible_python_interpreter: /usr/bin/python2.7
 # Ansible_connection: ssh/local
 ansible_connection: ssh
@@ -45,78 +43,69 @@ ansible_user: "{{ hostnode_operuser | d('kohaoper') }}"
 # Asible_become_pass:
 ansible_become_pass: "{{ hostnode_operpass }}"
 
-## ###############
-## KohaLXC/dataenv
-## ###############
-## KohaLXC/dataenv:
-# MMT/data-enabled
+## ###############################
+## KohaLXC/dataenv: datasets+fixes
+## ###############################
+## Data and dumps for MMT
 hostnode_dataenv_enabled: False
-# KohaLXC/dataenv: dataset name(s) and fixes in source dir(s) for MMT-migration:
-#hostnode_dataenv_dataset:
+#hostnode_dataenv_pckgs:
+#hostnode_dataenv_confdir:
+#hostnode_dataenv_datadir:
+# Data/set names and fixes in source dirs
 hostnode_dataenv_datasets:
-hostnode_dataenv_fixsource:
 
-# KohaLXC/dataenv+(origo/pp)mmtenv: support creation of data+mmt-aware LXCs
-# KohaLXC/ppmmtenv: PP/MMT-tool environment
-#hostnode_ppmmtenv_enabled: False
-# KohaLXC/mmtenv: Origo/MMT-tool environment
-#hostnode_origommtenv_enabled: False
-
-## ##########################
-## Server updates/reboots/nic
-## ##########################
+## ################################################
+## KohaLXC/srvenv: updates, networking, filesystems
+## ################################################
+## Server/host management and networking
 # Rebootable server:
 hostnode_reboot_enabled: False
 # Upgradable server:
 hostnode_upgrade_enabled: True
-# List of (wildcarded) package names to be ignored from upgrades
+# List of (wildcarded) package names ignored in upgrades
 hostnode_upgrade_pckgsignore: "bacula-"
 # Network interface:
 hostnode_network_interface: bond0
 
-## ############
-## Storage: LVM
-## ############
-## LVM support: false/true (in group only in testing/production)
+## Server/host filesystem: LVM-storage
 hostnode_lvm_enabled: False
 # Volume group (VG) name (main):
 hostnode_lvmvg_main: roi-vg
 
-## ############
-## Storage: ZFS
-## ############
-## ZFS support: false/true (not in group for 'development' override for hosts)
+## Server/host filesystem: ZFS-storage
+# ZFS support:
 hostnode_zfs_enabled: False
 
-## ##############
-## KohaLXC/lxcenv
-## ##############
-## Enablement (pckgs+paths): Koha/hosts LXC/LXD-environment:
-# - enabled by default (here) only for 'testing' and 'production'
+## ############################################
+## KohaLXC/lxcenv: host systems LXC-environment
+## ############################################
+## Server/host LXC/LXD packages and paths
+# (enabled here only for 'testing' and 'production' inventories)
 hostnode_lxcenv_enabled: False
-# - disabled here for LXD 2.0 having serious issues with zpool/ZFS
+# (disabled here for LXD 2.0 having serious issues with zpool/ZFS)
 hostnode_lxdenv_enabled: False
 #hostnode_lxcenv_pckgs:
 #hostnode_lxcenv_confdir:
 #hostnode_lxcenv_setupdir:
 
-## LXC-networking: manual (configured) / dynamic (dhcp)
+## Server/host LXC-networking
+# Naming/discovery: manual (configured) / dynamic (dhcp)
 hostnode_lxcenv_networking: manual
-# LXC-networking: domain name: none, lxc, kohalxc, weblxc, mdblxc
+# Naming/domain: none, lxc, kohalxc, weblxc, mdblxc
 hostnode_lxcenv_domain: "{{ (hostnode_lxcenv_networking == 'dhcp') | ternary('kohalxc','lxc') }}"
 
-## ###############
-## Koha/webapp env
-## ###############
-# Koha/webapp: server domain (DNS)
-hostnode_kohaenv_srvdomain: lapinkirjasto.fi
-# Koha/webapp: server name (DNS)
-#hostnode_kohaenv_srvname: *.lapinkirjasto.fi
-#hostnode_kohaenv_ssl_acmechallenge:
-
-## ########################
-## LXCs: defaults/templates
-## ########################
-# LXC (list of):
-# - can contain both web and db-related LXCs for all hosts
+## List of LXCs: defaults and templates
+# (can contain both web and db-related LXCs for all hosts)
+hostnode_lxcenv_lxcs:
 hostnode_lxcs:
+
+## #############################################
+## KohaLXC/kohaenv: Koha/webapp-related settings
+## #############################################
+## Koha/webapp settings:
+# Koha/webapp server domain (DNS):
+hostnode_kohaenv_srvdomain: lapinkirjasto.fi
+# Koha/webapp server name (DNS)
+#hostnode_kohaenv_srvname: *.lapinkirjasto.fi
+# Koha/webapp SSL/DNS-01 challange
+#hostnode_kohaenv_ssl_acmechallenge:
