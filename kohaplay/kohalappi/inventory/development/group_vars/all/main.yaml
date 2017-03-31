@@ -1,5 +1,5 @@
 ---
-# File: inventory/development/group_vars/all
+# File: inventory/development/group_vars/all/main.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -7,7 +7,6 @@
 # License: GNU General Public License version 3.
 # 
 # Description: group_vars defauls @ 'development' inventory 
-# - defaults for 'development' inventory vars: hostnodes and LXCs
 # - overrides role-settings
 # - will be overwritten by playbook-level 'group_vars/all/{main,vault}.yaml'
 # - settings in 'hosts, 'vault.yaml', 'host_vars' here override all these
@@ -16,7 +15,8 @@
 ## #####################################
 ## General: facts & handlers + inventory
 ## #####################################
-# Inventory: localdev, development, testing, production, ..
+
+# Inventory: localdev, 'development', testing, production
 hostnode_environment: "{{ inventory_dir | basename }}"
 # Testing/debugging vars inheritance in ansible:
 hostnode_testvar: inventory_development_group_vars_all
@@ -26,9 +26,11 @@ gather_facts: False
 # Force all handlers always (also in case play fails..)
 #force_handlers: False
 
+
 ## ########################
 ## General: Ansible-related
 ## ########################
+
 # Python interpreter:
 # - for distros not having Python 2 in path (e.g 'Ubuntu 16.04')
 #ansible_python_interpreter: /usr/bin/python2.7
@@ -43,9 +45,11 @@ ansible_user: "{{ hostnode_operuser | d('kohaoper') }}"
 # Asible_become_pass:
 ansible_become_pass: "{{ hostnode_operpass }}"
 
+
 ## ###############################
 ## KohaLXC/dataenv: datasets+fixes
 ## ###############################
+
 ## Data and dumps for MMT
 hostnode_dataenv_enabled: False
 #hostnode_dataenv_pckgs:
@@ -54,9 +58,11 @@ hostnode_dataenv_enabled: False
 # Data/set names and fixes in source dirs
 hostnode_dataenv_datasets:
 
+
 ## ################################################
 ## KohaLXC/srvenv: updates, networking, filesystems
 ## ################################################
+
 ## Server/host management and networking
 # Rebootable server:
 hostnode_reboot_enabled: False
@@ -76,9 +82,11 @@ hostnode_lvmvg_main: roi-vg
 # ZFS support:
 hostnode_zfs_enabled: False
 
+
 ## ############################################
 ## KohaLXC/lxcenv: host systems LXC-environment
 ## ############################################
+
 ## Server/host LXC/LXD packages and paths
 # (enabled here only for 'testing' and 'production' inventories)
 hostnode_lxcenv_enabled: False
@@ -99,9 +107,11 @@ hostnode_lxcenv_domain: "{{ (hostnode_lxcenv_networking == 'dhcp') | ternary('ko
 hostnode_lxcenv_lxcs:
 hostnode_lxcs:
 
+
 ## #############################################
 ## KohaLXC/kohaenv: Koha/webapp-related settings
 ## #############################################
+
 ## Koha/webapp settings:
 # Koha/webapp server domain (DNS):
 hostnode_kohaenv_srvdomain: lapinkirjasto.fi

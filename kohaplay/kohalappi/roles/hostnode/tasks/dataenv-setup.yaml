@@ -29,9 +29,9 @@
     state="present"
     autoremove="yes"
   with_flattened:
-    - hostnode_dataenv_pckgs
+    - "{{ hostnode_dataenv_enabled | ternary(hostnode_dataenv_pckgs, '') }}"
   when:
-    - hostnode_dataenv_enabled
+    - item is defined and item != ''
 
 ## Ensure 'koha'-user (rssh) exists (by default: koha/1001)
 - name: data - Ensure user 'koha' (rssh) exists for Koha-data & transfers
@@ -45,7 +45,6 @@
     generate_ssh_key="no"
     comment="Koha/LXC visitor user"
   when:
-    - hostnode_dataenv_enabled
     - hostnode_kohagrp_name is defined
     - hostnode_kohagrp_id is defined
 
@@ -60,7 +59,6 @@
     dest="/etc/rssh.conf"
     backup="no"
   when:
-    - hostnode_dataenv_enabled
     - hostnode_environment != "localdev"
 
 ## Ensure 'koha'-group exists (by default: koha/1001)
@@ -72,7 +70,6 @@
     gid="{{ hostnode_kohagrp_id }}"
     state="present"
   when:
-    - hostnode_dataenv_enabled
     - hostnode_kohagrp_name is defined
     - hostnode_kohagrp_id is defined
 
@@ -93,7 +90,6 @@
     delete="no"
   with_items: "{{ hostnode_dataenv_datasets | map(attribute='name') | list }}"
   when:
-    - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
     - hostnode_dataenv_datasets is defined
     - hostnode_dataenv_datasets | map(attribute='name') | first | d() != ""
@@ -113,7 +109,6 @@
     - [ 'TranslationTables', 'preprocessed', 'scripts', 'target', 'logs', 'valid', 'complete' ]
   when:
     - kohalxc_datadir is defined
-    - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled or hostnode_origommtenv_enabled
     - item is defined
   delegate_to: localhost
@@ -140,7 +135,6 @@
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.zip; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .zip); ( cd $d/source && unzip $f || exit 0); done
   with_items: "{{ hostnode_dataenv_datasets | map(attribute='name') | list }}"
   when:
-    - hostnode_dataenv_enabled
     - hostnode_origommtenv_enabled
     - kohalxc_datadir is defined
     - item is defined and ("Origo" in item)
@@ -167,7 +161,6 @@
         { name: 'staffaccounts', gid: "{{ kohalxc_dataenv_staffaccounts_gid }}" } ]
   when:
     - kohalxc_dataenv_gfileid is defined
-    - hostnode_dataenv_enabled
     - kohalxc_datadir is defined
     - hostnode_ppmmtenv_enabled
     - item.0 is defined and ("PallasPro" in item.0)
@@ -183,7 +176,6 @@
   when:
     - kohalxc_datadir is defined
     - kohalxc_tooldir is defined
-    - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
     - item is defined and ("PallasPro" in item)
 
@@ -204,7 +196,6 @@
   when:
     - kohalxc_datadir is defined
     - kohalxc_tooldir is defined
-    - hostnode_dataenv_enabled
     - hostnode_ppmmtenv_enabled
     - item is defined and ("PallasPro" in item)
   delegate_to: localhost
@@ -227,7 +218,6 @@
   with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
   when:
     - kohalxc_datadir is defined
-    - hostnode_dataenv_enabled
     - item.name is defined and item.src is defined and item.script is defined
   delegate_to: localhost
 
@@ -242,7 +232,6 @@
   register: cmd_fixsources
   when:
     - kohalxc_datadir is defined
-    - hostnode_dataenv_enabled
     - item.name is defined and item.src is defined and item.script is defined
 #- debug: var=cmd_fixsources.results
 
@@ -267,7 +256,6 @@
     - "{{ kohalxc_setupdir }}"
     - "{{ kohalxc_datadir }}"
   when:
-    - hostnode_dataenv_enabled
     - hostnode_dataenv_datasets is defined
 
 - fail:
@@ -315,7 +303,6 @@
     - { name: lxc_config, source: "{{ lxc_src }}", startChunk: 0, endChunk: -1 }
     - { name: config_all, source: "{{ host_src }}", startChunk: 0, endChunk: -1 }
   when:
-    - hostnode_dataenv_enabled
     - hostnode_dataenv_datadir is defined
     - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined
@@ -336,7 +323,6 @@
     - { name: liqlocde_translation.pm, dir: PerlMMT/TranslationTables }
     - { name: material_code_to_itype.pm, dir: PerlMMT/TranslationTables }
   when:
-    - hostnode_dataenv_enabled
     - hostnode_dataenv_datadir is defined
     - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined
@@ -361,7 +347,6 @@
     - { name: fi2ma.rul, dir: BibliosImportChain/Usemarcon/fi2ma }
     - { name: Instructions.pm, dir: PatronsImportChain }
   when:
-    - hostnode_dataenv_enabled
     - hostnode_dataenv_datadir is defined
     - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined

@@ -69,6 +69,7 @@ hostnode_srvenv_pckgs:
   - iptables-persistent
   - bridge-utils
   - mailutils
+  - byobu
 # Environment main configuration directory: Shell/kohasetup + Ansible/plays
 hostnode_srvenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.srv"
 

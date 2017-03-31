@@ -45,14 +45,14 @@
     state="present"
     autoremove="yes"
   with_flattened:
-    - hostnode_srvenv_pckgs
-    - hostnode_secure_pckgs
-    - hostnode_lvm_pckgs
+    - "{{ hostnode_srvenv_enabled | ternary(hostnode_srvenv_pckgs, '') }}"
+    - "{{ hostnode_secure_enabled | ternary(hostnode_secure_pckgs, '' ) }}"
+    - "{{ hostnode_lvm_enabled | ternary(hostnode_lvm_pckgs, '') }}"
   when:
     - hostnode_srvenv_enabled or hostnode_secure_enabled or hostnode_lvm_enabled
+    - item is defined and item != ''
 
 ## Ensure 'kohasys'-user exists (by default: kohasys/1000)
-# [KohaLXC]:srvenv
 - name: srvenv - Make system user 'kohasys' for Koha/hosts-service management
   become: yes
   user: >
@@ -66,7 +66,6 @@
     - hostnode_kohasys_id is defined
 
 ## Ensure devops (kohaoper/1002) belongs to 'koha' group and has ssh-keys
-# [KohaLXC]:srvenv
 - name: srvenv - Ensure devops has ssh-keys and belongs to 'koha' group
   become: yes
   user: >
@@ -82,7 +81,6 @@
     - hostnode_kohagrp_name is defined
 
 ## Ensure locales we need are present
-# [KOHALXC]:srvenv
 - name: srvenv - Ensure needed locales for internationalization are present
   become: yes
   locale_gen:
@@ -110,7 +108,6 @@
 #    - hostnode_environment != "localdev"
 
 ## Ensure kohahosts_operuser (devops/HOME) has required dirs
-# [KOHALXC]:srvenv
 - name: srvenv - Ensure devops has dirs for scripts, logs and Works
   file: >
     path="/home/{{ hostnode_operuser }}/{{ item }}"
@@ -142,7 +139,6 @@
 
 #- debug: var="hostnode_kohalxc_rootdir,hostnode_kohalxc_tooldir"
 ## Ensure devops/hostnode has required symlinks in $HOME
-# [KohaLXC]:srvenv
 - name: srvenv - Symlink for 'kohalxc' main script in devops/HOME
   file: >
     src="{{ hostnode_kohalxc_rootdir }}/kohalxc.sh"
@@ -277,17 +273,40 @@
 #  when:
 #    - ansible_host != hostnode_backup_sshfssrv
 
+## Ensure only latest kernels are kept
+- name: srvenv - Ensure only latest kernels are kept (cleanup /boot)
+  become: yes
+  shell: purge-old-kernels --keep 3 -y
+  #shell: apt purge $(dpkg --list 'linux-image*' | grep ^ii | awk '{print $2}' | sort | egrep "[0-9]-generic" | head -n -3 | tr '\n' ' '; echo "")
+  args:
+    executable: /bin/bash
+  register: cmd_purge_oldkernels
+- debug: var=cmd_purge_oldkernels.cmd,cmd_purge_oldkernels.stdout_lines
+
 ## Make sure hosts package cache is not stale
-# [KohaLXC]:srvenv
-- name: srvenv - Update apt cache (kept valid for past 4 hrs)
+- name: srvenv - Autoclean and update apt cache (kept valid for past 2 hrs)
   become: yes
   apt:
+    autoremove: yes
+    purge: yes
+    force: yes
     update_cache: yes
-    cache_valid_time: 7200
-  when: ansible_os_family == 'Debian'
+  register: cmd_apt_autoremove
+- debug: var=cmd_apt_autoremove
+
+#    cache_valid_time: 7200
+#when: ansible_os_family == 'Debian'
+#- debug: var=ansible_os_family
+
+## Recover from partial/failed upgrades and ensure only latest kernels are kept
+- name: srvenv - Try to recover from partial installs (if any)
+  become: yes
+  shell: apt-get -f install
+  register: cmd_aptget_recoverpartials
+  failed_when:
+    - cmd_aptget_recoverpartials.rc == 100
 
 ## List packages that need to be updated/upgraded in the server
-# [KohaLXC]:srvenv
 - name: srvenv - List what is updatable/upgradable (sans held/ignored packages)
   shell: apt list --upgradable 2>/dev/null | grep -v '{{ hostnode_upgrade_pckgsignore | d() }}' | grep -s "upgradable"
   register: cmd_aptlist_upgrades
@@ -296,7 +315,6 @@
 
 - debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_dataenv_enabled
 ## Upgrade all packages
-# [KohaLXC]:srvenv
 - name: srvenv - Upgrade all packages to the latest version.
   become: yes
   shell: apt clean && apt update -y && apt upgrade -y
@@ -306,7 +324,6 @@
   changed_when: cmd_aptlist_upgrades.rc == 0
 
 ## Persist current iptables rules
-# [KohaLXC]:srvenv
 - name: Persist iptables rules (if upgrades and possible reboot so requires)
   become: yes
   shell: >
@@ -316,7 +333,6 @@
     - cmd_aptlist_upgrades.rc == 0
 
 ## Reboot server
-# [KohaLXC]:srvenv
 - name: srvenv - Reboot server (when package upgrade so requires)
   become: yes
   shell: >
@@ -345,4 +361,6 @@
     - hostnode_reboot_enabled
   # [TODO]: keep below commented-out for reboots also when not upgrading..
   #  - cmd_aptlist_upgrades.rc == 0
+
+- fail:
 

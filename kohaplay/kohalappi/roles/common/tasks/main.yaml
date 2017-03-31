@@ -30,6 +30,9 @@
 ## Logger - write a timestamp to target hosts system-log
 - name: status - Let target system syslog know about us
   command: logger -t Ansible-play "kohalappi/{{ role_path | basename}}" in [{{ inventory_dir | basename }}]; inventory_hostname={{ inventory_hostname }}, ansible_host={{ ansible_host }}, ansible_port={{ ansible_port | d('22') }}, ansible_connection={{ ansible_connection }}, ansible_user={{ ansible_user }}, ansible_distribution={{ ansible_distribution }}, ansible_distribution_release={{ ansible_distribution_release }}, ansible_default_ipv4.interface={{ ansible_default_ipv4.interface }}
+  when:
+    - inventory_hostname != "localhost"
+    - hostnode_environment != "localdev"
   tags: common:status
 
 ## Configure and setup timezone (requires: Ansible 2.2.0+)
@@ -93,5 +96,5 @@
     - { regexp: '^(alias l=)(.*)', line: '#\1\2' }
   when:
     - kohalxc_devenv_enabled
-    #- (hostnode_devenv_enabled is defined and hostnode_devenv_enabled) or (kohalxcs_devenv_enabled is defined and kohalxcs_devenv_enabled is defined)
+    - hostnode_environment != "localdev"
   tags: common:setup
