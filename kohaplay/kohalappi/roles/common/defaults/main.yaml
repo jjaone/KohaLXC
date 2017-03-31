@@ -58,7 +58,9 @@ kohalxc_datasets:
 
 ## KohaLXC-devenv: developer env config files and setup scripts
 kohalxc_devenv: "{{ kohalxc_tooldir }}/conf.d/env.dev"
-kohalxc_devenv_enabled: "{{ (hostnode_devenv_enabled is defined and hostnode_devenv_enabled) or (kohalxcs_devenv_enabled is defined and kohalxcs_devenv_enabled) }}"
+kohalxc_devenv_enabled: (hostnode_devenv_enabled is defined and hostnode_devenv_enabled) or (kohalxcs_devenv_enabled is defined and kohalxcs_devenv_enabled)
+## TODO: above fixes Ansible warning about when:/defs having Jinja2-delimiters
+#kohalxc_devenv_enabled: "{{ (hostnode_devenv_enabled is defined and hostnode_devenv_enabled) or (kohalxcs_devenv_enabled is defined and kohalxcs_devenv_enabled) }}"
 
 ## KohaLXC-srvenv: common server env config files and setup scripts
 kohalxc_srvenv: "{{ kohalxc_tooldir }}/conf.d/env.srv"

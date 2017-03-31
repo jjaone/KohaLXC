@@ -46,15 +46,15 @@
     - raw: echo "hostnodes(pre_tasks/raw) 'play-hostnodes.yaml'"
     - debug: var=inventory_hostname,hostnode_environment,hostnode_operid,kohalxc_operuser
 
-    # [debug]: List names of (localy defined) LXCs (if any)
+    # List names of (locally defined) LXCs (if any)
     - name: hostnode/pre_tasks - List names of defined LXCs (if any)
-      debug: var=lxcs_names,hostnode_lxcs,hostnode_environment
+      debug: var=lxcs.lxcs_names,hostnode_environment
       when:
-        - lxcs_names is defined
-        - lxcs_names != ""
+        - lxcs is defined and lxcs.lxcs_names is defined
+        - lxcs.lxcs_names != ""
       tags: hostnode:prerole
 
-    # [debug]: List contents of read vars_files (if any)
+    # List contents of read vars_files (if any)
     - name: hostnode/pre_tasks - List contents of preset vars (if any)
       debug: var=hostnode_var
       when:
@@ -75,18 +75,18 @@
 
     # List provisioned LXCs (if any)
     - name: hostnode/post_tasks - List provisioned LXCs (if any)
-      debug: var=lxcs_names,hostnode_environment
+      debug: var=lxcs.lxcs_names,hostnode_environment
       when:
-        - lxcs_names is defined or hostnode_lxcs is defined
-        - lxcs_names != "" or hostnode_lxcs != ""
+        - lxcs.lxcs_names is defined or hostnode_lxcs is defined
+        - lxcs.lxcs_names != "" or hostnode_lxcs != ""
       tags: hostnode:postrole
 
     # [debug]: List provisioned LXCs (if any)
     - name: hostnode/post_tasks - List provisioned LXCs (if any)
-      debug: var=lxcs_names,hostnode_lxcs,hostnode_environment
+      debug: var=lxcs.lxcs_names,hostnode_lxcs,hostnode_environment
       when:
-        - lxcs_names is defined or hostnode_lxcs is defined
-        - lxcs_names != "" or hostnode_lxcs != ""
+        - lxcs.lxcs_names is defined or hostnode_lxcs is defined
+        - lxcs.lxcs_names != "" or hostnode_lxcs != ""
       tags: hostnode:postrole,hostnode:debug
 
     # [debug]: Show some ssh/connection vars
@@ -126,14 +126,15 @@
 #        add_host name="{{ item.lxc.name  + '.' + item.net.domain }}" groups="{{ item.net.domain | d('lxc') }}" ansible_user="{{ kohalxc_operuser | d('default-user') }}" ansible_port=22 ansible_become_method="sudo" ansible_become_pass="{{ kohalxc_operpass | d('default-pass') }}"
       #  add_host name="{{ item.name  + ('lxc.group = weblxc' in item.container_config) | ternary('.weblxc','.mdblxc') | d() }}" groups="{{ ('lxc.group = weblxc' in item.container_config) | ternary('weblxc','mdblxc') | d('lxc') }}" ansible_user="{{ kohalxc_operuser | d('default-user') }}" ansible_port=22 ansible_become_method="sudo" ansible_become_pass="{{ kohalxc_operpass | d('default-user') }}"
 #    local_action: add_host name="{{ item.split('.')[0] }}" groups="{{ item.split('.')[-1] | d('lxc') }}"
-      with_items: hostnode_lxcs | d()
+      with_items: " {{ hostnode_lxcs | d() }} "
       when:
       - item is defined and item != ""
       - item.lxc is defined
       - item.net is defined
       - item.lxc.container_config is defined
       - item.net.domain is defined
-      - item.net.domain == "weblxc" or item.net.domain == "mdblxc"
+      - item.net.domain in hostnode_lxcenv_domain
+      #- item.net.domain == "weblxc" or item.net.domain == "mdblxc"
       #- item.net.domain is defined and item.net.domain in inventory_hostname
       delegate_to: localhost
       tags: hostnode:postrole

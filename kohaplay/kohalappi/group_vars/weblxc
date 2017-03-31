@@ -11,14 +11,6 @@
 # - these override the settings in group_vars/all/{main,vault}.yaml
 # #############################################################################
 
-## ###########################
-## General: facts & hanldlers
-## ###########################
-# Facts gathering:
-#gather_facts: False
-# Force all handlers always (also in case play fails etc):
-#force_handlers: false
-
 ## ###############
 ## Ansible related
 ## ###############

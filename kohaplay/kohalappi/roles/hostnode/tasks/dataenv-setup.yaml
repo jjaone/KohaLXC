@@ -172,7 +172,7 @@
   vars:
     srcName: liqlocde_translation
   local_action: shell cd {{ kohalxc_datadir }}/dump4mmt-{{ item }}/source/TranslationTables && rm -f {{ srcName }}-*.csv && cat {{ srcName }}.csv | tr ',' ';' | awk -F, 'NR>1 {print>"{{ srcName }}-" sprintf("%02d", $1) ".csv"}' && rm -f {{ kohalxc_tooldir }}/ppmmtws/PerlMMT/TranslationTables/{{ srcName }}.pm-map
-  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | map(attribute='name') | list }}"
+  with_items: "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | map(attribute='name') | list }}"
   when:
     - kohalxc_datadir is defined
     - kohalxc_tooldir is defined
@@ -192,7 +192,7 @@
   args:
     chdir: "{{ kohalxc_tooldir }}/ppmmtws/ConversionTools"
     creates: "../PerlMMT/TranslationTables/{{ srcName }}.pm-map"
-  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | map(attribute='name') | list }}"
+  with_items: "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | map(attribute='name') | list }}"
   when:
     - kohalxc_datadir is defined
     - kohalxc_tooldir is defined
@@ -215,7 +215,7 @@
     src="files/kohalxc_dataenv/{{item.script}}.j2"
     dest="{{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}}"
     mode="u+rwx,g+rx,o-rwx"
-  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
+  with_items: "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
   when:
     - kohalxc_datadir is defined
     - item.name is defined and item.src is defined and item.script is defined
@@ -228,7 +228,7 @@
     KOHALXC_DATADIR: "{{ kohalxc_datadir }}"
     KOHALXC_DATASET: "{{ item.name | d('default') }}"
   local_action: shell pwd && echo "== " && ls -l {{ kohalxc_datadir }} && echo "== " && {{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}} {{item.src}}
-  with_items:  "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
+  with_items: "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
   register: cmd_fixsources
   when:
     - kohalxc_datadir is defined
@@ -258,8 +258,6 @@
   when:
     - hostnode_dataenv_datasets is defined
 
-- fail:
-
 - debug: var="hostnode_kohalxc_tooldir,hostnode_ppmmtenv_enabled,hostnode_dataenv_datadir"
 ## Push/copy KohaLXC/mmtenv tools and templated default config.xml to target
 # [KohaLXC]:dataenv,ppmmtenv
@@ -273,7 +271,7 @@
 # - loadExternalRepos: whether to load external repositories or not
 # - preprocess: do the 'PreProcess' phase in each import chain
 # - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
-- name: dataenv/ppmmt - Setup PP/MMT-tools main configuration (host/lxc_config.xml)
+- name: data/ppmmt - Setup PP/MMT-tools main configuration (host/lxc_config.xml)
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/source.0"
     lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/source.0"
@@ -303,13 +301,14 @@
     - { name: lxc_config, source: "{{ lxc_src }}", startChunk: 0, endChunk: -1 }
     - { name: config_all, source: "{{ host_src }}", startChunk: 0, endChunk: -1 }
   when:
+    - false
     - hostnode_dataenv_datadir is defined
     - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined
 
 ## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv/ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
+- name: data/ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.dir }}/{{ item.name }}"
@@ -323,13 +322,14 @@
     - { name: liqlocde_translation.pm, dir: PerlMMT/TranslationTables }
     - { name: material_code_to_itype.pm, dir: PerlMMT/TranslationTables }
   when:
+    - false
     - hostnode_dataenv_datadir is defined
     - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined
   
 ## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
 # [KohaLXC]:dataenv,ppmmtenv
-- name: dataenv/ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
+- name: data/ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -347,6 +347,7 @@
     - { name: fi2ma.rul, dir: BibliosImportChain/Usemarcon/fi2ma }
     - { name: Instructions.pm, dir: PatronsImportChain }
   when:
+    - false
     - hostnode_dataenv_datadir is defined
     - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined

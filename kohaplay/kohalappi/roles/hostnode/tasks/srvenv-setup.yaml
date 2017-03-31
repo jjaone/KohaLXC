@@ -361,6 +361,3 @@
     - hostnode_reboot_enabled
   # [TODO]: keep below commented-out for reboots also when not upgrading..
   #  - cmd_aptlist_upgrades.rc == 0
-
-- fail:
-

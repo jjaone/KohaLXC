@@ -38,8 +38,7 @@ hostnode_dataenv_enabled: True
 #hostnode_dataenv_datadir:
 hostnode_dataenv_datasets:
   - { name: "Axiell-20161019-Lappi_PallasPro", default: "yes",
-      src: "source.1",
-      script: "fix_licmarca-split_36631.sh" }
+      src: "source.1", script: "fix_licmarca-split_36631.sh" }
   - { name: "Axiell-20170228-Lappi_PallasPro" }
   - { name: "Axiell-20161230-Kemi_Origo" }
 

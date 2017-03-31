@@ -22,7 +22,10 @@
     state="present"
     autoremove="yes"
   with_flattened:
-    - hostnode_lxcenv_pckgs
+    - "{{ hostnode_lxcenv_enabled | ternary(hostnode_lxcenv_pckgs, '') }}"
+  when:
+    - hostnode_lxcenv_enabled 
+    - item is defined and item != ''
 
 ## [TODO]: LXC networking, DNS, resolvconf, dnsmasq host settings..
 
@@ -53,27 +56,28 @@
 # - use what we have in 'lxc_names' but only for domains we host:
 - name: lxc - Read definitions for all named LXCs
   vars:
-    lxcname: "{{ item.split('.')[0]}}"
+    lxcname: "{{ item.split('.')[0] }}"
     lxcdomain: "{{ item.split('.')[1] | d('lxc') }}"
+  #shell: echo "file=lxcs/{{ item }}/config/{{ lxcname }}.yaml"
   include_vars:
     file: "lxcs/{{ item }}/config/{{ lxcname }}.yaml"
     name: "{{ lxcname }}"
-  with_items: lxcs.lxcs_names | d()
+  with_items: "{{ lxcs.lxcs_names  | d() }}"
   when:
     - item is defined and item != ''
-    - (lxcdomain in hostnode_lxcenv_domain)
+    - lxcdomain in hostnode_lxcenv_domain
 
-## LXC-containers: Combine defined LXCs as fact list
-# - if 'lxcs.lxcs_names' doesn't have any of these, the d() takes care of ignoring it
+## LXC-containers: Collect defined LXCs as fact list
+# - if 'lxcs.lxcs_names' doesn't have some of these, the d() takes care of ignoring it
 - name: lxc - Combine all read LXC definitions
   set_fact:
     hostnode_lxcs:
-      - "{{ kldev_dmdb|d() }}"
-      - "{{ kldev_mdbks|d() }}"
-      - "{{ kltest_dmdb|d() }}"
-      - "{{ kltest_mdbks|d() }}"
-
+      - "{{ kldev_dmdb   | d() }}"
+      - "{{ kldev_mdbks  | d() }}"
+      - "{{ kltest_dmdb  | d() }}"
+      - "{{ kltest_mdbks | d() }}"
 #- debug: var=hostnode_lxcs,hostnode_kohalxc_tooldir,kohalxc_tooldir
+
 ## Extract the env enablements from lxc.group's in container_config
 # TODO: (remove this): delete *.fact files first -> obsolete, dirs have been cleared previously
 #- name: lxcenv - Start LXC-environments facts building with clean state
@@ -83,20 +87,23 @@
 #  with_items: hostnode_lxcs | d()
 #  when:
 #    - item.net.domain is defined and item.net.domain in inventory_hostname
-    
 - name: lxc - Extract LXC-environments facts from lxc.group in 'container_config'
+  #debug: var=item
   template: >
     src="files/kohalxc_lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
     dest="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
     force="yes"
-  with_items: hostnode_lxcs | d()
+  with_items: "{{ hostnode_lxcs | d() }}"
+  #no_log: true
   when:
+    - item is defined
+    - item.net is defined
     - item.net.domain is defined and item.net.domain in hostnode_lxcenv_domain
 
 ## Show all LXC-containers
-- name: lxc - Show defined LXCs (managed/running in inventory host for this domain)
+- name: lxc - Show defined LXCs (managed/running in inventory host for this lxcdomain)
   debug: var=item.net.domain,item.lxc.name,item.lxc.state
-  with_items: hostnode_lxcs | d()
+  with_items: "{{ hostnode_lxcs | d() }}"
   changed_when: false
   when:
     - item is defined
@@ -110,7 +117,8 @@
   args:
     executable: /bin/bash
     chdir: "/home/{{ hostnode_operuser }}"
-  with_items: hostnode_lxcs | d()
+  with_items: "{{ hostnode_lxcs | d() }}"
+  no_log: true
   when:
     - item is defined
     - item.net is defined
@@ -126,8 +134,8 @@
 
 #- debug: var=hostnode_backup_enabled,hostnode_backupsrv,hostnode_kohaenv_srvname,hostnode_lxcenv_networking,hostnode_lxcenv_domain
 ## Backup all managed LXCs now that they are stopped according to backup-schedule
-# - weekly for now: day-of-week == 2=Tuesday or 4=Thursday or 7=Sunday)
-- name: lxc+backup - Weekly (Tue, Thu, Sun) tar/rsync backup of managed LXC-containers to Backup-server (if not already)
+# - weekly for now: day-of-week == 2=Tuesday or 5=Frday)
+- name: lxc+backup - Weekly (Tue, Fri) tar/rsync backup of managed LXC-containers to Backup-server (if not already)
   become: yes
   environment:
     KOHALXC_NAME: "{{ item.lxc.name }}"
@@ -142,10 +150,10 @@
   args:
     executable: /bin/bash
     creates: "{{ hostnode_backup_backupdir }}/lxcenv-backup_{{ kohalxc_date_yyyymmdd }}/{{ item.lxc.name }}.tar.gz"
-  with_items: hostnode_lxcs | d()
+  with_items: "{{ hostnode_lxcs | d() }}"
   when:
     - hostnode_backup_enabled
-    - (kohalxc_date_dow|int == 2) or (kohalxc_date_dow|int == 4) or (kohalxc_date_dow|int == 7)
+    - (kohalxc_date_dow|int == 2) or (kohalxc_date_dow|int == 5)
     - item is defined and item.net is defined
     - item.net.domain is defined and item.net.domain in hostnode_lxcenv_domain
     - item.lxc is defined and item.lxc.name is defined
@@ -154,7 +162,7 @@
 - debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_kohalxc_works
 ##  Use this to resolve need for manually mount devenv/convlog dirs
 # - for browsing and migration/LXCs (in non 'dataenv' hostnodes)
-- name: nodata - Mount datenv hosts folders for 'kohadata'
+- name: lxc+nodata - Mount datenv hosts folders for 'kohadata'
   #become: yes
   environment:
     SSHPASS: "{{hostnode_operpass}}"
@@ -170,7 +178,7 @@
   when:
     - not hostnode_dataenv_enabled
 
-- name: nodata - Mount access for Koha-staff to dump4default-convsources (if any)
+- name: lxc+nodata - Mount access for Koha-staff to dump4default-convsources (if any)
   become: yes
   shell: |
     [[ -d {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource ]] && ( rm -f /home/koha/{dumpdefault,konversiolokit,virkailijakirjeet} &&
@@ -184,35 +192,37 @@
   when:
     - not hostnode_dataenv_enabled
 
-## Create/re-configure and enable all LXCs
-# - do this only in remote 'development' and 'testing'
-- name: lxc - Create/re-configure all defined LXCs
+## Build/(re)create and enable as defined all LXCs
+# - TODO: should be done only in remote 'development' and 'testing' inventories
+- name: lxc - Build/recreate and enable all defined LXCs
   become: yes
   lxc_container:
     "{{ item.lxc }}"
-  with_items: hostnode_lxcs | d()
-  register: cmd_lxccreate
+  #with_items: hostnode_lxcs | d()
+  with_items: "{{ hostnode_lxcs | d() }}"
+  register: cmd_lxcbuild
   when:
     - item is defined
     - item.lxc is defined
     - item.net is defined
     - item.lxc.container_config is defined
     - item.net.domain is defined and item.net.domain in hostnode_lxcenv_domain
+#- debug: var=cmd_lxcbuild.results
 
-- debug: var=cmd_lxccreate.results
 ## Ensure that hostnode ssh-key has been copied to managed LXC
 - name: lxc - Ensure host(node) is authorized to ssh-access in managed LXCs
   environment:
     LXCHOST: "{{ item.lxc_container.name }}.{{ item.item.net.domain }}"
     LXCUSER: "{{ item.item.net.user | d('ubuntu') }}"
     SSHPASS: "{{ kohalxc_operpass }}"
+  #debug: msg="item.lxc_container={{ item.lxc_container }}"
   shell: |
     [[ -z $(ssh-keygen -F $LXCUSER@$LXCHOST) ]] && ssh-keyscan -H $LXCUSER@$LXCHOST >> ~/.ssh/known_hosts
     sshpass -e ssh-copy-id -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -i ~/.ssh/id_rsa.pub $LXCUSER@$LXCHOST
   args:
     executable: /bin/bash
-  #no_log: True
-  with_items: cmd_lxccreate.results
+  no_log: true
+  with_items: "{{ cmd_lxcbuild.results }}"
   register: cmd_sshcopy
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
@@ -226,8 +236,9 @@
   environment:
     LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
   shell: ssh-keygen -l -F "$LXCHOST" > /dev/null || echo "$LXCHOST"
-  with_items: cmd_lxccreate.results
+  with_items: "{{ cmd_lxcbuild.results }}"
   register: cmd_sshkeys_missing
+  no_log: true
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
     - item.item.net is defined
@@ -243,11 +254,12 @@
     LXCHOST: "{{ item.stdout }}"
     LXCUSER: "{{ item.item.item.net.user | d(kohalxc_operuser) }}"
     SSHPASS: "{{ kohalxc_operpass }}"
+  #debug: msg="item.item={{ item.item }}"
   shell: sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub $LXCUSER@$LXCHOST
   #debug: msg="item.stdout={{item.stdout}},item.item.item.net.usr={{item.item.item.net.user}},sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub $LXCUSER@$LXCHOST"
   #shell: echo sshpass -e ssh-copy-id -o 'StrictHostKeyChecking=no' -o 'ProxyCommand=ssh -q {{ hostnode_operuser }}@{{ ansible_host }} -p {{ hostnode_sshport }} -W %h:%p' -i {{ local_home }}/.ssh/id_rsa.pub {{ kohalxc_operuser }}@$LXCHOST
-  #no_log: True
-  with_items: cmd_sshkeys_missing.results
+  #no_log: true
+  with_items: "{{ cmd_sshkeys_missing.results }}"
   when:
     - item is defined
     - item.stdout is defined and item.stdout != ''
