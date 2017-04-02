@@ -281,7 +281,7 @@
   args:
     executable: /bin/bash
   register: cmd_purge_oldkernels
-- debug: var=cmd_purge_oldkernels.cmd,cmd_purge_oldkernels.stdout_lines
+#- debug: var=cmd_purge_oldkernels.cmd,cmd_purge_oldkernels.stdout_lines
 
 ## Make sure hosts package cache is not stale
 - name: srvenv - Autoclean and update apt cache (kept valid for past 2 hrs)

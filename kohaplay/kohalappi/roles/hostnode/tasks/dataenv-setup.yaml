@@ -248,7 +248,8 @@
     - item.name is defined and ('PallasPro' in item.name)
 #- debug: var=cmd_fixsources.results
 
-- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_kohalxc_organization,hostnode_dataenv_datasets
+#- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_kohalxc_organization,hostnode_dataenv_datasets
+
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
 # [KohaLXC]:data
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
@@ -262,7 +263,7 @@
     perms="yes"
     links="yes"
     rsync_timeout="15"
-    rsync_opts="--include='**/' --include='/*/default/**' --include='/*/dump4mmt-default**' --include='/*/dump4mmt-*/**' --include='/*/dump4mmt-*/source*/**' --exclude='*'"
+    rsync_opts="--include='**/' --include='/*/default/**' --include='/*/dump4mmt-**' --include='/*/dump4mmt-*/**' --include='/*/dump4mmt-*/source*/**' --exclude='*'"
     recursive="yes"
     delete="no"
   with_items:
@@ -271,10 +272,20 @@
   when:
     - hostnode_dataenv_datasets is defined
 
-- debug: var="hostnode_kohalxc_tooldir,hostnode_ppmmtenv_enabled,hostnode_origommtenv_enabled,hostnode_dataenv_datadir"
-- fail:
-## Push/copy KohaLXC/mmtenv tools and templated default config.xml to target
-# [KohaLXC]:dataenv,ppmmtenv
+- name: Does PP/MMT have default/current dataset in data directory?
+  stat:
+    path: "{{ hostnode_dataenv_datadir }}/dump4mmt-pp"
+  register: cmd_dump4mmt_pp
+#- debug: msg="About dir/link 'dump4mmt-pp'={{cmd_dump4mmt_pp.stat }},exists={{ cmd_dump4mmt_pp.stat.exists }}"
+- name: Does Origo/MMT have default/current dataset in data directory?
+  stat:
+    path: "{{ hostnode_dataenv_datadir }}/dump4mmt-origo"
+  register: cmd_dump4mmt_origo
+#- debug: msg="About dir/link 'dump4mmt-origo'={{ cmd_dump4mmt_origo.stat }},exist={{ cmd_dump4mmt_origo.stat.exists }}"
+
+#- debug: var="hostnode_ppmmtenv_enabled,hostnode_origommtenv_enabled"
+#- debug: var="hostnode_kohalxc_tooldir,hostnode_dataenv_datadir"
+## Push/copy KohaLXC/ppmmt tools and templated default config.xml to target
 # Parameters passed to {host,lxc}_config.xml
 # - name: name of the config file: {host_config,lxc_config}.xml
 # - source: source directory in dump4mmt-xyz folder ('source.0' for fixed sources)
@@ -285,7 +296,7 @@
 # - loadExternalRepos: whether to load external repositories or not
 # - preprocess: do the 'PreProcess' phase in each import chain
 # - {biblios_,items_,holds_,fines_,patrons_,checkouts_,history_,serials_}run: Import chains
-- name: data/ppmmt - Setup PP/MMT-tools main configuration (host/lxc_config.xml)
+- name: data+ppmmt - Setup PP/MMT-tools main configuration (host/lxc_config.xml)
   vars:
     host_src: "{{ hostnode_dataenv_datadir }}/dump4mmt-default/source.0"
     lxc_src: "/home/{{ kohalxc_operuser }}/{{ hostnode_kohalxc_organization }}/kohadata/source.0"
@@ -315,14 +326,12 @@
     - { name: lxc_config, source: "{{ lxc_src }}", startChunk: 0, endChunk: -1 }
     - { name: config_all, source: "{{ host_src }}", startChunk: 0, endChunk: -1 }
   when:
-    - false
-    - hostnode_dataenv_datadir is defined
-    - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined
+    - hostnode_dataenv_datadir is defined
+    - cmd_dump4mmt_pp.stat.exists
 
-## Push/copy KohaLXC/mmtenv import.pl+TranslationTables to target
-# [KohaLXC]:dataenv,ppmmtenv
-- name: data/ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
+## Push/copy KohaLXC/ppmmt import.pl+TranslationTables to target
+- name: data+ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.dir }}/{{ item.name }}"
@@ -336,14 +345,12 @@
     - { name: liqlocde_translation.pm, dir: PerlMMT/TranslationTables }
     - { name: material_code_to_itype.pm, dir: PerlMMT/TranslationTables }
   when:
-    - false
-    - hostnode_dataenv_datadir is defined
-    - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined
+    - hostnode_dataenv_datadir is defined
+    - cmd_dump4mmt_pp.stat.exists
   
-## Push/copy KohaLXC/mmtenv lib and BibliosImportChain scripts/configs to target
-# [KohaLXC]:dataenv,ppmmtenv
-- name: data/ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
+## Push/copy KohaLXC/ppmmt lib and BibliosImportChain scripts/configs to target
+- name: data+ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
     src="files/kohalxc_dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -361,10 +368,9 @@
     - { name: fi2ma.rul, dir: BibliosImportChain/Usemarcon/fi2ma }
     - { name: Instructions.pm, dir: PatronsImportChain }
   when:
-    - false
-    - hostnode_dataenv_datadir is defined
-    - hostnode_ppmmtenv_enabled
     - hostnode_kohalxc_tooldir is defined
+    - hostnode_dataenv_datadir is defined
+    - cmd_dump4mmt_pp.stat.exists
 
 ## Abort play here (for testing and development):
 #- fail:
