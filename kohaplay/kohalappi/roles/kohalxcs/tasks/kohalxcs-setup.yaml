@@ -242,7 +242,7 @@
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
-#- debug: var=cmd_runconversion_result,kohalxcs_kohalxc_tooldir
+#- debug: var=job_runconversion_result,kohalxcs_kohalxc_tooldir
 ## Run conversion: finish the run (split/show log per ImportChains
 - name: data+ppmmt - Finish conversion run (split/show log by import-chains)
   environment:

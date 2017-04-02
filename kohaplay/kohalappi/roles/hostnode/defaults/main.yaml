@@ -97,11 +97,12 @@ hostnode_dataenv_fixssource:
 # KohaLXC/(pp/o)mmtenv: support creation of data+MMT-aware LXCs
 
 ## KohaLXC/data+(origo/pp)mmtenv: support creation of data+MMT-aware LXCs
-# - enable here if any convertable dataset(s) have been defined (for the host)
-hostnode_mmtdata_enabled: "{{ hostnode_dataenv_datasets is defined and (hostnode_dataenv_datasets | map(attribute='name')) | first is defined }}"
+# - enabled (true) if any convertable dataset(s) have been defined/exists (for the host)
+hostnode_mmtdata: hostnode_dataenv_datasets is defined and (hostnode_dataenv_datasets | map(attribute='name')) | first is defined
 
 # KohaLXC/ppmmtenv: PP/MMT-tool environment  (enabled when 'PallasPro' datasets exist)
-hostnode_ppmmtenv_enabled: "{{ hostnode_mmtdata_enabled and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*PallasPro.*')) }}"
+hostnode_ppmmtdata: hostnode_mmtdata and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*PallasPro.*'))
+hostnode_ppmmtenv_enabled: "{{ hostnode_mmtdata and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*PallasPro.*')) }}"
 ## KohaLXC/ppmmtenv: PP/MMT-conversion settings
 # - import chains: Preprocess Patrons Biblios Items Checkouts Holds Fines Serials
 # - not defined or empty means 'all'
@@ -111,8 +112,8 @@ hostnode_ppmmtenv_importchains:
 #  - Biblios
 
 # KohaLXC/origommtenv: Origo/MMT-tool environment (enabled when 'Origo' datasets exist)
-hostnode_origommtenv_enabled: "{{ hostnode_mmtdata_enabled and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*Origo.*')) }}"
-#hostnode_origommtenv_enabled: "{{ hostnode_mmtdata_enabled and (hostnode_dataenv_dataset | join(' ') | match('.*Origo.*')) }}"
+hostnode_origommtdata: hostnode_mmtdata and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*Origo.*'))
+hostnode_origommtenv_enabled: "{{ hostnode_mmtdata and (hostnode_dataenv_datasets | map(attribute='name') | list | join(' ') | match('.*Origo.*')) }}"
 ## KohaLXC/origommtenv: PP/MMT-conversion settings
 # - import chains: Preprocess Patrons Biblios Items Checkouts Holds Fines
 hostnode_origommtenv_importchains:
