@@ -24,6 +24,9 @@
 # Force all handlers always (also in case play fails etc):
 #force_handlers: false
 
+# Misc
+common_newline: "\n"
+
 ## ###############
 ## Ansible related
 ## ###############

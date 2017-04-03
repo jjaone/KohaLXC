@@ -77,6 +77,8 @@ hostnode_network_interface: bond0
 hostnode_lvm_enabled: False
 # Volume group (VG) name (main):
 hostnode_lvmvg_main: roi-vg
+# Volume group (VG) name (backup+data): e.g /dev/roidata-vg
+#hostnode_lvmvg_data: roidata-vg
 
 ## Server/host filesystem: ZFS-storage
 # ZFS support:
@@ -113,9 +115,9 @@ hostnode_lxcs:
 ## #############################################
 
 ## Koha/webapp settings:
-# Koha/webapp server domain (DNS):
+# Koha/webapp: server domain (DNS):
 hostnode_kohaenv_srvdomain: lapinkirjasto.fi
-# Koha/webapp server name (DNS)
+# Koha/webapp: server name (DNS)
 #hostnode_kohaenv_srvname: *.lapinkirjasto.fi
 # Koha/webapp SSL/DNS-01 challange
 #hostnode_kohaenv_ssl_acmechallenge:

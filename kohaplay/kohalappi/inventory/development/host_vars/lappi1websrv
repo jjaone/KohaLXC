@@ -16,7 +16,7 @@
 ## #####################################
 
 #hostnode_environment: "{{ inventory_dir | basename }}"
-#hostnode_testvar: inventory_development_host_vars_roiweblxc
+#hostnode_testvar: inventory_development_host_vars_lappi1websrv
 #gather_facts: False
 #force_handlers: False
 
@@ -83,4 +83,18 @@ hostnode_lxcenv_networking: dhcp
 hostnode_lxcenv_domain: "{{ (hostnode_lxcenv_networking == 'dhcp') | ternary('weblxc','lxc') }}"
 
 ## List of LXCs: defaults and templates
+hostnode_lxcenv_lxcs:
 hostnode_lxcs:
+
+
+## #############################################
+## KohaLXC/kohaenv: Koha/webapp-related settings
+## #############################################
+
+## Koha/weball settings:
+# Koha/webapp: server domain (DNS)
+#hostnode_kohaenv_srvdomain: lapinkirjasto.fi
+# Koha/webapp: server name (DNS)
+#hostnode_kohaenv_srvname: devkoha.lapinkirjasto.fi
+# Koha/webapp SSL/DNS-01 challange
+#hostnode_kohaenv_ssl_acmechallenge:

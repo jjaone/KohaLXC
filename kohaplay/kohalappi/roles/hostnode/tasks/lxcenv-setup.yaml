@@ -53,7 +53,7 @@
 # - retrieve defaults from 'roles/<role>/vars/lxcs/default'
 - include_vars: lxcs/default/config/default.yaml
 # LXCs: to be managed/running in inventory host in: $KOHALXC_SETUP
-# - use what we have in 'lxc_names' but only for domains we host:
+# - use what we have in 'lxc_names', (can't restrict this to domains we host)
 - name: lxc - Read definitions for all named LXCs
   vars:
     lxcname: "{{ item.split('.')[0] }}"
@@ -65,7 +65,7 @@
   with_items: "{{ lxcs.lxcs_names  | d() }}"
   when:
     - item is defined and item != ''
-    - lxcdomain in hostnode_lxcenv_domain
+#    - lxcdomain in hostnode_lxcenv_domain
 
 ## LXC-containers: Collect defined LXCs as fact list
 # - if 'lxcs.lxcs_names' doesn't have some of these, the d() takes care of ignoring it
@@ -94,6 +94,8 @@
     dest="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
     force="yes"
   with_items: "{{ hostnode_lxcs | d() }}"
+  loop_control:
+    label: "Extracting facts for LXC={{ item.net.user }}@{{ item.lxc.name }}.{{ item.net.domain }} (srvname={{ (item.net.srvname is defined) | ternary(item.net.srvname,'undefined') }})"
   #no_log: true
   when:
     - item is defined
@@ -104,6 +106,8 @@
 - name: lxc - Show defined LXCs (managed/running in inventory host for this lxcdomain)
   debug: var=item.net.domain,item.lxc.name,item.lxc.state
   with_items: "{{ hostnode_lxcs | d() }}"
+  loop_control:
+    label: "Showing config..{{common_newline}}LXC={{ item.net.user }}@{{ item.lxc.name }}.{{ item.net.domain }}, srvname= {{ (item.net.srvname is defined) | ternary(item.net.srvname,'undefined') }}"
   changed_when: false
   when:
     - item is defined
@@ -118,7 +122,9 @@
     executable: /bin/bash
     chdir: "/home/{{ hostnode_operuser }}"
   with_items: "{{ hostnode_lxcs | d() }}"
-  no_log: true
+  loop_control:
+    label: "Stopping LXC={{ item.net.user }}@{{ item.lxc.name }}.{{ item.net.domain }} (srvname= {{ (item.net.srvname is defined) | ternary(item.net.srvname,'undefined') }})"
+  #no_log: true
   when:
     - item is defined
     - item.net is defined
@@ -159,11 +165,10 @@
     - item.lxc is defined and item.lxc.name is defined
     - hostnode_backupsrv is defined and hostnode_backup_backupdir is defined
 
-- debug: var=hostnode_dataenv_enabled,hostnode_kohalxc_organization,hostnode_dataenv_dataset,hostnode_dataenv_datasets,hostnode_kohalxc_works
+- debug: var=hostnode_dataenv_enabled,hostnode_dataenv_datadir,hostnode_dataenv_datasets,hostnode_kohalxc_works,hostnode_kohalxc_organization
 ##  Use this to resolve need for manually mount devenv/convlog dirs
 # - for browsing and migration/LXCs (in non 'dataenv' hostnodes)
-- name: lxc+nodata - Mount datenv hosts folders for 'kohadata'
-  #become: yes
+- name: lxc+nodata - Mount data hosts default and conversion datasets for 'kohadata'
   environment:
     SSHPASS: "{{hostnode_operpass}}"
   shell: |
@@ -178,14 +183,15 @@
   when:
     - not hostnode_dataenv_enabled
 
-- name: lxc+nodata - Mount access for Koha-staff to dump4default-convsources (if any)
+## Ensure Koha-librarians have access to dump4mmt (default dataset and convsources)
+- name: lxc+nodata - Mount access for Koha-staff to 'dump4mmt' (convsources)
   become: yes
   shell: |
     [[ -d {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource ]] && ( rm -f /home/koha/{dumpdefault,konversiolokit,virkailijakirjeet} &&
     ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource /home/koha/dumpdefault &&
     ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/logs /home/koha/konversiolokit &&
     ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/target/Patrons/staffaccounts/letters /home/koha/virkailijakirjeet &&
-    echo "== All symlinks done.")
+    echo "== All 'dump4mmt-convsource' symlinks done.")
     exit 0
   args:
     executable: /bin/bash
@@ -198,8 +204,9 @@
   become: yes
   lxc_container:
     "{{ item.lxc }}"
-  #with_items: hostnode_lxcs | d()
   with_items: "{{ hostnode_lxcs | d() }}"
+  loop_control:
+    label: "Build/recreate..{{common_newline}}LXC={{ item.net.user }}@{{ item.lxc.name }}.{{ item.net.domain }} (srvname={{ (item.net.srvname is defined) | ternary(item.net.srvname,'undefined') }}),{{common_newline}}-lxc.net={{ item.net }},{{common_newline}}-lxc.container={{ item.lxc.container_config }}{{common_newline}}"
   register: cmd_lxcbuild
   when:
     - item is defined
@@ -221,13 +228,15 @@
     sshpass -e ssh-copy-id -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -i ~/.ssh/id_rsa.pub $LXCUSER@$LXCHOST
   args:
     executable: /bin/bash
-  no_log: true
   with_items: "{{ cmd_lxcbuild.results }}"
+  loop_control:
+    label: "Ensure SSH-access ..{{common_newline}}{{ item.item.net }}, {{ (item.lxc_container is defined) | ternary(item.lxc_container,'undefined') }}"
+  #no_log: true
   register: cmd_sshcopy
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
-    - item.item.net is defined
-    - item.item.net.domain is defined and item.item.net.domain in hostnode_lxcenv_domain
+    - item.item.net is defined and item.item.net.domain is defined
+    - item.item.net.domain in hostnode_lxcenv_domain
 
 #- debug: var=cmd_sshcopy.results
 ## Check whether we have auth/host-key for sshing to LXCs
@@ -237,8 +246,10 @@
     LXCHOST: "{{item.lxc_container.name}}.{{item.item.net.domain}}"
   shell: ssh-keygen -l -F "$LXCHOST" > /dev/null || echo "$LXCHOST"
   with_items: "{{ cmd_lxcbuild.results }}"
+  loop_control:
+    label: "Handle jump-sshing ..{{common_newline}}{{ item.item.net }}, {{ (item.lxc_container is defined) | ternary(item.lxc_container,'undefined') }}"
+  #no_log: true
   register: cmd_sshkeys_missing
-  no_log: true
   when:
     - item.lxc_container is defined and item.lxc_container.state == "running"
     - item.item.net is defined
@@ -273,7 +284,6 @@
 - name: lxc - status/setup - List status of running/stopped LXCs..
   become: yes
   shell: lxc-ls -f
-
 
 ## Abort play here (for testing and development):
 #- fail:
