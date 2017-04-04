@@ -98,7 +98,7 @@ sub set_holdingbranch {
     my $homedepid = $_[2]->[2];
     my @lastlocid = $_[2]->[3] =~ /(\d\d?)(\d\d\d)/;
     my $lastdepid = $_[2]->[4];
-    my ($locid, $depid);
+    my ($locid, $depid, $ccode); ## TODO/FIX: KohaLappi: added -2017-04-04
 
     #Enforce holdingbranch, but fall back to homebranch if no holdingbranch
     $libid = ($lastlocid[0])  ? $lastlocid[0] : $homelocid[0];
@@ -123,7 +123,9 @@ sub set_holdingbranch {
 #        #We don't need to warn about this as this is rather harmless. holdingbranch defaults to homebranch if holdingbranch is missing.
 #        $_[0]->separateItemAsVolatile("set_holdingbranch(): Copyid '".$_[0]->{itemnumber}."': has a undefined circulation library, using KONVERSIO\n".
 #                                      "libid => '".($libid ? $libid : '')."', locid => '".($locid ? $locid : '')."', depid => '".($depid ? $depid : '')."'");
-        $branchcode = 'KONVERSIO';
+	# TODO/FIX:KohaLappi;makecompliant w/ our liqlocqde_translation -20170404
+        $branchcode = 'KONKIR';
+        ##$branchcode = 'KONVERSIO';
     }
     $_[0]->{holdingbranch} = $branchcode;
 
@@ -145,23 +147,24 @@ sub set_homebranch {
     my $homedepid = $_[2]->[2];
     my @lastlocid = $_[2]->[3] =~ /(\d\d?)(\d\d\d)/;
     my $lastdepid = $_[2]->[4];
-    my ($locid, $depid);
+    my ($locid, $depid, $ccode);
 
 
     $libid = $homelocid[0];
     $locid = $homelocid[0].$homelocid[1] if @homelocid > 0;
     $depid = $homedepid;
 
-    my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $locid, depid => $depid }  );
+    my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $locid, depid => $depid, ccode => $ccode }  );
     my $oldLocName = $licloqde->[0];
     my $branchcode = $licloqde->[1];
     my $shelvingLocation = $licloqde->[2];
+    my $ccode = $liqlocde->[3];
 
     if (!$branchcode) {
         $libid = '' unless $libid; $locid = '' unless $locid; $depid = '' unless $depid;
         $_[0]->separateItemAsVolatile("set_homebranch(): Copyid ".$_[0]->{itemnumber}.": has a undefined homebranch library, using holdingbranch\n".
                                       "libid => ".$libid.", locid => ".$locid.", depid => ".$depid."");
-            $branchcode = $_[0]->{holdingbranch};
+	$branchcode = $_[0]->{holdingbranch};
     }
     $_[0]->{homebranch} = $branchcode;
 
@@ -184,15 +187,21 @@ sub set_homebranch {
     }
 
     #Enforce holdingbranch for Items with no holdingbranch. This happens when an Item never leaves home... I guess..
-    if (not(exists $_[0]->{holdingbranch}) || $_[0]->{holdingbranch} eq 'KONVERSIO') {
+    if (not(exists $_[0]->{holdingbranch}) || $_[0]->{holdingbranch} eq 'KONKIR') {
         $_[0]->{holdingbranch} = $_[0]->{homebranch};
     }
 
     ## Set the quick circulation (pikalaina) collection code
-    if ($oldLocName =~ /PIKA$/) {
-        $_[0]->{ccode} = 'PILA';
+    #if ($oldLocName =~ /PIKA$/) {
+    #    $_[0]->{ccode} = 'PILA';
+    #}
+
+    # Set the collection code
+    if ( $ccode ne '' ) {
+	$_[0]->{ccode} = "$ccode";
     }
 }
+
 sub get_homebranch {
     return $_[0]->{homebranch};
 }
@@ -497,9 +506,15 @@ sub set_status {
 
     my @byte1 = CommonRoutines::breakIntegerToBinaryArray($status1);
     my @byte2 = CommonRoutines::breakIntegerToBinaryArray($status2);
+
+    ## TODO/FIX: KohaLapppi: extracted from MMT/OUTI: /20170404
+    # - ccode needs to come from translation::resolve, this is likely broken for no??
     my $licloqde = TranslationTables::liqlocde_translation::resolve(  { libid => $libid, locid => $locid, depid => $depid }  );
-    my $libraryDerivedStatus = $licloqde->[3];
-    my $libraryDerivedStatusSupplement = $licloqde->[4];
+    # TODO/FIX: KohaLappi (answering "MMT/OUTI:Is this here or not?"): yes it is).
+    my $setCcode = $licloqde->[3];
+
+    my $libraryDerivedStatus = $licloqde->[4];
+    my $libraryDerivedStatusSupplement = $licloqde->[5];
 
 =SELECT * FROM config.copy_status;
  id |         name         | holdable | opac_visible | copy_active | restrict_copy_delete
@@ -540,15 +555,15 @@ sub set_status {
     if (defined $libraryDerivedStatus) {
         switch ($libraryDerivedStatus) {
             case 'Bindery' { $item->{damaged} = 1; }
-            case 'Lost' { $item->{itemlost} = 1; }
+	    case 'NOHOLD' { $item->{damaged} = 5; } # We'll put some of the items non-holdable in KohaLappi/2017-04-04
+	    case 'Lost' { $item->{itemlost} = 1; }
             case 'Billed' { $item->{notforloan} = 6; }
             case 'Claims returned' { $item->{itemnotes} .= ($item->{itemnotes}) ? ', Väittää palauttaneensa' : 'Väittää palauttaneensa'; }
-            case 'NoLoan' { $item->{notforloan} = '1'; }
+            case 'NOTLOAN' { $item->{notforloan} = '1'; }
             case 'EmplOnly' { $item->{notforloan} = '2'; }
             case 'PubNote' { $item->{itemnotes} = ($item->{itemnotes}) ? ', '.$libraryDerivedStatusSupplement : $libraryDerivedStatusSupplement; }
         }
     }
-
 
     return 'KILL MEE!' if ($byte1[STATUS1DELETEDBIT]);#deleted
     $item->{itemlost} = "1" if ($byte1[-5]); #lost
@@ -567,7 +582,7 @@ sub set_status {
     }
 
     ##If itemtype is CA (Celia audiobook), then set the notforloan => 1.
-    if ($item->{itype} eq 'CA') {
+    if ($item->{itype} eq 'CELIA') {
         $item->{notforloan} = "1"; #Not for loan
     }
 }
@@ -593,6 +608,7 @@ sub get_deleted {
 sub set_location {
     #This value is set in set_homebranch()
     # TODO: Do we need this for 'kohalappi'?
+    # - No, we dont. -2017-04-04
     if ($CFG::CFG->{organization} eq 'pielinen') {
         if ($_[0]->{homebranch} eq 'ILO_LUK') {
             $_[0]->{location} = 'REF';
@@ -602,6 +618,11 @@ sub set_location {
 }
 sub get_location {
     return $_[0]->{location};
+}
+
+## TODO/FIX: KohaLappi; copied from MMT/OUTI, -2017-04-04
+sub set_ccode {
+    return "Unknown";
 }
 
 sub set_issues {

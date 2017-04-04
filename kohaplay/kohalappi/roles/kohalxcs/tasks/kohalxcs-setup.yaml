@@ -342,22 +342,42 @@
     - kohalxcs_mmtenv_enabled
     - kohalxc_kohagrp_name is defined
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
-- fail:
-## Migrate: 'patrons' (and staffaccounts)
-# TODO: Do we want to empty some Patron-related data before migrating?
+
+## Migrate
+# TODO: SQL for preserving db tables data before migrating:
+# USE kohadata.system_preferences: system settings
+# - SELECT * FROM kohadata.system_preferences;
+# USE kohadata.branches: libraries
+# - SELECT * FROM kohadata.branches;
+# USE kohadata.letters: notifications and message templates
+# - SELECT * FROM kohadata.letters;
+#
+# TODO: Empty/clean these dbtables (Patrons and other) data before migrating:
+# USE kohadata.issues: all
+# - DELETE FROM issues WHERE issue_id <> 0;
+# USE kohadata.borrowers: non-staff Patrons
 # - DELETE FROM borrowers WHERE categorycode <> 'S' AND borrowernumber <> 1;
+# USE kohadata.branchtransfers: all
+# - TRUNCATE TABLE branchtransfers;
+# - DELETE FROM branchtransfers WHERE  itemnumber <> 0;
+# USE kohadata.branchrelations
+# - TRUNCATE TABLE branchrelations;
+# USE kohadata.message_queue
+# - DELETE FROM kohadata.message_queue WHERE borrowernumber <> 0;
+
+## Migrate: 'patrons' (and staffaccounts)
 - name: koha+mmt - Migrate newly converted Patrons and/or Staff accounts
   become: yes
   shell: |
     #su -l koha -c "bulkPatronImport.pl --help"
     [[ -d Patrons ]] && ls -1shl Patrons && echo
-    [[ -f Patrons/patrons.migrateme ]] && head -9 Patrons/patrons.migrateme && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Patrons/patrons.migrateme --deduplicate &> log/bulkPatronImport-patrons.log"
-    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo
+    [[ -f Patrons/patrons.migrateme ]] && head -9 Patrons/patrons.migrateme && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Patrons/patrons.migrateme --deduplicate &> log/bulkPatronImport-$(date +%Y%m%d_%k%M).log"
+    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo "== ansible-kohalxc: Not migrating Staffaccounts (for now)"
     #[[ -f Staffaccounts/staffaccounts.migrateme ]] && head -9 Staffaccounts/staffaccounts.migrateme && su -l koha -c "bulkPatronImport    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target/Staffaccounts/staffaccounts.migrateme &> log/bulkPatronImport-staffaccounts.log"
     exit 0
   args:
     executable: /bin/bash
-    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
+    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
@@ -420,7 +440,7 @@
     - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
 
 ##
-## Koha/webapp-setup after this point => should be moved to kohaenv-setup.yaml ##
+## Koha/webapp-setup after this point => TODO: move to kohaenv-setup.yaml
 ##
 
 - debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname,kohalxcs_kohaenv_https,kohalxcs_kohaenv_sslle,kohalxc_organization
