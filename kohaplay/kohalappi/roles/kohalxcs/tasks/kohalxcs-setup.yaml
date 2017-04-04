@@ -36,7 +36,7 @@
     kohalxcs_mdbenv_enabled: "{{ lxcg.mdbenv_enabled | d(false) }}"
     kohalxcs_kohaenv_enabled: "{{ lxcg.kohaenv_enabled | d(false) }}"
     kohalxcs_kohaenv_srvname: "{{ lxcn.kohaenv_srvname | d() }}" 
-#- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_origommtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
+- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_origommtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname
 
 ## Pre-seed debconf (to prevent install dialogs) for select packages
 - name: koha - For select packges 'debconf' pre-seed installation settings
@@ -86,9 +86,10 @@
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
     backrefs: yes
-    backup: no
+    backup: yes
   with_items:
     - { regexp: '^(myhostname =)(.*)', line: '\1 {{ kohalxcs_kohaenv_srvname }}' }
+    - { regexp: '^(mydestination =)( .*{{ hostnode_kohaenv_srvdomain }},)(.*)', line: '\1 {{ kohalxcs_kohaenv_srvname }},\3' }
     - { regexp: '^(inet_interfaces =)(.*)', line: '\1 localhost' }
     #- { regexp: '^(#myorigin =)(.*)', line: '\1\2' }
     #- { regexp: '^(relayhost =)(.*)', line: '\1 [smtp.gmail.com]:587' }
@@ -206,6 +207,7 @@
     - kohalxcs_ppmmtenv_enabled
 
 - debug: var=kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling
+
 #- debug: var=kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
 # - might run very long time, async by default, poll and timeout in seconds (if given)
@@ -259,7 +261,7 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Make 'Staffaccounts' in addition to PP/MMT-Patrons
-# - only if 'Patrons' converted and "kohlxcs_mmtenv_migrateme" has 'staffaccounts'
+# - only if converting 'Patrons' & "kohlxcs_mmtenv_migrateme" has 'staffaccounts'
 - name: data+ppmmt+(migrate) - Make Staff accounts for Koha (in addition to normal PatronsImportChain-conversion)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
@@ -277,14 +279,14 @@
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
     - ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
-## Generate '{Staffaccounts,Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme's
-- name: data+ppmmt - Build '*.migrateme' from conv targets for migrating them to Koha
+## Build '{Staffaccounts,Patrons,Biblios,Items,Holds,Checkouts,Fines}.migrateme's
+- name: data+ppmmt - Build '*.migrateme' from conv targets to insert them to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
     #ls -1sh && for d in "Staffaccounts Patrons Biblios Items Holds Checkouts Fines"
-    ls -1sh && for d in "Staffaccounts {{ kohalxcs_ppmmtenv_importchains | d() }}"
+    ls -1sh && for d in "{{ kohalxcs_ppmmtenv_importchains | d() }}"
     do
        ([[ -d $d ]] && cd $d && echo && echo "== $d: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo);
        #([[ -d $d ]] && cd $d && echo && echo "== $d: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && find */ -maxdepth 1 -name '${d,,}.migrateme' -exec cp -vp {} . \; 2>/dev/null; ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo);
@@ -308,17 +310,16 @@
 
 ## Database/status: 'patrons' and staffaccounts
 # - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
-- name: koha+mdb - Show converted Patrons and generated Staff accounts, if any are in the db
+- name: koha+mdb - Show converted Patrons and Staff accounts that are in the db
   become: yes
   shell: |
     [[ -d Patrons ]] && ls -1shl Patrons && echo
     [[ -f Patrons/patrons.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> "S" LIMIT 15;'
     [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo
-    [[ -f Staffaccounts/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'
-    exit 0
+    [[ -f Staffaccounts/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'; exit 0
   args:
     executable: /bin/bash
-    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/target
+    chdir: "/home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target"
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mdbenv_enabled
@@ -341,7 +342,7 @@
     - kohalxcs_mmtenv_enabled
     - kohalxc_kohagrp_name is defined
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
-
+- fail:
 ## Migrate: 'patrons' (and staffaccounts)
 # TODO: Do we want to empty some Patron-related data before migrating?
 # - DELETE FROM borrowers WHERE categorycode <> 'S' AND borrowernumber <> 1;

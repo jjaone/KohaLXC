@@ -831,9 +831,9 @@ sub buildABarcode {
     my $cuident = $_[2]->[1];
 
     # DEBUG/TODO:KohaLappi; to find out more abt the barcode-length issue
-    if ($CFG::CFG->{organization} eq 'kohalappi') {
-	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:patronId='.$patronId.', cuident='.$cuident);
-    }
+    #if ($CFG::CFG->{organization} eq 'kohalappi') {
+    #	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:patronId='.$patronId.', cuident='.$cuident);
+    #}
 
     ##If the borrower has an alternate identification, which is not the !!!!SSN!!!!, use that instead.
     #Also make sure that it is a presumed barcode instead of other craziness what typically is put to the cuident-field.
@@ -889,9 +889,9 @@ sub buildABarcode {
     }
 
     # DEBUG/TODO:KohaLappi; to find out more abt the barcode-length issue
-    if ($CFG::CFG->{organization} eq 'kohalappi') {
-	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:patronId='.$patronId.', cuident='.$cuident.', createdLocationId='.$createdLocationId.', countyNumber='.$countyNumber.', identifyingNumber='.$identifyingNumber.', barcode='.$barcode.'.');
-    }
+    #if ($CFG::CFG->{organization} eq 'kohalappi') {
+    #	$log->warning('DEBUG[Patron.pm.j2/buildABarcode()]:patronId='.$patronId.', cuident='.$cuident.', createdLocationId='.$createdLocationId.', countyNumber='.$countyNumber.', identifyingNumber='.$identifyingNumber.', barcode='.$barcode.'.');
+    #}
 
     return $barcode;
 }

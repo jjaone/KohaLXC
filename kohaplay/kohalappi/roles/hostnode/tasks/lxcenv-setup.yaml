@@ -76,18 +76,10 @@
       - "{{ kldev_mdbks  | d() }}"
       - "{{ kltest_dmdb  | d() }}"
       - "{{ kltest_mdbks | d() }}"
-#- debug: var=hostnode_lxcs,hostnode_kohalxc_tooldir,kohalxc_tooldir
+- debug: msg="{{ hostnode_lxcs|map(attribute='net')|list }}"
 
-## Extract the env enablements from lxc.group's in container_config
-# TODO: (remove this): delete *.fact files first -> obsolete, dirs have been cleared previously
-#- name: lxcenv - Start LXC-environments facts building with clean state
-#  file: |
-#    path="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
-#    state=absent
-#  with_items: hostnode_lxcs | d()
-#  when:
-#    - item.net.domain is defined and item.net.domain in inventory_hostname
-- name: lxc - Extract LXC-environments facts from lxc.group in 'container_config'
+## Get LXC environment from lxc.group's in container_config
+- name: lxc - Build LXC-environments facts from lxc.group in 'container_config'
   #debug: var=item
   template: >
     src="files/kohalxc_lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
@@ -95,13 +87,15 @@
     force="yes"
   with_items: "{{ hostnode_lxcs | d() }}"
   loop_control:
-    label: "Extracting facts for LXC={{ item.net.user }}@{{ item.lxc.name }}.{{ item.net.domain }} (srvname={{ (item.net.srvname is defined) | ternary(item.net.srvname,'undefined') }})"
+    label: "Build environment facts for LXC={{ item.net.user }}@{{ item.lxc.name }}.{{ item.net.domain }} (srvname={{ (item.net.srvname is defined) | ternary(item.net.srvname,'undefined') }})"
   #no_log: true
   when:
     - item is defined
     - item.net is defined
-    - item.net.domain is defined and item.net.domain in hostnode_lxcenv_domain
+    - item.net.domain is defined
+    - item.net.domain in hostnode_lxcenv_domain
 
+#- debug: msg="{{ hostnode_lxcs|map(attribute='lxc')|list }}"
 ## Show all LXC-containers
 - name: lxc - Show defined LXCs (managed/running in inventory host for this lxcdomain)
   debug: var=item.net.domain,item.lxc.name,item.lxc.state
@@ -176,8 +170,8 @@
     (cd {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata &&
     mkdir -vp dump4mmt-convsource && chmod g+w dump4mmt-convsource &&
     [[ ! -e dump4mmt-default ]] && ln -s dump4mmt-convsource dump4mmt-default;
-    [[ ! -d dump4mmt-convsource/logs ]] && sshfs -o allow_other,reconnect {{hostnode_operuser}}@{{hostnode_websrv}}:Works/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-default/source.0/ {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource;
-    ls -l dump4mmt-default/ && echo "== All done.")
+    [[ ! -d dump4mmt-convsource/source.0 ]] && sshfs -o allow_other,reconnect {{hostnode_operuser}}@{{hostnode_websrv}}:Works/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-default/ {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource;
+    ls -l dump4mmt-default/source.0 && echo "== All done.")
   args:
     executable: /bin/bash
   when:
@@ -187,10 +181,10 @@
 - name: lxc+nodata - Mount access for Koha-staff to 'dump4mmt' (convsources)
   become: yes
   shell: |
-    [[ -d {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource ]] && ( rm -f /home/koha/{dumpdefault,konversiolokit,virkailijakirjeet} &&
-    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource /home/koha/dumpdefault &&
-    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/logs /home/koha/konversiolokit &&
-    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/target/Patrons/staffaccounts/letters /home/koha/virkailijakirjeet &&
+    [[ -d {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/source.0 ]] && ( rm -f /home/koha/{dumpdefault,konversiolokit,virkailijakirjeet} &&
+    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/source.0 /home/koha/dumpdefault &&
+    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/source.0/logs /home/koha/konversiolokit &&
+    ln -f -s {{hostnode_kohalxc_works}}/{{hostnode_kohalxc_organization}}/kohadata/dump4mmt-convsource/source.0/target/Patrons/staffaccounts/letters /home/koha/virkailijakirjeet &&
     echo "== All 'dump4mmt-convsource' symlinks done.")
     exit 0
   args:

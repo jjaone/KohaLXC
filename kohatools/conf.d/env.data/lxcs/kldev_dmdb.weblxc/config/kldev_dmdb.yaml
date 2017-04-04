@@ -14,7 +14,8 @@
 # - network: app(OPAC)-port=88, int(staff)-port=8088
 # #############################################################################
 
-## net port mappings/domain (web/mdb)lxc => host: 88/8088 => 80/8080
+## Network LXC/host port mappings + domain:
+# - (web/mdb)lxc => host: 88/8088 => 80/8080
 net:
   app_port: 88
   int_port: 8088
@@ -34,7 +35,8 @@ lxc:
     - "{{ hostnode_lxc_mount_kohatools }}"
     - "{{ hostnode_lxc_mount_kohadata }}"
     # lxc_groups:
-    - lxc.group = {{ hostnode_environment | d('local') }}
+    #- lxc.group = {{ hostnode_environment | d('local') }}
+    - lxc.group = development
     - lxc.group = dev
     - lxc.group = mdb
     - lxc.group = data
@@ -42,7 +44,7 @@ lxc:
     # lxc_start:
     - lxc.start.auto = 1
     - lxc.start.delay = 0
-    #- lxc.start.order = 0
+    - lxc.start.order = 0
     # lxc_network:
     - lxc.network.veth.pair = Vkldev_dmdb
     - lxc.network.type = veth

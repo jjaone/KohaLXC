@@ -32,7 +32,8 @@ lxc:
     - "{{ hostnode_lxc_mount_kohatools }}"
     - "{{ hostnode_lxc_mount_kohadata }}"
     # lxc/group
-    - lxc.group = {{ hostnode_environment | d('local') }}
+    #- lxc.group = {{ hostnode_environment | d('local') }}
+    - lxc.group = testing
     - lxc.group = dev
     - lxc.group = mdb
     - lxc.group = ppmmt

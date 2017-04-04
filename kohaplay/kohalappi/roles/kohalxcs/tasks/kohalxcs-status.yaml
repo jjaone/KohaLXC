@@ -43,19 +43,5 @@
   setup: >
     fact_path="{{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{inventory_hostname}}/config"
     filter="ansible_local"
-#- debug: var=ansible_host,inventory_hostname,ansible_local.kohalxcs.default,ansible_local.kohalxcs.default.devenv_enabled,ansible_local.kohalxcs.default.dataenv_enabled,ansible_local.kohalxcs.default.mmtenv_enabled,ansible_local.kohalxcs.default.mdbenv_enabled,ansible_local.kohalxcs.default.kohaenv_enabled
 - debug: var=ansible_local
-- debug: var=ansible_host,inventory_hostname,kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
-
-## Extract the environment enablements from lxc.group(s)
-#- name: status - Extract KohaLXC environment enablements from lxc.group(s)
-#  become: yes
-#  shell:
-#  shell: lxc-info --name=`echo {{ inventory_hostname }} | cut -d"." -f1` -c lxc.group | tr "\n" " " | cut -d"=" -f2- | cut -c2- | sed 's/{{ hostnode_environment }} //'
-
-## Some vars: status/debug 
-#- debug: var=hostnode_operuser,kohalxc_operuser
-#- debug: var=ansible_host,ansible_user,ansible_host,inventory_hostname
-#- debug: var=hostnode_srvname
-#- debug: var=hostnode_lxcs
-#- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled
+#- debug: var=ansible_host,inventory_hostname,kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mdbvenv_enabled,kohalxcs_kohaenv_enabled
