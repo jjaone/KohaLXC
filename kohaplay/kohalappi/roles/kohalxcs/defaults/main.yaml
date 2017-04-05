@@ -130,12 +130,13 @@ kohalxcs_mmtenv_zebrarebuild: /usr/share/koha/bin/migration_tools/rebuild_zebra.
 kohalxcs_mmtenv_zebrarebuild_opts: -b -r -v -x
 #kohalxcs_mmtenv_zebrarebuild_opts: -b -r -v -x --offset 100000 --length 50000
 
-## ######################
-## Mysql/MariaDB (mdbenv)
-## ######################
+## ######################################
+## KohaLXC/mdbenv: Mysql/MariaDB-database
+## #####################################
 kohalxcs_mdbenv_enabled: false
 # Packages needed for setup/config/tools
 kohalxcs_mdbenv_pckgs:
+  - python-mysqldb
 # Koha/database host
 kohalxcs_mdbenv_dbhost: "{{ kohalxc_mdbenv_dbhost | d('localhost') }}"
 # Koha/database port
@@ -147,9 +148,9 @@ kohalxcs_mdbenv_kohapass: "{{ kohalxc_mdbenv_kohapass }}"
 # Koha/database name
 kohalxcs_mdbenv_kohadb: "{{ kohalxc_mdbenv_kohadb | d('kohadata') }}"
 
-## ###############
-## KohaLXC/kohaenv
-## ###############
+## ############################
+## KohaLXC/kohaenv: Koha/webapp
+## ############################
 kohalxcs_kohaenv_enabled: false
 # Packages needed for setup/config/tools
 kohalxcs_kohaenv_pckgs:

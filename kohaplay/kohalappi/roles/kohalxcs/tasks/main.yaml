@@ -10,29 +10,133 @@
 # - container environment specfic provisioning and setup of Koha-related LXCs
 # #############################################################################
 
-## General: debugs for LXC-related dev-work and debugging
-#- include: kohalxcs-debug.yaml
-#  tags: kohalxcs:debug
+## kohalxcs/common: read ansible_facts from target ansible localized folder:
+# - /etc/ansible/facts.d
+- name: setup - Read LXC env facts (ansible_local/{{inventory_hostname}}).lxc_group
+  setup: >
+    fact_path="{{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{inventory_hostname}}/config"
+    filter="ansible_local"
+  tags: kohalxcs,kohalxcs:status,kohalxcs:setup
+
+## kohlxcs/common: set this LXC-environment enablements based on above facts
+- name: setup - Set the LXC-environments based on local facts (if any)
+  vars:
+    lxcg: "{{ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_group}}"
+    lxcn: "{{ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_net|d()}}"
+  set_fact:
+    kohalxcs_devenv_enabled: "{{ lxcg.devenv_enabled | d(false) }}"
+    kohalxcs_dataenv_enabled: "{{ lxcg.dataenv_enabled | d(false) }}"
+    kohalxcs_mmtenv_enabled: "{{ lxcg.mmtenv_enabled | d(false) }}"
+    kohalxcs_ppmmtenv_enabled: "{{ lxcg.ppmmtenv_enabled | d(false) }}"
+    kohalxcs_origommtenv_enabled: "{{ lxcg.origommtenv_enabld | d(false) }}"
+    kohalxcs_mdbenv_enabled: "{{ lxcg.mdbenv_enabled | d(false) }}"
+    kohalxcs_kohaenv_enabled: "{{ lxcg.kohaenv_enabled | d(false) }}"
+    kohalxcs_kohaenv_srvname: "{{ lxcn.kohaenv_srvname | d() }}"
+  tags: kohalxcs,kohalxcs:status,kohalxcs:setup
+
+## kohalxcs/debug: show LXC-related dev-work settings and configs
+- include: kohalxcs-debug.yaml
+  tags: kohalxcs:debug
+
+## kohalxcs/koha: prevent install dialogs, debconf preseed for select packages
+- name: koha - For select packges 'debconf' pre-seed installation settings
+  become: yes
+  debconf:
+    name: "{{ item.name }}"
+    setting: "{{ item.name }}/{{ item.q }}"
+    vtype: "{{ item.type }}"
+    value: "{{ item.value}}"
+  with_items:
+    - { name: postfix, q: mailname, type: string, value: "{{ kohalxcs_kohaenv_srvname }}" }
+    - { name: postfix, q: main_mailer_type, type: string, value: "Internet Site" }
+  when:
+    - kohalxcs_kohaenv_enabled
+  tags: kohalxcs:setup
+
+## Ensure {dev,data,mdb,koha}env.* pckgs are installed (if env is enabled)
+- name: dev+data+mdb+koha - Ensure needed packages are installed
+  become: yes
+  apt: >
+    name="{{ item }}"
+    update_cache="yes"
+    state="present"
+    autoremove="yes"
+  with_flattened:
+    - "{{ (kohalxcs_devenv_enabled) | ternary(kohalxcs_devenv_pckgs, '') }}"
+    - "{{ (kohalxcs_dataenv_enabled) | ternary(kohalxcs_dataenv_pckgs, '' ) }}"
+    - "{{ (kohalxcs_mdbenv_enabled) | ternary(kohalxcs_mdbenv_pckgs, '' ) }}"
+    - "{{ (kohalxcs_kohaenv_enabled) | ternary(kohalxcs_kohaenv_pckgs, '' ) }}"
+  when:
+    - kohalxcs_devenv_enabled or kohalxcs_dataenv_enabled or kohalxcs_mdbenv_enabled or kohalxcs_kohaenv_enabled
+    - item is defined and item != ''
+  tags: kohalxcs:setup
+
+## Ensure koha-group exists in the lXC
+# - TODO: should ensure we have 'koha' user in LXC w/ appropriate group
+- name: koha+data+ppmmt - Ensure we have a koha-user group
+  become: yes
+  group: >
+    name={{ kohalxc_kohagrp_name }}
+    gid={{ kohalxc_kohagrp_id }}
+    state=present
+  when:
+    - kohalxcs_kohaenv_enabled or kohalxcs_dataenv_enabled or kohalxcs_ppmmtenv_enabled
+    - kohalxc_kohagrp_name is defined
+    - kohalxc_kohagrp_id is defined
+  tags: kohalxcs,kohalxcs:status,kohalxcs:setup
+
+## Ensure kohaoper (i.e. 'ansible_user') belongs to koha-group and has ssh-keys
+- name: setup - Ensure LXC-user (ansible_user) has ssh-keys and belongs to koha-group
+  become: yes
+  user: >
+    name="{{ ansible_user }}"
+    uid="{{ kohalxc_operid }}"
+    groups="{{ kohalxc_kohagrp_name | d(hostnode_kohagrp_name) }}"
+    append="yes"
+    generate_ssh_key="yes"
+    comment="Koha/LXC kohaoper user"
+  when:
+    - kohalxc_operid is defined
+    - kohalxc_kohagrp_name is defined
+  tags: kohalxcs,kohalxcs:status,kohalxcs:setup
+
+## Ensure kohalxc_operuser(kohaoper/HOME) has required dirs
+- name: setup - Ensure LXC-user (ansible_user) has dirs for scripts and logs
+  file: >
+    path="/home/{{ ansible_user }}/{{ item }}"
+    state="directory"
+  with_items:
+    - bin
+    - log
+  tags: kohalxcs,kohalxcs:status,kohalxcs:setup
+
+## Status/Setup of 'mdbenv' for LXCs
+#- include: mdbenv-status.yaml
+#  tags: kohalxcs,kohalxcs:status
+- include: mdbenv-setup.yaml
+  when:
+    - kohalxcs_mdbenv_enabled
+  tags: kohalxcs:setup
 
 ## lxc-{status,setup}
 # - TODO: conditions for tags should be read from each LXCs group configs
 - include: kohalxcs-status.yaml
   tags: kohalxcs,kohalxcs:status
 - include: kohalxcs-setup.yaml
-  tags: kohalxcs,kohalxcs:setup
   when:
     - kohalxcs_devenv_enabled
+  tags: kohalxcs:setup
 
 ## Status of the devenv for 'lxcs'
 #- include: devenv-status.yaml
 #  tags: "kohalxcs,kohalxcs:devenv-status"
 ## Setup the devenv for 'lxcs'
 #- include: devenv-setup.yaml
-#  tags: "kohalxcs,kohalxcs:devenv-setup"
+#  tags: "kohalxcs:devenv-setup"
 
 ## Status of the srvenv for 'lxcs'
 #- include: srven-status.yaml
 #  tags: "kohalxcs,kohalxcs:srvenv-status"
 ## Setup the srvenv for 'lxcs'
 #- include: srven-setup.yaml
-#  tags: "kohalxcs,kohalxcs:srvenv-setup"
+#  tags: "kohalxcs:srvenv-setup"

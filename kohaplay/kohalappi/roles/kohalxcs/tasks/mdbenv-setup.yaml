@@ -1,0 +1,75 @@
+---
+# File: roles/kohalxcs/tasks/mdbenv-setup.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description: setup tasks of Mysql/MariaDB-related LXC
+# - setup database-related LXCs environments in all playbook inventories
+# - ensure availability of all required distro packages and Perl-modules
+# 
+# ##############################################################################
+
+#- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname
+
+##
+#- name: test - Dump all databases
+#  shell: |
+#    mysqldump --user={{ kohalxcs_mdbenv_rootuser }} --password={{ kohalxcs_mdbenv_rootpass }} --all-databases --result-file=/tmp/all-dbs.sql
+
+## Database: full dump of library db
+- name: mdb - Dump Koha library database
+  mysql_db:
+    state: dump
+    name: "{{ kohalxcs_mdbenv_kohadb }}"
+    login_host: "{{ kohalxcs_mdbenv_dbhost }}"
+    login_port: "{{ kohalxcs_mdbenv_dbport }}"
+    login_user: "{{ kohalxcs_mdbenv_kohauser }}"
+    login_password: "{{ kohalxcs_mdbenv_kohapass }}"
+    target: /tmp/mdbenv_dump-{{ inventory_hostname }}-{{kohalxcs_mdbenv_kohadb}}_{{kohalxc_date_yyymmdd}}.sql
+
+## Database/status: 'patrons' and staffaccounts
+# - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
+- name: koha+mdb - Show converted Patrons and Staff accounts that are in database
+  become: yes
+  shell: |
+    [[ -d Patrons ]] && ls -1shl Patrons && echo
+    [[ -f Patrons/patrons.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> "S" LIMIT 15;'
+    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo
+    [[ -f Staffaccounts/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'; exit 0
+  args:
+    executable: /bin/bash
+    chdir: "/home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mdbenv_enabled
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
+
+- fail:
+
+## Possible pre-migration database table tweaks and configs
+# TODO: SQL for preserving db tables data before migrating:
+# USE kohadata.system_preferences: system settings
+# - SELECT * FROM kohadata.system_preferences;
+# USE kohadata.branches: libraries
+# - SELECT * FROM kohadata.branches;
+# USE kohadata.letters: notifications and message templates
+# - SELECT * FROM kohadata.letters;
+#
+# TODO: Empty/clean these dbtables (Patrons and other) data before migrating:
+# USE kohadata.issues: all
+# - DELETE FROM issues WHERE issue_id <> 0;
+# USE kohadata.borrowers: non-staff Patrons
+# - DELETE FROM borrowers WHERE categorycode <> 'S' AND borrowernumber <> 1;
+# USE kohadata.branchtransfers: all
+# - TRUNCATE TABLE branchtransfers;
+# - DELETE FROM branchtransfers WHERE  itemnumber <> 0;
+# USE kohadata.branchrelations
+# - TRUNCATE TABLE branchrelations;
+# USE kohadata.message_queue
+# - DELETE FROM kohadata.message_queue WHERE borrowernumber <> 0;
+
+## !! For debug/dev FAIL here on purpose..!! ##
+#- fail:

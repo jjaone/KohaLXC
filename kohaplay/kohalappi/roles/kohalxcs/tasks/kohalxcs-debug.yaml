@@ -1,0 +1,64 @@
+---
+# File: roles/kohalxcs/tasks/kohalxcs-debug.yaml
+# ############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description:
+# - debug/verbose info abt tooling environments for LXCs (all inventories)
+# #############################################################################
+
+## Show local development environment
+- name: Show local development environment key params
+  debug: var=hostnode_environment,local_home,localdev_operuser,localdev_operid,kohalxc_operuser
+  when: inventory_hostname == 'localhost'
+  
+## Show Ansible related vars
+- name: Show Ansible related settings
+  debug: >
+    var=ansible_host,ansible_user,ansible_local,ansible_ssh_common_args,inventory_hostname
+    verbosity=1
+
+## Show KohaLXC-tooling and server hosts environment related settings
+- name: Show KohaLXC-tooling related settings
+  debug: >
+    var=gather_facts,force_handlers,kohalxc_testvar,kohalxc_operuser,kohalxc_install,kohalxc_works,kohalxc_organization
+    verbosity=1
+
+## KohaLXC/tool: 'kohalxc'
+# - environments: devenv, srvenv, mdbenv, dataenv, webenv/kohaenv
+- debug: var=kohalxc_tooldir verbosity=1
+- debug: var=kohalxc_devenv,kohalxc_devenv_enabled verbosity=1
+- debug: var=kohalxc_srvenv,kohalxc_srvenv_enabled verbosity=1
+- debug: var=kohalxc_mdbenv,kohalxc_mdbenv_enabled verbosity=1
+- debug: var=kohalxc_mdbenv_rootuser,kohalxc_mdbenv_rootpass,kohalxc_mdbenv_kohauser,kohalxc_mdbenv_kohapass,kohalxc_mdbenv_kohadb verbosity=1
+- debug: var=kohalxc_webenv,kohalxc_webenv_enabled verbosity=1
+- debug: var=kohalxc_kohaenv,kohalxc_kohaenv_enabled verbosity=1
+- debug: var=kohalxc_dataenv,kohalxc_dataenv_enabled,kohalxc_datadir verbosity=1
+
+## KohaLXC/LXCs: 'kohalxcs'
+# - environments: devenv, srvenv, mdbenv, dataenv, *mmtenv, webenv/kohaenv
+- debug: var=kohalxcs_testvar,vault_kohalxcs_testvar verbosity=1
+- debug: var=kohalxcs_kohalxc_tooldir verbosity=1
+- debug: var=kohalxcs_devenv_enabled,kohalxcs_devenv_pckgs verbosity=1
+- debug: var=kohalxcs_srvenv_enabled,kohalxcs_srvenv_pckgs verbosity=1
+- debug: var=kohalxcs_mdbenv_enabled,kohalxcs_mdbenv_pckgs verbosity=0
+- debug: var=kohalxcs_mdbenv_rootuser,kohalxcs_mdbenv_rootpass,kohalxcs_mdbenv_kohauser,kohalxcs_mdbenv_kohapass,kohalxcs_mdbenv_kohadb  verbosity=0
+- debug: var=kohalxcs_dataenv_enabled,kohalxcs_dataenv_pckgs verbosity=1
+- debug: var=kohalxcs_ppmmtenv_enabled,kohalxcs_origommtenv_enabled,kohalxcs_mmtenv_enabled  verbosity=1
+- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_pckgs,kohalxcs_kohaenv_srvname  verbosity=0
+
+## KohaLXC/hosts: 'hostnode'
+# hostnode/environment: hosts, ports, groups, users
+- debug: var=hostnode_testvar,hostnode_environment,hostnode_websrv,hostnode_mdbsrv,hostnode_datasrv verbosity=1
+- debug: var=hostnode_kohasys_user,hostnode_kohasys_id verbosity=1
+- debug: var=hostnode_kohagrp_name,hostnode_kohagrp_id verbosity=1
+- debug: var=hostnode_operuser,hostnode_operid,hostnode_sshport verbosity=1
+# hostnode/upgrades and rebootability
+- debug: var=hostnode_upgrade_enabled,hostnode_reboot_enabled,hostnode_network_interface verbosity=1
+# hostnode/secure+storage
+- debug: var=hostnode_secure_enabled,hostnode_lvm_enabled,hostnode_zfs_enabled verbosity=1
+# hostnode/lxcenv
+- debug: var=hostnode_lxcenv_domain verbosity=1

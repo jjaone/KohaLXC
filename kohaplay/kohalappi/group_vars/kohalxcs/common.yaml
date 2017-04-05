@@ -1,0 +1,64 @@
+
+# File: group_vars/kohalxcs(weblxc/mdblxc)/common.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3
+# 
+# Description:
+# - playbook-level variables for kohalxcs: weblxc/mdblxc group of hosts (LXCs)
+# - these override the settings in group_vars/all/{main,vault}.yaml
+# #############################################################################
+
+kohalxcs_testvar: group_vars_kohalxcs_main.yaml
+
+## ###############
+## Ansible related
+## ###############
+#ansible_python_interpreter:
+#ansible_connection:
+#ansible_port:
+#ansible_become_method:
+#ansible_user:
+#ansible_become_pass:
+# Proxy-command to enable access to containers directly from control host
+# - 'hostnode_operuser' is the mngmt-host dev/ops user
+#ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ hostnode_operuser }}@{{ hostnode_websrv }} -p {{ hostnode_sshport }} -W %h:%p"'
+#ansible_ssh_common_args: '-o ProxyCommand="ssh -q {{ hostnode_operuser }}@{{ hostnode_mdbsrv }} -p {{ hostnode_sshport }} -W %h:%p"'
+
+
+## ################################
+## KohaLXC/tooling: paths & configs
+## ################################
+
+# Home of KohalXC-stuff
+kohalxc_install: "/home/{{ ansible_user }}"
+
+
+## ######################################
+## KohaLXC/mdbenv: Mysql/MariaDB-database
+## ######################################
+
+# Database: root user/pass
+kohalxcs_mdbenv_rootuser: "{{ kohalxc_mdbenv_rootuser }}"
+#vault_kohalxcs_mdbenv_rootuser: "{{ kohalxcs_mdbenv_rootuser }}"
+kohalxcs_mdbenv_rootpass: "{{ kohalxc_mdbenv_rootpass }}"
+#vault_kohalxcs_mdbenv_rootpass: "{{ kohalxcs_mdbenv_rootpass }}"
+
+# Database: koha user/pass/db
+kohalxcs_mdbenv_kohauser: "{{ kohalxc_mdbenv_kohauser }}"
+#vault_kohalxcs_mdbenv_kohauser: "{{ kohalxcs_mdbenv_kohauser }}"
+kohalxcs_mdbenv_kohapass: "{{ kohalxc_mdbenv_kohapass }}"
+#vault_kohalxcs_mdbenv_kohapass: "{{ kohalxcs_mdbenv_kohapass }}"
+kohalxcs_mdbenv_kohadb:   "{{ kohalxc_mdbenv_kohadb }}"
+#vault_kohalxcs_mdbenv_kohadb:   "{{ kohalxcs_mdbenv_kohadb }}"
+
+
+## ############################
+## KohaLXC/kohaenv: Koha/webapp
+## ############################
+
+# Koha/webapp server name (DNS):
+kohalxcs_kohaenv_srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
+#vault_kohalxcs_kohaenv_srvname: "{{ kohalxcs_kohaenv_srvname }}"
