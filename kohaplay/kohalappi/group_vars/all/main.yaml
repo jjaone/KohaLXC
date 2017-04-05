@@ -54,6 +54,9 @@ ansible_become_method: sudo
 # - use '*vault*.yaml' etc. (won't be included in this repo)
 # ############################################################
 
+# Current date: yyyymmdd
+kohalxc_date_yyyymmdd: "{{lookup('pipe','date +%Y%m%d')}}"
+
 ## Accessing Koha/LXC-containers
 # - operations user name (could be overriden in lxc-create):
 #kohalxc_operuser: ubuntu

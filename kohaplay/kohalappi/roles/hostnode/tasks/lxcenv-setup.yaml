@@ -127,7 +127,7 @@
 
 ## Get current date: yyyymmdd
 #- set_fact: kohalxc_date_full="{{lookup('pipe','date +%Y%m%d%H%M%S')}}"
-- set_fact: kohalxc_date_yyyymmdd="{{lookup('pipe','date +%Y%m%d')}}"
+#- set_fact: kohalxc_date_yyyymmdd="{{lookup('pipe','date +%Y%m%d')}}"
 ## Get current date: day-of-week:
 - set_fact: kohalxc_date_dow="{{lookup('pipe','date +%u')}}"
 - debug: var=kohalxc_date_yyyymmdd,kohalxc_date_dow

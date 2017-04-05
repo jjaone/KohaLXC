@@ -28,7 +28,7 @@
     login_port: "{{ kohalxcs_mdbenv_dbport }}"
     login_user: "{{ kohalxcs_mdbenv_kohauser }}"
     login_password: "{{ kohalxcs_mdbenv_kohapass }}"
-    target: /tmp/mdbenv_dump-{{ inventory_hostname }}-{{kohalxcs_mdbenv_kohadb}}_{{kohalxc_date_yyymmdd}}.sql
+    target: /tmp/mdbenv_dump-{{ inventory_hostname }}-{{kohalxcs_mdbenv_kohadb}}_{{kohalxc_date_yyyymmdd}}.sql
 
 ## Database/status: 'patrons' and staffaccounts
 # - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
@@ -46,8 +46,6 @@
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mdbenv_enabled
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
-
-- fail:
 
 ## Possible pre-migration database table tweaks and configs
 # TODO: SQL for preserving db tables data before migrating:
