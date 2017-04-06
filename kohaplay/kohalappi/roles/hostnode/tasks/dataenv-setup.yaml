@@ -334,7 +334,7 @@
 ## Push/copy KohaLXC/ppmmt import.pl+TranslationTables to target
 - name: data+ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
   template: >
-    src="files/kohalxc_dataenv/{{ item.name }}.j2"
+    src="files/dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.dir }}/{{ item.name }}"
     group="{{ hostnode_kohagrp_name }}"
     mode="g+w"
@@ -350,8 +350,6 @@
     - hostnode_dataenv_datadir is defined
     - cmd_dump4mmt_pp.stat.exists
   
-- fail:
-
 ## Push/copy KohaLXC/ppmmt lib and BibliosImportChain scripts/configs to target
 - name: data+ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
