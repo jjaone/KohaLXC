@@ -53,7 +53,8 @@ DELIMITER //
 CREATE PROCEDURE kohadata.addcolumn(IN db CHAR(64),  In tbl CHAR(64),
 				    In col CHAr(64), IN stm CHAR(255))
    BEGIN
-	SET @s = @s_dummy;
+	SET @title = CONCAT('SELECT \'', tbl, '\' as \'\' ;');
+	SET @s_dummy = CONCAT('SHOW COLUMNS FROM ', db, '.', tbl, ' LIKE \'', col, '%\'');
 
 	SET @columnexists = (SELECT IF(count(*) = 1, 'Yes','No') AS result
 	FROM information_schema.columns
@@ -63,9 +64,13 @@ CREATE PROCEDURE kohadata.addcolumn(IN db CHAR(64),  In tbl CHAR(64),
 
    	SET @s = IF (@columnexists = 'No', stm, @s_dummy);
 
-   	PREPARE q FROM @s;
-   	EXECUTE q;
-   	DROP PREPARE q;
+	PREPARE q FROM @title;
+	EXECUTE q;
+	DROP PREPARE q;
+
+	PREPARE q FROM @s;
+	EXECUTE q;
+	DROP PREPARE q;
 
    END //
 DELIMITER ;
