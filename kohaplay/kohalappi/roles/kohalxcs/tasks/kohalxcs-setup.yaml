@@ -82,7 +82,7 @@
   become: yes
   template: >
     src="files/kohaenv/koha-conf.xml.j2"
-    dest="{{ kohalxcs_kohaenv_kohaconf }}"
+    dest="{{ kohalxcs_kohaenv_confdir }}/koha-conf.xml"
     mode="u=rw,g=r,o=r"
     owner="koha"
     group="{{ kohalxc_kohagrp_name }}"
@@ -102,6 +102,8 @@
     backup="no"
   when:
     - kohalxcs_ppmmtenv_enabled
+
+- fail:
 
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
 - name: ppmmt - Symlink conversion main script in container HOME/bin
@@ -235,7 +237,7 @@
   become: yes
   template: >
     src="files/kohaenv/{{ item.name }}.j2"
-    dest="/usr/share/koha/bin/{{ item.dir }}/{{ item.name}}"
+    dest="{{ kohalxcs_kohaenv_bindir }}/{{ item.dir }}/{{ item.name}}"
     owner="koha"
     group="{{ kohalxc_kohagrp_name }}"
     mode="u=rwx,g=rx,o=rx"
@@ -383,7 +385,7 @@
   #become_user: koha
   template: >
     src="files/kohaenv/{{ kohalxc_organization|lower }}-https.conf.j2"
-    dest="/etc/koha/{{ kohalxc_organization|lower }}-https.conf"
+    dest="{{ kohalxcs_kohenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf"
     mode="u=rw,g=r,o=r"
     owner="koha"
     group="koha"
@@ -395,7 +397,7 @@
 
 - name: koha+ssl - Make available our SSL-site configuration in Koha/Apache2
   become: yes
-  shell: ln -s -f /etc/koha/{{ kohalxc_organization|lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
+  shell: ln -s -f {{ kohalxcs_kohaenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
   #shell: service apache stop && a2enmod ssl && a2dissite koha.conf && ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-enabled/koha-ssl.conf && service apache2 restart
   when:
     - kohalxcs_kohaenv_enabled

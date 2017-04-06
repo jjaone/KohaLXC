@@ -37,7 +37,7 @@ RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
    ErrorLog {{ kohalxcs_kohaenv_opac_errorlog }} 
    #CustomLog {{ kohalxcs_kohaenv_opac_accesslog }}
    #TransferLog {{ kohalxcs_kohaenv_opac_accesslog }} combined  
-   SetEnv KOHA_CONF {{ kohalxcs_kohaenv_kohaconf }}
+   SetEnv KOHA_CONF {{ kohalxcs_kohaenv_confdir }}/koha-conf.xml
    SetEnv PERL5LIB {{ kohalxcs_kohaenv_perl5lib }}
 
    SetEnv MEMCACHED_SERVERS "127.0.0.1:11211"
@@ -165,7 +165,7 @@ RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
    Alias /plugin/ {{ kohalxcs_kohaenv_staff_plugins }}/
    ErrorLog {{ kohalxcs_kohaenv_staff_errorlog }}
    #TransferLog {{ kohalxcs_kohaenv_staff_accesslog }}
-   SetEnv KOHA_CONF {{ kohalxcs_kohaenv_kohaconf }}
+   SetEnv KOHA_CONF {{ kohalxcs_kohaenv_confdir }}/koha-conf.xml
    SetEnv PERL5LIB {{ kohalxcs_kohaenv_perl5lib }}
 
    SetEnv MEMCACHED_SERVERS "127.0.0.1:11211"

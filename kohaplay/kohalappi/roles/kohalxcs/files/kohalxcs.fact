@@ -1,8 +1,0 @@
-[default]
-environment={{ hostnode_environment | d('local') }}
-devenv_enabled={{ kohalxcs_devenv_enabled | d() }}
-dataenv_enabled={{ kohalxcs_dataenv_enabled | d()}}
-mmtenv_enabled={{ kohalxcs_mmtenv_enabled | d()}}
-ppmmtenv_enabled={{ kohalxcs_ppmmtenv_enabled | d()}}
-mdbenv_enabled={{ kohalxcs_mdbenv_enabled | d() }}
-kohaenv_enabled={{ kohalxcs_kohaenv_enabled | d() }}

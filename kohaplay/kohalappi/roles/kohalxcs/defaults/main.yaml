@@ -166,8 +166,9 @@ kohalxcs_kohaenv_srvname: "{{ hostnode_kohaenv_srvname }}"
 kohalxcs_kohaenv_srvtitle: "Lapin kirjasto"
 # Koha/webapp: server admin (email)
 kohalxcs_kohaenv_srvadmin: "webmaster@{{ kohalxcs_kohaenv_srvname | d('localhost') }}"
-# Koha/webapp: Koha configuration
-kohalxcs_kohaenv_kohaconf: /etc/koha/koha-conf.xml
+# Koha/webapp: Koha configuration (dir/file)
+kohalxcs_kohaenv_confdir: /etc/koha
+#kohalxcs_kohaenv_kohaconf: /etc/koha/koha-conf.xml
 # Koha/webapp: Koha PERL5LIB location
 kohalxcs_kohaenv_perl5lib: /usr/share/koha/lib
 # Koha/webapp: Koha bin/scripts location
