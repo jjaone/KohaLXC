@@ -51,7 +51,7 @@
 ## Setup remote data environment rssh.conf (dataenv/rssh settings)
 # [KohaLXC]:data(not-local)
 # - settings for 'KohaLXC' are in roles/common/defauls/main.yaml
-# - kohalxc_dataenv == kohalxc_tooldir/conf.d/env.data
+# - dataenv == kohalxc_tooldir/conf.d/env.data/files
 - name: data(not-local) - Setup system-wide rssh config for remote KohaLXC/dataenv
   become: yes
   template: >
@@ -284,8 +284,6 @@
   register: cmd_dump4mmt_origo
 #- debug: msg="About dir/link 'dump4mmt-origo'={{ cmd_dump4mmt_origo.stat }},exist={{ cmd_dump4mmt_origo.stat.exists }}"
 
-- fail:
-
 #- debug: var="hostnode_ppmmtenv_enabled,hostnode_origommtenv_enabled"
 #- debug: var="hostnode_kohalxc_tooldir,hostnode_dataenv_datadir"
 ## Push/copy KohaLXC/ppmmt tools and templated default config.xml to target
@@ -320,7 +318,7 @@
     loadExtRepos: 0
     debugACL: -7000
   template: >
-    src="files/kohalxc_dataenv/config.xml.j2"
+    src="files/dataenv/config.xml.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.name }}.xml"
     group="{{ hostnode_kohagrp_name }}"
     mode="g+w"
@@ -332,6 +330,8 @@
     - hostnode_kohalxc_tooldir is defined
     - hostnode_dataenv_datadir is defined
     - cmd_dump4mmt_pp.stat.exists
+
+- fail:
 
 ## Push/copy KohaLXC/ppmmt import.pl+TranslationTables to target
 - name: data+ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
