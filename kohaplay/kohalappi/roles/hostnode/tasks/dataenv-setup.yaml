@@ -353,7 +353,7 @@
 ## Push/copy KohaLXC/ppmmt lib and BibliosImportChain scripts/configs to target
 - name: data+ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
-    src="files/kohalxc_dataenv/{{ item.name }}.j2"
+    src="files/dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
     group="{{ hostnode_kohagrp_name }}"
     mode="g+w"
@@ -374,4 +374,4 @@
     - cmd_dump4mmt_pp.stat.exists
 
 ## Abort play here (for testing and development):
-#- fail:
+- fail:
