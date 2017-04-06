@@ -33,6 +33,15 @@
     - false
     - hostnode_backup_enabled
 
+## Database/setup: all db schema changesa and system preference alterations/tweaks
+- name: mdb - Library database schema changes and system configuration tweaks
+  shell: |
+    whoami && pwd && ls -la {{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs;
+    mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} < {{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{ inventory_hostname }}/sql/mdbenv_setup-kohadata_items-ksissue_1957.sql
+#    mysql -s -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -s 'DESCRIBE items;'
+  register: sql_describe_items
+#- debug: msg="{{ sql_describe_items.stdout_lines }}"
+
 ## Database/status: 'patrons' and 'staffaccounts'
 # - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
 - name: koha+mdb - Show converted/migrated Patrons and/or Staffaccounts
@@ -46,10 +55,11 @@
     executable: /bin/bash
     chdir: "/home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target"
   when:
+    - false
     - kohalxcs_kohaenv_enabled
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
-## Possible pre-migration database table tweaks and configs
+## In addition to above, more pre-migration database schema changes and tweaks:
 # TODO: SQL for preserving db tables data before migrating:
 # USE kohadata.system_preferences: system settings
 # - SELECT * FROM kohadata.system_preferences;

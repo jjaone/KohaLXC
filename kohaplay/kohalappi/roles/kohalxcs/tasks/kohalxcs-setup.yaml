@@ -103,8 +103,6 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- fail:
-
 ## Ensure 'run_conversion' script is symlinked to container $HOME/bin
 - name: ppmmt - Symlink conversion main script in container HOME/bin
   file: >
@@ -205,15 +203,6 @@
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
-
-## Database: full dump of the db
-#- name: Dump all databases to hostname.sql
-#  mysql_db:
-#    state: dump
-#    name: all
-#    login_user: "{{ kohalxc_mdbenv_kohauser }}"
-#    login_password: "{{ kohalxc_mdbenv_kohauser }}"
-#    target: /tmp/mdbenv-dump_{{ inventory_hostname }}_all-ddmmyyy.sql
 
 ## Database/status: 'patrons' and staffaccounts
 # - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
@@ -385,7 +374,7 @@
   #become_user: koha
   template: >
     src="files/kohaenv/{{ kohalxc_organization|lower }}-https.conf.j2"
-    dest="{{ kohalxcs_kohenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf"
+    dest="{{ kohalxcs_kohaenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf"
     mode="u=rw,g=r,o=r"
     owner="koha"
     group="koha"

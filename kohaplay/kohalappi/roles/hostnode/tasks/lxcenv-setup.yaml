@@ -82,7 +82,7 @@
 - name: lxc - Build LXC-environments facts from lxc.group in 'container_config'
   #debug: var=item
   template: >
-    src="files/kohalxc_lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
+    src="files/lxcenv/getEnvironmentFromContainerConfig.yaml.j2"
     dest="{{ hostnode_kohalxc_tooldir}}/conf.d/env.data/lxcs/{{ item.lxc.name | d('default') }}.{{ item.net.domain | d('lxc') }}/config/{{ item.lxc.name | d('default') }}.fact"
     force="yes"
   with_items: "{{ hostnode_lxcs | d() }}"
