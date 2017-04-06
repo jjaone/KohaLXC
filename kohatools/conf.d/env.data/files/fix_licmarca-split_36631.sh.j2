@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# KohaLXC/kohatools (data+mmtenv): PP/MMT-configuration
+# file: $KOHALXC_TOOLDIR/conf.d/fix_licmarca-split_36631.sh
+{{ ansible_managed | comment }}
+
+## Command line args
+# - name/number of the dataset fix that we are running here (source.0 = this only)
+DATASET_FIXSOURCE="${1:-source.0}"
+[[ -z "$DATASET_FIXSOURCE" ]] && echo "== Error: no name for dataset fix given.. exiting." && echo && exit 2
+echo "== Name of the dataset source fix content to be generated: DATASET_FIXSOURCE='$DATASET_FIXSOURCE'"
+
+## KOHALXC environment
+# - Check that KOHALXC_ORGANIZATION is set
+[[ -z "$KOHALXC_ORGANIZATION" ]] || [[ ! -e "$KOHALXC_WORKS" ]] &&
+    echo "== No KOHALXC_ORGANIZATION ..exiting" && exit 1
+# - Check that KOHALXC_WORKS is set and directory exists..
+[[ -z "$KOHALXC_WORKS" ]] || [[ ! -e "$KOHALXC_WORKS" ]] &&
+    echo "== No KOHALXC_WORKS set or dir does not exist ..exiting" && exit 1
+# - Check that KOHALXC_TOOLDIR is set and directory exists..
+[[ -z "$KOHALXC_TOOLDIR" ]] || [[ ! -e "$KOHALXC_TOOLDIR" ]] &&
+    echo "== No KOHALXC_TOOLDIR set or dir does not exist ..exiting" && exit 1
+
+## Directories
+KOHALXC_DATADIR="${KOHALXC_DATADIR:=$KOHALXC_WORKS/$KOHALXC_ORGANIZATION/kohadata}"
+KOHALXC_DATASET="${KOHALXC_DATASET:=default}"
+echo "== "
+echo "== KOHALXC_DATADIR=$KOHALXC_DATADIR"
+echo "== KOHALXC_DATASET=$KOHALXC_DATASET"
+echo "== DATASET_FIXSOURCE=$DATASET_FIXSOURCE"
+DATASET_DUMPPREFIX=dump4mmt
+DATASET_DUMP=$DATASET_DUMPPREFIX-$KOHALXC_DATASET
+#echo "== DATASET_DUMPPREFIX=$DATASET_DUMPPREFIX"
+echo "== DATASET_DUMP=$DATASET_DUMP"
+
+(echo && cd $KOHALXC_DATADIR/$DATASET_DUMP && pwd && ls -l)
+
+## Make sure directories exist for DATASET fixes/edits
+mkdir -vp $KOHALXC_DATADIR/$DATASET_DUMP/$DATASET_FIXSOURCE/{preprocessed,scripts,target,logs}
+
+###################
+## Start the fix ##
+##
+## Sync/copy original source(s) to fixsource(s): any '*.kir' and '*.csv' files
+echo && cd $KOHALXC_DATADIR/$DATASET_DUMP/$DATASET_FIXSOURCE && pwd || exit 666
+echo && echo "== Sync/copy source *.kir and *.csv files to:`pwd`" 
+pwd && echo "== rsync -avh --include '*/' --exclude 'preprocessed/*' --exclude 'target/*' --include '*.kir' --include '*.csv' --exclude '*' --delete --force --delete-excluded --prune-empty-dirs ../source/ ./"
+rsync -avh --include '*/' --exclude 'preprocessed/*' --exclude 'target/*' --include '*.kir' --include '*.csv' --exclude '*' --delete --force --delete-excluded --prune-empty-dirs ../source/ ./
+ls -lR
+
+## Ensure directories exist for DATASET fixes/edits (maybe rsync above removed some..)
+mkdir -vp $KOHALXC_DATADIR/$DATASET_DUMP/$DATASET_FIXSOURCE/{preprocessed,scripts,target,logs}
+
+## Fix licmarca.kir:
+
+# - split to 36631 long chunkcs
+echo && echo "== Splitting licmarca.kir to 36631 lines long chunks.."
+mkdir -vp .splitted-biblios
+(cd .splitted-biblios && rm -f *-* && 
+split -a 3 -d -l 36631 ../licmarca.kir licmarca.kir- &&
+file licmarca.kir-*)
+
+echo && echo "== Ignoring first chunk to combine chunks to 'licmarca.kir-fixed'"
+rm .splitted-biblios/licmarca.kir-000
+rm -f licmarca.kir-fixed
+
+echo "== Combine ok chunks to 'licmarca.kir-fixed'.."
+cat .splitted-biblios/licmarca.kir-* >> licmarca.kir-fixed
+
+echo "== Backup original licmarca.kir (unless orig exists or is a symlink).."
+[[ ! -e licmarca.kir-orig ]] && [[ ! -L licmarca.kir ]] && mv licmarca.kir licmarca.kir-orig
+
+echo "== Rename fix to 'licmarca.kir'.."
+[[ -e licmarca.kir-fixed ]] && mv licmarca.kir-fixed licmarca.kir
+
+#echo "== Symlink fix to 'licmarca.kir'.."
+#[[ -e licmarca.kir-fixed ]] && ln -s licmarca.kir-fixed licmarca.kir
+
+## Fix licmarcb.kir: truncate to zero size
+echo "== Truncate licmarcb.kir to zero size (backup original).."
+[[ ! -e licmarcb.kir-orig ]] && [[ ! -L licmarcb.kir ]] && mv licmarcb.kir licmarcb.kir-orig
+truncate --size=0 licmarcb.kir
+##
+## End the fix ##
+#################
+
+## Make a symlink in '../source.0' to this dir (unless 'source.0' is a dir)
+( cd .. && [[ ! -d "source.0" ]] && rm -f source.0 &&
+	ln -vs ${DATASET_FIXSOURCE} source.0 && ls -ld )
+
+## Show what we got
+echo && echo "== Show what we got:"
+( cd .. && pwd && ls -ld source* )
+echo && pwd && ls -lR
+
+## All done
+exit 0
