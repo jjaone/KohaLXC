@@ -1,1 +1,0 @@
-../kohatools/ppmmtws/PerlMMT/TranslationTables/liqlocde_translation.pm

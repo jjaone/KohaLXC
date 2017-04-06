@@ -1,0 +1,2 @@
+This folder has translation tables for different parts of PP which need to be mapped differently in Evergreen.
+Prime example is the library unit hierarchy, which will be trimmed from excessive departments.
