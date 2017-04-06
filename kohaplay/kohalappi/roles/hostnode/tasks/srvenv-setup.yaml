@@ -100,7 +100,7 @@
 #- name: devenv - Setup system-wide Bash profile for remote KohaLXC-development
 #  become: yes
 #  template: >
-#    src="files/kohalxc_devenv/bash_profile.sh.j2"
+#    src="files/devenv/bash_profile.sh.j2"
 #    dest="/etc/profile.d/kohalxc-devenv.sh"
 #    backup="no"
 #  when:

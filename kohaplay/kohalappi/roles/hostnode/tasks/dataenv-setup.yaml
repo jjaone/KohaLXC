@@ -55,7 +55,7 @@
 - name: data(not-local) - Setup system-wide rssh config for remote KohaLXC/dataenv
   become: yes
   template: >
-    src="files/kohalxc_dataenv/rssh.conf.j2"
+    src="files/dataenv/rssh.conf.j2"
     dest="/etc/rssh.conf"
     backup="no"
   when:
@@ -224,7 +224,7 @@
 - name: data(control)+ppmmt[default] - Push templetized dump/dataset fixes to source/scripts folder
 #  debug: var=item,item.name,item.src
   template: >
-    src="files/kohalxc_dataenv/{{item.script}}.j2"
+    src="files/dataenv/{{item.script}}.j2"
     dest="{{ kohalxc_datadir }}/dump4mmt-{{item.name}}/source/scripts/{{item.script}}"
     mode="u+rwx,g+rx,o-rwx"
   with_items: "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
@@ -277,11 +277,14 @@
     path: "{{ hostnode_dataenv_datadir }}/dump4mmt-pp"
   register: cmd_dump4mmt_pp
 #- debug: msg="About dir/link 'dump4mmt-pp'={{cmd_dump4mmt_pp.stat }},exists={{ cmd_dump4mmt_pp.stat.exists }}"
+
 - name: Does Origo/MMT have default/current dataset in data directory?
   stat:
     path: "{{ hostnode_dataenv_datadir }}/dump4mmt-origo"
   register: cmd_dump4mmt_origo
 #- debug: msg="About dir/link 'dump4mmt-origo'={{ cmd_dump4mmt_origo.stat }},exist={{ cmd_dump4mmt_origo.stat.exists }}"
+
+- fail:
 
 #- debug: var="hostnode_ppmmtenv_enabled,hostnode_origommtenv_enabled"
 #- debug: var="hostnode_kohalxc_tooldir,hostnode_dataenv_datadir"
