@@ -158,7 +158,7 @@ sub set_homebranch {
     my $oldLocName = $licloqde->[0];
     my $branchcode = $licloqde->[1];
     my $shelvingLocation = $licloqde->[2];
-    my $ccode = $liqlocde->[3];
+    $ccode = $licloqde->[3]; # has been declared above already
 
     if (!$branchcode) {
         $libid = '' unless $libid; $locid = '' unless $locid; $depid = '' unless $depid;

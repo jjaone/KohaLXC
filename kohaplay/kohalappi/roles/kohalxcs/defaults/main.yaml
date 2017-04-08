@@ -108,15 +108,15 @@ kohalxcs_ppmmtenv_enabled: false
 ## KohaLXC/ppmmtenv: PP/MMT-conversion script run settings
 # - which import chains should we run (empty means none)
 kohalxcs_ppmmtenv_importchains: "{{ hostnode_ppmmtenv_importchains | d('') }}"
-# - run timeout (in seconds): 2 hrs = 2 * 3600 s = 7200 s
-kohalxcs_ppmmtenv_timeout: 7200
+# - run timeout (in seconds): 3 hrs = 3 * 3600 s = 10800 s
+kohalxcs_ppmmtenv_timeout: 10800
 # - run poll frequency (in seconds): 0 or none = asynchronous run
 kohalxcs_ppmmtenv_polling: 0
 # - the delay between checks of whether conversion has finished (default: 60 s = 1 min)
 kohalxcs_ppmmtenv_checkdelay: 60
-# - check this many times (minutes) conversion run status (default: 120 times/mins):
-# - 120 * 60 s = 7200 s (= 2 hours)
-kohalxcs_ppmmtenv_checkfinished: "{{ (kohalxcs_ppmmtenv_timeout|d(7200)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+# - check this many times/minutes conversion run status (default: 180 times/mins):
+# - 180 * 60 s = 10800 s (= 3 hours)
+kohalxcs_ppmmtenv_checkfinished: "{{ (kohalxcs_ppmmtenv_timeout|d(10800)|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
 
 ## KohaLXC/ommtenv: Origo/MMT-tool environment
 kohalxcs_ommtenv_enabled: false

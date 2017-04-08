@@ -134,7 +134,7 @@
 # [KohaLXC]:data(control),mmt("Origo")
 # - must use local action/gunzip cause no Ansible module for "uncompress" exists
 # - Note: "shopt -s/-u nullglob" would work, but only with /bin/bash
-- name: data(control)+origommt - Extract Origo-db btable data from dumps
+- name: data(control)+origommt - Extract Origo-db table data from dumps
   local_action: shell for f in {{ kohalxc_datadir }}/dump4mmt-{{ item }}/*.zip; do [ -f "$f" ] || continue; d=$(dirname $f); t=$(basename $f .zip); ( cd $d/source && unzip $f || exit 0); done
   with_items: "{{ hostnode_dataenv_datasets | map(attribute='name') | list }}"
   when:
@@ -248,8 +248,17 @@
     - item.name is defined and ('PallasPro' in item.name)
 #- debug: var=cmd_fixsources.results
 
-#- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_kohalxc_organization,hostnode_dataenv_datasets
+## Ensure datasets dirs/symlinks are ok (if above dataset source fixes was not run)
+- name: data(control)+ppmmt[default] - Ensure dataset source dirs are ok
+  with_items: "{{ hostnode_dataenv_datasets | selectattr('default', 'defined') | list }}"
+  local_action: shell pwd && echo "== " && ls -l {{ kohalxc_datadir }} && (cd {{ kohalxc_datadir }}/dump4mmt-{{item.name}} && [ -L source.0 ] && exit 0 || ln -s -f source source.0)
+  when:
+    - kohalxc_datadir is defined
+    - item is defined
+    - item.name is defined and ('PallasPro' in item.name)
+    - not cmd_fixsources|changed
 
+#- debug: var=kohalxc_setupdir,kohalxc_datadir,hostnode_kohalxc_works,hostnode_kohalxc_organization,hostnode_dataenv_datasets
 ## Push kohalxc/default setups and kohadata/dump4mtt-<dumpname>/source* datasets:
 # [KohaLXC]:data
 # - to: /home/'hostnode_operuser'/Works/<org>/{kohalxc,kohadata}
