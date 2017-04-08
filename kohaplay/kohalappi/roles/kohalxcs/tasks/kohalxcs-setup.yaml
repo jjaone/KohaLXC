@@ -116,7 +116,7 @@
 - debug: var=kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling,kohalxcs_origommtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
 # - might run very long time, async by default, poll and timeout in seconds
-- name: data+ppmmt - Start main conversion script using 'lxc_config' ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+- name: data+ppmmt - PP/MMT converting ({{kohalxcs_ppmmtenv_importchains}}) as 'lxc_config.xml' timeout in {{ 2* (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
@@ -138,7 +138,7 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
-- name: data+ppmmt - Is PP/MMT conversion run still on ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: data+ppmmt - Is PP/MMT still converting ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
@@ -151,7 +151,7 @@
 
 #- debug: var=job_runconversion_result,kohalxcs_kohalxc_tooldir
 ## Run conversion: finish the run (split/show log per ImportChains
-- name: data+ppmmt - Finish conversion run (split/show log by import-chains)
+- name: data+ppmmt - PP/MMT conversion finished (split/show log by import-chains)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
@@ -193,7 +193,7 @@
   shell: |
     pwd && ls -1sh
     for d in {{kohalxcs_ppmmtenv_importchains|replace(',',' ')|d()}}; do
-      [[ -d $d ]] && [[ "Serials" != "$d" ]] && cd $d && echo "== $d in: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo;
+      ([[ -d $d ]] && [[ "Serials" != "$d" ]] && cd $d && echo "== $d in: $(pwd)" && rm -f ${d,,}.migrateme && cat 01_${d,,}* > ${d,,}.migrateme && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo;)
     done
   args:
     executable: /bin/bash

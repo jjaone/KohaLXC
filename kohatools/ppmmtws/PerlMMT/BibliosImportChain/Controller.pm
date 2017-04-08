@@ -62,7 +62,7 @@ sub start {
     }
 
     #Prepare the licauthmarc.repo file. licauthmarc.repo is used by the ItemsInjector to get certain record-specific entries
-    if (   $CFG::CFG->{StartingChunk} == 0 && $CFG::CFG->{EndingChunk} > 49   ) { #TODO/FIX:Kohalappi: only do the overwrite when more than 50 marc records chunks are converted. This is to make it possible to generate licauthmarc.repo if it does not exist for BibItemsImportChain runs that need it anyaways
+    if (   $CFG::CFG->{StartingChunk} == 0 && ( ($CFG::CFG->{EndingChunk} < 0) || ($CFG::CFG->{EndingChunk} > 49) ) ) { #TODO/FIX:Kohalappi: do the overwrite also when more than 50 marc records chunks are converted. This is to make it possible to generate licauthmarc.repo for some partial conversions if it does not exist for BibItemsImportChain runs that need it anyaways
     #if (   $CFG::CFG->{StartingChunk} == 0 && $CFG::CFG->{EndingChunk} < 0   ) { #only do the overwrite when all marc records are converted. This is to prevent licauthmarc.repo from getting formatted on every BibItemsImportChain run
 		open ($LICAUTHMARC, '>:utf8', $sourceDataDirectory.'/preprocessed/licauthmarc.repo') or die "Can't open ".$sourceDataDirectory.'/preprocessed/licauthmarc.repo'.": $!";
 		select((select($LICAUTHMARC), $|=1)[0]); #make filehandle hot!
