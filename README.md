@@ -68,6 +68,10 @@ Build, deploy and (re)start Koha-related LXC-container(s) to run e.g. PP/MMT-con
 ```
 $ kohalxc -i inventory/testing ansible -t hostnode:lxcenv-setup,hostnode:postrole,kohalxcs:setup
 ```
+Setup server, configure LXC-environment in development for full PP/MMT conversion run (all ImportChains for default dataset):
+```
+$ kohalxc -i inventory/development ansible -t hostnode:srvenv-setup,hostnode:dataenv-setup,hostnode:lxcenv-setup,hostnode:postrole,kohalxcs:setup -e "hostnode_ppmmtenv_importchains=Preprocess,Patrons,Biblios,Items,CheckOuts,Holds,Fines,Serials"
+```
 
 ### Ansible plays using system 'ansible-playbook'
 * _must be run in the $KOHALXC_ANSIBLE_PLAYBOOKS directory_
