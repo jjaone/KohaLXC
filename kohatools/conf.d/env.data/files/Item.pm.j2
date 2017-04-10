@@ -222,9 +222,10 @@ sub set_itemcallnumber {
     my $noPrimaryLocationDefined = 0;
     my $callnumber;
 
-    if ($biblionumber == 10036644) {
-        my $break = 1;
-    }
+    #if ($biblionumber == 10036644) {
+    #    my $break = 1;
+    #}
+
     #select the correct call number location according to the library id
     $sourceIsil = TranslationTables::isil_translation::GetIsil($libid);
 
@@ -559,7 +560,7 @@ sub set_status {
 	    case 'Lost' { $item->{itemlost} = 1; }
             case 'Billed' { $item->{notforloan} = 6; }
             case 'Claims returned' { $item->{itemnotes} .= ($item->{itemnotes}) ? ', Väittää palauttaneensa' : 'Väittää palauttaneensa'; }
-            case 'NOTLOAN' { $item->{notforloan} = '1'; }
+            case 'NOLOAN' { $item->{notforloan} = '1'; }
             case 'EmplOnly' { $item->{notforloan} = '2'; }
             case 'PubNote' { $item->{itemnotes} = ($item->{itemnotes}) ? ', '.$libraryDerivedStatusSupplement : $libraryDerivedStatusSupplement; }
         }
