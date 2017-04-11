@@ -12,85 +12,6 @@
 # - 
 # ##############################################################################
 
-## Configure SMTP server for sending mail (postfix)
-#TODO: if needed specify relay host/sasl config at the end of '/etc/postfix/main.cf':
-#relayhost=smtp.gmail.com:587
-#smtp_use_tls = yes
-#smtp_sasl_auth_enable = yes
-#smtp_sasl_security_options =
-#smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
-#smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt in '/etc/postfix/sasl_passwd':
-#[smtp.gmail.com]:587 user@gmail.com:passwd
-# - generate the lookup-db: "sudo postmap /etc/postfix/sasl_passwd
-- name: koha - Configure SMTP server for sending mail (postfix)
-  become: yes
-  lineinfile:
-    dest: /etc/postfix/main.cf
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-    backrefs: yes
-    backup: yes
-  with_items:
-    - { regexp: '^(myhostname =)(.*)', line: '\1 {{ kohalxcs_kohaenv_srvname }}' }
-    - { regexp: '^(mydestination =)( .*{{ hostnode_kohaenv_srvdomain }},)(.*)', line: '\1 {{ kohalxcs_kohaenv_srvname }},\3' }
-    - { regexp: '^(inet_interfaces =)(.*)', line: '\1 localhost' }
-    #- { regexp: '^(#myorigin =)(.*)', line: '\1\2' }
-    #- { regexp: '^(relayhost =)(.*)', line: '\1 [smtp.gmail.com]:587' }
-  when:
-    - kohalxcs_kohaenv_enabled
-
-## Set the From/sender address fro SMTP/postfix
-- name: koha - Set SMTP server From(sender) address in canonical map
-  become: yes
-  shell: |
-    echo "@$(hostname) no-reply@{{ kohalxcs_kohaenv_srvname }}" > /etc/postfix/canonical;
-    postmap /etc/postfix/canonical;
-  when:
-    - kohalxcs_kohaenv_enabled
-
-## Configure SMTP/postifix to rewrite From/sender address to mails
-- name: koha - Configure SMTP server/postfix From(sender) address
-  become: yes
-  blockinfile:
-    dest: /etc/postfix/main.cf
-    insertafter: EOF
-    content: |
-      sender_canonical_maps = hash:/etc/postfix/canonical
-  when:
-    - kohalxcs_kohaenv_enabled
-  notify: Restart smtp
-
-## Cronjobs for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
-#  - "cronjobs/process_message_queue.pl -v"
-#  - "migration_tools/rebuild_zebra.pl -a -b -x -z -v"
-- name: koha - Add cronjob(s) for Koha
-  become: yes
-  cron:
-    user: koha
-    name: "{{ item.name }}"
-    job: "$KOHA_CRONJOB_TRIGGER {{ kohalxcs_kohaenv_bindir }}/{{ item.job }}"
-    minute: "{{ item.minute | d('*') }}"
-    state: present
-  with_items:
-    - { name: "process_message_queue", job: "cronjobs/process_message_queue.pl -v" }
-    - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/1" }
-  when:
-    - kohalxcs_kohaenv_enabled
-
-## Use templatized koha-conf.xml to configure this Koha-instance
-- name: koha - Templatized main Koha configuration
-  become: yes
-  template: >
-    src="files/kohaenv/koha-conf.xml.j2"
-    dest="{{ kohalxcs_kohaenv_confdir }}/koha-conf.xml"
-    mode="u=rw,g=r,o=r"
-    owner="koha"
-    group="{{ kohalxc_kohagrp_name }}"
-    backup="yes"
-  when:
-    - kohalxcs_kohaenv_enabled
-  notify: Restart webserver
-
 ## Push/copy 'run_conversion' script to ConversionTools
 # - TODO: mode="u+rwx,g+rx,o-rwx"
 - name: ppmmt - Push containerized conversion main script to ConversionTools
@@ -122,7 +43,7 @@
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
     ls -l ~/bin/run_conversion;
-    echo && echo "== START OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date)" && echo;
+    echo && echo "== START OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date +%Y%m%d_%H%M)" && echo;
     $HOME/bin/run_conversion lxc_config.xml {{ kohalxcs_ppmmtenv_importchains }} > /dev/null;
     [[ "0" == "$?" ]] && (head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log; echo && echo "== ..CONVERTING.." && echo;)
   args:
@@ -157,7 +78,7 @@
     KOHALXC_DATADIR: "{{ '/home/'~ansible_user~'/'~kohalxcs_organization|d(kohalxc_organization)~'/kohadata' }}"
   shell: |
     tail -30 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
-    echo && echo "== END OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date)." && echo
+    echo && echo "== END OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date +%Y%m%d_%H%M)." && echo
     (cd $KOHALXC_DATADIR/source.0/logs && pwd && ls -l | grep '\-last\|\-previous' && echo)
     (cd $KOHALXC_DATADIR/source.0/target && pwd && ls -Csh && echo)
   when:
@@ -265,14 +186,14 @@
 - name: koha+mmt - Migrate newly converted Patrons and/or Staff accounts ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
-    [[ -d Patrons ]] && ls -1shl Patrons && echo "== ansible-kohalxc: Started migrating 'Patrons' on $(date +%Y%m%d_%k%M).."
-    [[ -f Patrons/patrons.migrateme ]] && head -9 Patrons/patrons.migrateme && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Patrons/patrons.migrateme --deduplicate &> log/bulkPatronImport-$(date +%Y%m%d_%k%M).log"
+    [[ -d Patrons ]] && ls -1shl Patrons && echo "== ansible-kohalxc: Started migrating 'Patrons' on $(date +%Y%m%d_%H%M).."
+    [[ -f Patrons/patrons.migrateme ]] && head -9 Patrons/patrons.migrateme && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Patrons/patrons.migrateme --deduplicate &> log/bulkPatronImport-$(date +%Y%m%d_%H%M).log"
     [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo "== ansible-kohalxc: Not migrating 'Staffaccounts' (for now)"
     #[[ -f Staffaccounts/staffaccounts.migrateme ]] && head -9 Staffaccounts/staffaccounts.migrateme && su -l koha -c "bulkPatronImport    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Staffaccounts/staffaccounts.migrateme &> log/bulkPatronImport-staffaccounts.log"
     exit 0
   args:
     executable: /bin/bash
-    chdir: /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target
+    chdir: "/home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target"
   async: "{{ kohalxcs_ppmmtenv_timeout }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migratepatrons
@@ -283,12 +204,13 @@
     - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Patrons+Staffaccounts): .. are we finished yet?
-- name: koha+mmt - Is 'Patrons' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay | d(60) }} mins)
+- name: koha+mmt - Is 'Patrons' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+  become: yes
   async_status: jid={{ job_migratepatrons.ansible_job_id }}
   register: cmd_migratepatrons_result
   until: cmd_migratepatrons_result.finished
-  retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay | d(60) }}"
-  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
@@ -354,6 +276,68 @@
 ## Koha/webapp-setup after this point => TODO: move to kohaenv-setup.yaml
 ##
 
+## Configure SMTP server for sending mail (postfix)
+#TODO: if needed specify relay host/sasl config at the end of '/etc/postfix/main.cf':
+#relayhost=smtp.gmail.com:587
+#smtp_use_tls = yes
+#smtp_sasl_auth_enable = yes
+#smtp_sasl_security_options =
+#smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+#smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt in '/etc/postfix/sasl_passwd':
+#[smtp.gmail.com]:587 user@gmail.com:passwd
+# - generate the lookup-db: "sudo postmap /etc/postfix/sasl_passwd
+- name: koha - Configure SMTP server for sending mail (postfix)
+  become: yes
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backrefs: yes
+    backup: yes
+  with_items:
+    - { regexp: '^(myhostname =)(.*)', line: '\1 {{ kohalxcs_kohaenv_srvname }}' }
+    - { regexp: '^(mydestination =)( .*{{ hostnode_kohaenv_srvdomain }},)(.*)', line: '\1 {{ kohalxcs_kohaenv_srvname }},\3' }
+    - { regexp: '^(inet_interfaces =)(.*)', line: '\1 localhost' }
+    #- { regexp: '^(#myorigin =)(.*)', line: '\1\2' }
+    #- { regexp: '^(relayhost =)(.*)', line: '\1 [smtp.gmail.com]:587' }
+  when:
+    - kohalxcs_kohaenv_enabled
+
+## Set the From/sender address fro SMTP/postfix
+- name: koha - Set SMTP server From(sender) address in canonical map
+  become: yes
+  shell: |
+    echo "@$(hostname) no-reply@{{ kohalxcs_kohaenv_srvname }}" > /etc/postfix/canonical;
+    postmap /etc/postfix/canonical;
+  when:
+    - kohalxcs_kohaenv_enabled
+
+## Configure SMTP/postifix to rewrite From/sender address to mails
+- name: koha - Configure SMTP server/postfix From(sender) address
+  become: yes
+  blockinfile:
+    dest: /etc/postfix/main.cf
+    insertafter: EOF
+    content: |
+      sender_canonical_maps = hash:/etc/postfix/canonical
+  when:
+    - kohalxcs_kohaenv_enabled
+  notify: Restart smtp
+
+## Use templatized koha-conf.xml to configure this Koha-instance
+- name: koha - Templatized main Koha configuration
+  become: yes
+  template: >
+    src="files/kohaenv/koha-conf.xml.j2"
+    dest="{{ kohalxcs_kohaenv_confdir }}/koha-conf.xml"
+    mode="u=rw,g=r,o=r"
+    owner="koha"
+    group="{{ kohalxc_kohagrp_name }}"
+    backup="yes"
+  when:
+    - kohalxcs_kohaenv_enabled
+  notify: Restart webserver
+
 - debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname,kohalxcs_kohaenv_https,kohalxcs_kohaenv_sslle,kohalxc_organization
 ## Install LetsEncrypt/certbot client for SSL-certificates
 - name: koha+ssl - Install LetsEncrypt from Git for SSL-certificate generation
@@ -413,6 +397,23 @@
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
   notify: Restart webserver
+
+## Cronjobs for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
+#  - "cronjobs/process_message_queue.pl -v"
+#  - "migration_tools/rebuild_zebra.pl -a -b -x -z -v"
+- name: koha - Add cronjob(s) for Koha
+  become: yes
+  cron:
+    user: koha
+    name: "{{ item.name }}"
+    job: "$KOHA_CRONJOB_TRIGGER {{ kohalxcs_kohaenv_bindir }}/{{ item.job }}"
+    minute: "{{ item.minute | d('*') }}"
+    state: present
+  with_items:
+    - { name: "process_message_queue", job: "cronjobs/process_message_queue.pl -v" }
+    - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/1" }
+  when:
+    - kohalxcs_kohaenv_enabled
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:
