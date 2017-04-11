@@ -91,11 +91,11 @@ kohalxcs_dataenv_pckgs:
   - groff
   - apg
   - rng-tools
-#hostnode_dataenv_confdir: "{{ hostnode_kohalxc_tooldir }}/conf.d/env.data"
+# KohaLXC/dataenv: configuration
+kohalxcs_dataenv_confdir: "{{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data"
 # KohaLXC/dataenv: datadir
-#hostnode_dataenv_datadir: "{{ hostnode_kohalxc_works }}/{{ hostnode_kohalxc_organization }}/kohadata"
+kohalxcs_dataenv_datadir: "{{ kohalxcs_kohalxc_works }}/{{ kohalxc_organization }}/kohadata"
 # KohaLXC/dataenv: datasets name(s) for MMT-migration:
-#hostnode_dataenv_dataset: "{{ kohalxc_dataset }}"
 #hostnode_dataenv_datasets: "{{ kohalxc_datasets }}"
 
 ## #########################################################################
