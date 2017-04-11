@@ -36,8 +36,8 @@
 
 - debug: var=kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling,kohalxcs_origommtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
-# - might run very long time, async by default, poll and timeout in seconds
-- name: data+ppmmt - PP/MMT converting ({{kohalxcs_ppmmtenv_importchains}}) as 'lxc_config.xml' timeout in {{ 2* (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins
+# - runs several hours, async by default, poll and timeout in seconds
+- name: data+ppmmt - PP/MMT converting ({{kohalxcs_ppmmtenv_importchains}}) as 'lxc_config.xml' timeout in {{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
@@ -217,40 +217,38 @@
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
     - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
-## Migrate: 'biblios'
-- name: koha+mmt - Migrate (newly) converted Biblios ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+## Migrate (Biblios): bibliographic MarcXML data migration to Koha
+- name: koha+mmt - Migrate converted Biblios ({{ 4 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
     [[ -d Biblios ]] && ls -1shl Biblios && echo "== ansible-kohalxc: Started migrating 'Biblios' on $(date +%Y%m%d_%H%M).."
-    [[ -f Biblios/biblios.migrateme ]] && head -18 Biblios/biblios.migrateme && su -l koha -c "bulkmarcimport.pl -v -t -a -b -m=MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Biblios/biblios.migrateme &> log/bulkmarcimport-$(date +%Y%m%d_%H%M).log"
+    [[ -f Biblios/biblios.migrateme ]] && head -3 Biblios/biblios.migrateme && su -l koha -c "bulkmarcimport.pl -v -a -b -commit 2000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Biblios/biblios.migrateme -l log/biblionumberConversionTable &> log/bulkmarcimport-$(date +%Y%m%d_%H%M).log"
     exit 0
   args:
     executable: /bin/bash
     chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
-  async: "{{ kohalxcs_ppmmtenv_timeout }}"
+  async: "{{ 4 * (kohalxcs_ppmmtenv_timeout|int) }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migratebiblios
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('biblios' in kohalxcs_ppmmtenv_importchains|lower)
-#    - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
+    - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
+#    - ('biblios' in kohalxcs_ppmmtenv_importchains|lower)
 
 ## Migrate (Biblios): .. are we finished yet?
-- name: koha+mmt - Is 'Biblios' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Is 'Biblios' still migrating ({{ 4 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
   become: yes
   async_status: jid={{ job_migratebiblios.ansible_job_id }}
   register: cmd_migratebiblios_result
   until: cmd_migratebiblios_result.finished
-  retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  retries: "{{ 4 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay| d(60) }}"
   when:
     - job_migratebiblios is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
-
-- fail:
 
 - debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
