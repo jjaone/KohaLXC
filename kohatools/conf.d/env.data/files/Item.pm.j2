@@ -444,6 +444,12 @@ sub set_barcode {
             $nochecknumber = 1;
         }
     }
+    elsif ($CFG::CFG->{organization} eq 'kohalappi') {
+	# TODO/FIX: kohalappi; no checksum when len of identifyingNumber == 7
+	# - for the  dump 2 and/or production dump conversion(s)
+	if (length($identifyingNumber) == 7) {
+            $nochecknumber = 1;
+        }
 
     my $barcode;
     if ($nochecknumber) {
