@@ -494,11 +494,14 @@
     user: koha
     name: "{{ item.name }}"
     job: "$KOHA_CRONJOB_TRIGGER {{ kohalxcs_kohaenv_bindir }}/{{ item.job }}"
+    day: "{{ item.day | d('*') }}"
+    hour: "{{ item.hour | d('*') }}"
     minute: "{{ item.minute | d('*') }}"
     state: present
   with_items:
     - { name: "process_message_queue", job: "cronjobs/process_message_queue.pl -v" }
     - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/1" }
+    - { name: "cleanup_database", job: "cronjobs/cleanup_database -v --sessions --sessdays 7 --zebraqueue 7 --mail 7 --logs 7", hour: "3" }
   when:
     - kohalxcs_kohaenv_enabled
 
