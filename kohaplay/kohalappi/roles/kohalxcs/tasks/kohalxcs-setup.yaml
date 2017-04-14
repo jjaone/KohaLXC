@@ -256,6 +256,7 @@
 - name: koha+mmt - Migrate converted Serials ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
+    pwd && ls -la
     [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials' on $(date +%Y%m%d_%H%M).."
     [[ -f Serials/serialmothers.marc ]] && head -3 Serials/serialmothers.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serialmothers.marc -l log/serialmothersnumberConversionTable &> log/bulkmarcimport_serialmothers-$(date +%Y%m%d_%H%M).log"
     [[ -f Serials/serials.marc ]] && head -3 Serials/serials.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serials.marc -l log/serialsnumberConversionTable &> log/bulkmarcimport_serials-$(date +%Y%m%d_%H%M).log"
@@ -263,7 +264,7 @@
   args:
     executable: /bin/bash
     chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
-  async: "{{ 2 * (kohalxcs_ppmmtenv_timeout|int) }}"
+  async: "{{ 2 * kohalxcs_ppmmtenv_timeout }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migrateserials
   when:
@@ -280,7 +281,7 @@
   retries: "{{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
-    - job_migrateitems is defined
+    - job_migrateserials is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
@@ -317,7 +318,7 @@
     - kohalxcs_mmtenv_enabled
     - ('items' in kohalxcs_mmtenv_migrateme|lower)
 
-- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
+#- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
 - name: koha+mmt - Rebuild Zebra index for Koha ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
@@ -343,7 +344,7 @@
     - kohalxcs_mmtenv_enabled
     - ( ('biblios' in kohalxcs_ppmmtenv_importchains|lower) and ('biblios' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('items' in kohalxcs_ppmmtenv_importchains|lower) and ('items' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('serials' in kohalxcs_ppmmtenv_importchains|lower) and ('serials' in kohalxcs_mmtenv_migrateme|lower) )
 
-- debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
+#- debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
 ## Zebra rebuild: check whether we are finished
 - name: koha+mmt - Is Biblios/Zebra index still building ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
   become: yes
