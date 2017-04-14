@@ -327,7 +327,7 @@
     service koha-zebra-daemon stop
     ln -s -f /usr/share/koha/bin/koha-zebra-ctl.sh /etc/init.d/koha-zebra-daemon
     update-rc.d koha-zebra-daemon defaults
-    $(ps aux | grep "koha-zebra-ctl" | grep -v grep) && service koha-zebra-daemon restart || service koha-zebra-daemon start
+    su -l koha -c "ps aux | grep 'koha-zebra-ctl' | grep -v grep && service koha-zebra-daemon restart || service koha-zebra-daemon start"
     chown koha -R /var/lib/koha
     su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -a -b -r -v -x"
     echo && echo "== ansible-kohalxc: Zebra index rebuild done."

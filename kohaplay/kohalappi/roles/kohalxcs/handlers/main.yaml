@@ -29,3 +29,26 @@
   become: yes
   service: name=postfix state=restarted
 
+## Stop Zebra indexing service
+- name: Stop zebra
+  become: yes
+  shell:
+    su -l koha -c "ps aux | grep 'koha-zebra-ctl' | grep -v grep && service koha-zebra-daemon stop || exit 0"
+  args:
+    executable: /bin/bash
+
+## Start Zebra indexing service
+- name: Start zebra
+  become: yes
+  shell:
+    su -l koha -c "ps aux | grep 'koha-zebra-ctl' | grep -v grep || service koha-zebra-daemon start && exit 0"
+  args:
+    executable: /bin/bash
+
+## Restart Zebra indexing service
+- name: Restart zebra
+  become: yes
+  shell:
+    su -l koha -c "ps aux | grep 'koha-zebra-ctl' | grep -v grep && service koha-zebra-daemon restart || (service koha-zebra-daemon stop && service koha-zebra-daemon start)"
+  args:
+    executable: /bin/bash
