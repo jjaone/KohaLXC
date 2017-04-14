@@ -105,7 +105,7 @@
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
     - ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
-## Build *.migrateme files: (skip Serials for they have *.marc files for this)
+## Build *.migrateme files: (skip Serial(s)Items for they have *.marc files)
 # - Staffaccounts,Patrons,Biblios,Items,(Serials,)Holds,Checkouts,Fines
 - name: data+ppmmt - Build '*.migrateme' from conv targets to insert them to Koha
   environment:
@@ -114,7 +114,7 @@
   shell: |
     pwd && ls -1sh
     for d in {{kohalxcs_ppmmtenv_importchains|replace(',',' ')|d()}}; do
-      ([[ -d $d ]] && [[ "Serials" != "$d" ]] && cd $d && echo "== $d in: $(pwd)" && rm -f ${d,,}.migrateme && ( [[ "Biblios" != "$d" ]] && cat 01_${d,,}* > ${d,,}.migrateme || cat 03_${d,,}* > ${d,,}.migrateme ) && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo;)
+      ([[ -d $d ]] && cd $d && echo "== $d in: $(pwd)" && [[ "Serials" != "$d" || "SerialItems" != "$d" ]] && rm -f ${d,,}.migrateme && ( [[ "Biblios" != "$d" ]] && cat 01_${d,,}* > ${d,,}.migrateme || cat 03_${d,,}* > ${d,,}.migrateme ) && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo;)
     done
   args:
     executable: /bin/bash
@@ -142,7 +142,7 @@
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Push/copy KohaLXC/kohalxcs migration environment (mmtenv) customization scripts
-- name: koha+mmt - Templatize bulkImport scripts/settings for migration
+- name: koha+mmt - Templatize some bulkImport scripts/settings for migration
   become: yes
   template: >
     src="files/kohaenv/{{ item.name }}.j2"
@@ -153,13 +153,13 @@
     backup="yes"
   with_items:
     - { name: bulkPatronImport.pl, dir: migration_tools }
-#    - { name: OplibMatcher.pl, dir: migration_tools }
-#    - { name: bulkItemImport.pl, dir: migration_tools }
+    - { name: OplibMatcher.pm, dir: migration_tools }
+    - { name: bulkItemImport.pl, dir: migration_tools }
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - kohalxc_kohagrp_name is defined
-    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower)
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate
 # TODO: SQL for preserving db tables data before migrating:
@@ -214,6 +214,7 @@
   retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
+    - job_migratepatrons is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
@@ -224,7 +225,7 @@
   become: yes
   shell: |
     [[ -d Biblios ]] && ls -1shl Biblios && echo "== ansible-kohalxc: Started migrating 'Biblios' on $(date +%Y%m%d_%H%M).."
-    [[ -f Biblios/biblios.migrateme ]] && head -3 Biblios/biblios.migrateme && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Biblios/biblios.migrateme -l log/biblionumberConversionTable &> log/bulkmarcimport-$(date +%Y%m%d_%H%M).log"
+    [[ -f Biblios/biblios.migrateme ]] && head -3 Biblios/biblios.migrateme && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Biblios/biblios.migrateme -l log/biblionumberConversionTable &> log/bulkmarcimport_biblios-$(date +%Y%m%d_%H%M).log"
     exit 0
   args:
     executable: /bin/bash
@@ -250,6 +251,39 @@
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
+
+## Migrate (Serials): serials bibliographic MarcXML data migration to Koha
+- name: koha+mmt - Migrate converted Serials ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+  become: yes
+  shell: |
+    [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials' on $(date +%Y%m%d_%H%M).."
+    [[ -f Serials/serialmothers.marc ]] && head -3 Serials/serialmothers.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serialmothers.marc -l log/serialmothersnumberConversionTable &> log/bulkmarcimport_serialmothers-$(date +%Y%m%d_%H%M).log"
+    [[ -f Serials/serials.marc ]] && head -3 Serials/serials.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serials.marc -l log/serialsnumberConversionTable &> log/bulkmarcimport_serials-$(date +%Y%m%d_%H%M).log"
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+  async: "{{ 2 * (kohalxcs_ppmmtenv_timeout|int) }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  register: job_migrateserials
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('serials' in kohalxcs_mmtenv_migrateme|lower)
+
+## Migrate (Serials): .. are we finished yet?
+- name: koha+mmt - Is 'Serials' still migrating ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+  become: yes
+  async_status: jid={{ job_migrateserials.ansible_job_id }}
+  register: cmd_migrateserials_result
+  until: cmd_migrateserials_result.finished
+  retries: "{{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  when:
+    - job_migrateitems is defined
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Items): library Items linked to bibliographic ('Biblios') MarcXML
 - name: koha+mmt - Migrate converted Items ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
@@ -293,7 +327,7 @@
     service koha-zebra-daemon stop
     ln -s -f /usr/share/koha/bin/koha-zebra-ctl.sh /etc/init.d/koha-zebra-daemon
     update-rc.d koha-zebra-daemon defaults
-    service koha-zebra-daemon start
+    $(ps aux | grep "koha-zebra-ctl" | grep -v grep) && service koha-zebra-daemon restart || service koha-zebra-daemon start
     chown koha -R /var/lib/koha
     su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -a -b -r -v -x"
     echo && echo "== ansible-kohalxc: Zebra index rebuild done."
@@ -307,7 +341,7 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ((('biblios' in kohalxcs_ppmmtenv_importchains|lower) and ('biblios' in kohalxcs_mmtenv_migrateme|lower)) or (('items' in kohalxcs_ppmmtenv_importchains|lower) and ('items' in kohalxcs_mmtenv_migrateme|lower)))
+    - ( ('biblios' in kohalxcs_ppmmtenv_importchains|lower) and ('biblios' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('items' in kohalxcs_ppmmtenv_importchains|lower) and ('items' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('serials' in kohalxcs_ppmmtenv_importchains|lower) and ('serials' in kohalxcs_mmtenv_migrateme|lower) )
 
 - debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
 ## Zebra rebuild: check whether we are finished
@@ -319,10 +353,10 @@
   retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   when:
-    - job_rebuildidx
+    - job_rebuildidx is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - (('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower))
+    - ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme)
 
 ##
 ## Koha/webapp-setup after this point => TODO: move to kohaenv-setup.yaml
