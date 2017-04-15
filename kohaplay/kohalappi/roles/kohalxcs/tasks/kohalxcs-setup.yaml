@@ -155,11 +155,12 @@
     - { name: bulkPatronImport.pl, dir: migration_tools }
     - { name: OplibMatcher.pm, dir: migration_tools }
     - { name: bulkItemImport.pl, dir: migration_tools }
+    - { name: bulkHoldsImport.pl, dir: migration_tools }
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - kohalxc_kohagrp_name is defined
-    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme|lower)
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme|lower) or ('holds' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate
 # TODO: SQL for preserving db tables data before migrating:
@@ -184,7 +185,7 @@
 # - DELETE FROM kohadata.message_queue WHERE borrowernumber <> 0;
 
 ## Migrate (Patrons+Staffaccounts): start..
-# TODO: this takes so long that we need async handling of task here!!
+# - generates '~koha/log/borrowernumberConversionTable' (used in later migration stages)
 - name: koha+mmt - Migrate (newly) converted Patrons and/or Staff accounts ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
@@ -221,6 +222,7 @@
     - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Biblios): bibliographic MarcXML data migration to Koha
+# - generates '~koha/log/biblionumberConversionTable' (used in later migration stages)
 - name: koha+mmt - Migrate converted Biblios ({{ 5 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
@@ -254,15 +256,18 @@
 
 ## Migrate (Serials): serials bibliographic MarcXML data migration to Koha
 # - insert MarcXML contents of Serials/{serialmothers.marc,serials.marc} to koha-db
-# - concat their conversion number related logs to 'serialnumberConversionTable' 
+# - generates (from above XML-sources)
+#   - (for serialmothers): '~koha/log/serialmothersnumberConversionTable'
+#   - (for serials): '~koha/log/serialsnumberConversionTable'
+# - '~koha/log/serialnumbers_ConversionTable'
 - name: koha+mmt - Migrate converted Serials ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
     [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials' on $(date +%Y%m%d_%H%M).."
     [[ -f Serials/serialmothers.marc ]] && head -3 Serials/serialmothers.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serialmothers.marc -l log/serialmothersnumberConversionTable &> log/bulkmarcimport_serialmothers-$(date +%Y%m%d_%H%M).log"
     [[ -f Serials/serials.marc ]] && head -3 Serials/serials.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serials.marc -l log/serialsnumberConversionTable &> log/bulkmarcimport_serials-$(date +%Y%m%d_%H%M).log"
-    [[ -f ~koha/log/serialmothersnumberConversionTable ]] && su -l koha -c "cp -p log/serialmothersnumberConversionTable log/serialnumberConversionTable"
-    [[ -f ~koha/log/serialsnumberConversionTable ]] && su -l koha -c "cat log/serialsnumberConversionTable >> log/serialnumberConversionTable"
+    [[ -f ~koha/log/serialmothersnumberConversionTable ]] && su -l koha -c "cp -p log/serialmothersnumberConversionTable log/serialnumbers_ConversionTable"
+    [[ -f ~koha/log/serialsnumberConversionTable ]] && su -l koha -c "cat log/serialsnumberConversionTable >> log/serialnumbers_ConversionTable"
     exit 0
   args:
     executable: /bin/bash
@@ -289,7 +294,9 @@
     - kohalxcs_mmtenv_enabled
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
-## Migrate (Items): library Items linked to 'Biblios' MarcXML
+## Migrate (Items): bulk import library Items linked to 'Biblios' MarcXML to db
+# - uses '~koha/log/biblionumberConversionTable'
+# - generates '~koha/log/itemnumberConversionTable'
 - name: koha+mmt - Migrate converted Items ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
@@ -322,11 +329,13 @@
     - ('items' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (SerialItems): library SerialItems linked to 'Serials' MarcXML
+# - uses '~koha/log/serialnumbers_ConversionTable' (and SerialItems/serials.item)
+# - generates '~koha/log/serialitemnumberConversionTable'
 - name: koha+mmt - Migrate converted SerialItems ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
     [[ -d SerialItems ]] && ls -1shl SerialItems && echo "== ansible-kohalxc: Started migrating 'SerialItems' on $(date +%Y%m%d_%H%M).."
-    [[ -f SerialItems/serials.item ]] && head -3 SerialItems/serials.item && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/serialnumberConversionTable --inConversionTable log/serialitemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/SerialItems/serials.item &> log/bulkItemImport_serialitems-$(date +%Y%m%d_%H%M).log"
+    [[ -f SerialItems/serials.item ]] && head -3 SerialItems/serials.item && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/serialnumbers_ConversionTable --inConversionTable log/serialitemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/SerialItems/serials.item &> log/bulkItemImport_serialitems-$(date +%Y%m%d_%H%M).log"
     exit 0
   args:
     executable: /bin/bash
@@ -354,13 +363,19 @@
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (CheckOuts): loans data migration to Koha
-# - requires patrons and all items conversionTables for id mapping(s)
+# - requires patrons and all items (normal + serials) conversionTables for mapping
+# - uses '~koha/log/itemnumberConversionTable + serialitemnumberComversionTable'
+#        '~koha/log/serialitemnumberComversionTable'
+#   => for (all itemnumbers) '~koha/log/itemnumbers_ConversionTable'
+# - uses '~kohal/log/borrowernumberConversionTable '
+#        '~kohal/log/itemnumbers_ConversionTable '
+
 - name: koha+mmt - Migrate 'Checkouts' ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
   become: yes
   shell: |
     [[ -d CheckOuts ]] && ls -1shl CheckOuts && echo "== ansible-kohalxc: Migrating 'Checkouts' on $(date +%Y%m%d_%H%M).."
-    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemsnumberConversionTable"
-    [[ -f CheckOuts/checkouts.migrateme ]] && head -3 CheckOuts/checkouts.migrateme && su -l koha -c "bulkCheckoutImport.pl -v --bnConversionTable log/borrowernumberConversionTable -inConversionTable log/itemsnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/CheckOuts/checkouts.migrateme &> log/bulkCheckoutImport-$(date +%Y%m%d_%H%M).log"
+    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable"
+    [[ -f CheckOuts/checkouts.migrateme ]] && head -3 CheckOuts/checkouts.migrateme && su -l koha -c "bulkCheckoutImport.pl -v --bnConversionTable log/borrowernumberConversionTable -inConversionTable log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/CheckOuts/checkouts.migrateme &> log/bulkCheckoutImport-$(date +%Y%m%d_%H%M).log"
     exit 0
   args:
     executable: /bin/bash
@@ -387,9 +402,51 @@
     - kohalxcs_mmtenv_enabled
     - ('checkouts' in kohalxcs_mmtenv_migrateme|lower)
 
+## Migrate (Holds): reservations/holds converted data migration to Koha
+# - needs patrons, biblios & items (normal + serials) conversionTables for mapping
+# - uses: '~koha/log/borrowernumberConversionTable'  = (Patrons)
+# - uses: '~koha/log/biblionumberConversionTable'    (normal Biblios)
+#         '~koha/log/serialnumbers_ConversionTable'  + (serials+mothers/Biblios)
+#      => '~koha/log/biblionumbers_ConversionTable'  = (all Biblios)
+# - uses: '~koha/log/itemnumberConversionTable       (normal Items)
+#         '~koha/log/serialitemnumberConversionTable + (serials+mothers/Items)
+#      => '~koha/log/itemnumbers_ConversionTable     = (all Items)
+- name: koha+mmt - Migrate 'Holds' ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
+  become: yes
+  shell: |
+    [[ -d Holds ]] && ls -1shl Holds && echo "== ansible-kohalxc: Migrating 'Holds' on $(date +%Y%m%d_%H%M).."
+    [[ -f ~koha/log/biblionumberConversionTable && -f ~koha/log/serialnumbers_ConversionTable ]] && su -l koha -c "cat log/biblionumberConversionTable log/serialnumbers_ConversionTable > log/biblionumbers_ConversionTable"
+    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable"
+    [[ -f Holds/holds.migrateme ]] && head -3 Holds/holds.migrateme && su -l koha -c "bulkHoldsImport.pl -v -o log/borrowernumberConversionTable -b log/biblionumbers_ConversionTable -i log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Holds/holds.migrateme &> log/bulkHoldsImport-$(date +%Y%m%d_%H%M).log"
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+  async: "{{ kohalxcs_ppmmtenv_timeout }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  register: job_migrateholds
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('holds' in kohalxcs_mmtenv_migrateme|lower)
+
+## Migrate (Holds): .. are we finished yet?
+- name: koha+mmt - Is 'Holds' still migrating ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+  become: yes
+  async_status: jid={{ job_migrateholds.ansible_job_id }}
+  register: cmd_migrateholds_result
+  until: cmd_migrateholds_result.finished
+  retries: "{{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  when:
+    - job_migrateholds is defined
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('holds' in kohalxcs_mmtenv_migrateme|lower)
+
 #- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
-- name: koha+mmt - Rebuild Zebra index for Koha ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+- name: koha+mmt - Rebuild Zebra index for Koha ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
   become: yes
   shell: |
     pwd && echo "== ansible-kohalxc: Rebuild (clean) and start Zebra index for Koha";
