@@ -253,18 +253,21 @@
     - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Serials): serials bibliographic MarcXML data migration to Koha
-- name: koha+mmt - Migrate converted Serials ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+# - insert MarcXML contents of Serials/{serialmothers.marc,serials.marc} to koha-db
+# - concat their conversion number related logs to 'serialnumberConversionTable' 
+- name: koha+mmt - Migrate converted Serials ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
-    pwd && ls -la
     [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials' on $(date +%Y%m%d_%H%M).."
     [[ -f Serials/serialmothers.marc ]] && head -3 Serials/serialmothers.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serialmothers.marc -l log/serialmothersnumberConversionTable &> log/bulkmarcimport_serialmothers-$(date +%Y%m%d_%H%M).log"
     [[ -f Serials/serials.marc ]] && head -3 Serials/serials.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serials.marc -l log/serialsnumberConversionTable &> log/bulkmarcimport_serials-$(date +%Y%m%d_%H%M).log"
+    [[ -f ~koha/log/serialmothersnumberConversionTable ]] && su -l koha -c "cp -p log/serialmothersnumberConversionTable log/serialnumberConversionTable"
+    [[ -f ~koha/log/serialsnumberConversionTable ]] && su -l koha -c "cat log/serialsnumberConversionTable >> log/serialnumberConversionTable"
     exit 0
   args:
     executable: /bin/bash
     chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
-  async: "{{ 2 * kohalxcs_ppmmtenv_timeout }}"
+  async: "{{ kohalxcs_ppmmtenv_timeout }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migrateserials
   when:
@@ -273,12 +276,12 @@
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Serials): .. are we finished yet?
-- name: koha+mmt - Is 'Serials' still migrating ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Is 'Serials' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
   become: yes
   async_status: jid={{ job_migrateserials.ansible_job_id }}
   register: cmd_migrateserials_result
   until: cmd_migrateserials_result.finished
-  retries: "{{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
     - job_migrateserials is defined
@@ -286,12 +289,12 @@
     - kohalxcs_mmtenv_enabled
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
-## Migrate (Items): library Items linked to bibliographic ('Biblios') MarcXML
+## Migrate (Items): library Items linked to 'Biblios' MarcXML
 - name: koha+mmt - Migrate converted Items ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
     [[ -d Items ]] && ls -1shl Items && echo "== ansible-kohalxc: Started migrating 'Items' on $(date +%Y%m%d_%H%M).."
-    [[ -f Items/items.migrateme ]] && head -3 Items/items.migrateme && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/biblionumberConversionTable --inConversionTable log/itemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Items/items.migrateme &> log/bulkItemImport-$(date +%Y%m%d_%H%M).log"
+    [[ -f Items/items.migrateme ]] && head -3 Items/items.migrateme && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/biblionumberConversionTable --inConversionTable log/itemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Items/items.migrateme &> log/bulkItemImport_items-$(date +%Y%m%d_%H%M).log"
     exit 0
   args:
     executable: /bin/bash
@@ -318,20 +321,51 @@
     - kohalxcs_mmtenv_enabled
     - ('items' in kohalxcs_mmtenv_migrateme|lower)
 
+## Migrate (SerialItems): library SerialItems linked to 'Serials' MarcXML
+- name: koha+mmt - Migrate converted SerialItems ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+  become: yes
+  shell: |
+    [[ -d SerialItems ]] && ls -1shl SerialItems && echo "== ansible-kohalxc: Started migrating 'SerialItems' on $(date +%Y%m%d_%H%M).."
+    [[ -f SerialItems/serials.item ]] && head -3 SerialItems/serials.item && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/serialnumberConversionTable --inConversionTable log/serialitemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/SerialItems/serials.item &> log/bulkItemImport_serialitems-$(date +%Y%m%d_%H%M).log"
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+  async: "{{ kohalxcs_ppmmtenv_timeout }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  register: job_migrateserialitems
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('serials' in kohalxcs_mmtenv_migrateme|lower)
+
+## Migrate (SerialItems): .. are we finished yet?
+- name: koha+mmt - Is 'SerialItems' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+  become: yes
+  async_status: jid={{ job_migrateserialitems.ansible_job_id }}
+  register: cmd_migrateserialitems_result
+  until: cmd_migrateserialitems_result.finished
+  retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  when:
+    - job_migrateserialitems is defined
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('serials' in kohalxcs_mmtenv_migrateme|lower)
+
 #- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
 - name: koha+mmt - Rebuild Zebra index for Koha ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
-  #become_user: koha
   shell: |
-    pwd && echo "== ansible-kohalxc: Rebuild and Start Zebra index for Koha ==";
-    service koha-zebra-daemon stop
+    pwd && echo "== ansible-kohalxc: Rebuild (clean) and start Zebra index for Koha";
+    service koha-zebra-daemon stop || echo "== ansible-kohalxc: Ensure no Zebra-daemon is running!"
     ln -s -f /usr/share/koha/bin/koha-zebra-ctl.sh /etc/init.d/koha-zebra-daemon
     update-rc.d koha-zebra-daemon defaults
     su -l koha -c "ps aux | grep 'koha-zebra-ctl' | grep -v grep && service koha-zebra-daemon restart || service koha-zebra-daemon start"
     chown koha -R /var/lib/koha
-    su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -a -b -r -v -x"
-    echo && echo "== ansible-kohalxc: Zebra index rebuild done."
+    su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -a -b -r -v -x &> log/rebuild_zebra-$(date +%Y%m%d_%H%M).log"
+    echo && echo "== ansible-kohalxc: Zebra index clean rebuild done."
     exit 0
   args:
     executable: /bin/bash
@@ -342,7 +376,7 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ( ('biblios' in kohalxcs_ppmmtenv_importchains|lower) and ('biblios' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('items' in kohalxcs_ppmmtenv_importchains|lower) and ('items' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('serials' in kohalxcs_ppmmtenv_importchains|lower) and ('serials' in kohalxcs_mmtenv_migrateme|lower) )
+    - ( 'zebra' in kohalxcs_mmtenv_migrateme|lower ) or ( ('biblios' in kohalxcs_ppmmtenv_importchains|lower) and ('biblios' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('items' in kohalxcs_ppmmtenv_importchains|lower) and ('items' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('serials' in kohalxcs_ppmmtenv_importchains|lower) and ('serials' in kohalxcs_mmtenv_migrateme|lower) )
 
 #- debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
 ## Zebra rebuild: check whether we are finished
@@ -357,7 +391,7 @@
     - job_rebuildidx is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme)
+    - ( 'zebra' in kohalxcs_mmtenv_migrateme|lower ) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme)
 
 ##
 ## Koha/webapp-setup after this point => TODO: move to kohaenv-setup.yaml
@@ -501,7 +535,7 @@
   with_items:
     - { name: "process_message_queue", job: "cronjobs/process_message_queue.pl -v" }
     - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/1" }
-    - { name: "cleanup_database", job: "cronjobs/cleanup_database -v --sessions --sessdays 7 --zebraqueue 7 --mail 7 --logs 7", hour: "3" }
+    - { name: "cleanup_database", job: "cronjobs/cleanup_database.pl -v --sessions --sessdays 7 --zebraqueue 7 --mail 7 --logs 7", hour: "3" }
   when:
     - kohalxcs_kohaenv_enabled
 
