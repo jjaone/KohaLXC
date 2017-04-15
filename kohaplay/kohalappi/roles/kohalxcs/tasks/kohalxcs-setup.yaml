@@ -353,6 +353,40 @@
     - kohalxcs_mmtenv_enabled
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
+## Migrate (CheckOuts): loans data migration to Koha
+# - requires patrons and all items conversionTables for id mapping(s)
+- name: koha+mmt - Migrate 'Checkouts' ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
+  become: yes
+  shell: |
+    [[ -d CheckOuts ]] && ls -1shl CheckOuts && echo "== ansible-kohalxc: Migrating 'Checkouts' on $(date +%Y%m%d_%H%M).."
+    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemsnumberConversionTable"
+    [[ -f CheckOuts/checkouts.migrateme ]] && head -3 CheckOuts/checkouts.migrateme && su -l koha -c "bulkCheckoutImport.pl -v --bnConversionTable log/borrowernumberConversionTable -inConversionTable log/itemsnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/CheckOuts/checkouts.migrateme &> log/bulkCheckoutImport-$(date +%Y%m%d_%H%M).log"
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+  async: "{{ kohalxcs_ppmmtenv_timeout }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  register: job_migratecheckouts
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('checkouts' in kohalxcs_mmtenv_migrateme|lower)
+
+## Migrate (CheckOuts): .. are we finished yet?
+- name: koha+mmt - Is 'Checkouts' still migrating ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+  become: yes
+  async_status: jid={{ job_migratecheckouts.ansible_job_id }}
+  register: cmd_migratecheckouts_result
+  until: cmd_migratecheckouts_result.finished
+  retries: "{{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  when:
+    - job_migratecheckouts is defined
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('checkouts' in kohalxcs_mmtenv_migrateme|lower)
+
 #- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
 - name: koha+mmt - Rebuild Zebra index for Koha ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
@@ -364,7 +398,7 @@
     update-rc.d koha-zebra-daemon defaults
     su -l koha -c "ps aux | grep 'koha-zebra-ctl' | grep -v grep && service koha-zebra-daemon restart || service koha-zebra-daemon start"
     chown koha -R /var/lib/koha
-    su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -a -b -r -v -x &> log/rebuild_zebra-$(date +%Y%m%d_%H%M).log"
+    su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -a -b -r -v -x &> log/zebra_rebuild-$(date +%Y%m%d_%H%M).log"
     echo && echo "== ansible-kohalxc: Zebra index clean rebuild done."
     exit 0
   args:
