@@ -373,9 +373,9 @@
 - name: koha+mmt - Migrate 'Checkouts' ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
   become: yes
   shell: |
-    [[ -d CheckOuts ]] && ls -1shl CheckOuts && echo "== ansible-kohalxc: Migrating 'Checkouts' on $(date +%Y%m%d_%H%M).."
-    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable"
-    [[ -f CheckOuts/checkouts.migrateme ]] && head -3 CheckOuts/checkouts.migrateme && su -l koha -c "bulkCheckoutImport.pl -v --bnConversionTable log/borrowernumberConversionTable -inConversionTable log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/CheckOuts/checkouts.migrateme &> log/bulkCheckoutImport-$(date +%Y%m%d_%H%M).log"
+    [[ -d CheckOuts ]] && ls -1shl CheckOuts && echo "== ansible-kohalxc: Migrating 'Checkouts' on $(date +%Y%m%d_%H%M).." && [[ -f CheckOuts/checkouts.migrateme ]] && ( 
+    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable";
+    [[ -f ~koha/log/borrowernumberConversionTable ]] && head -3 CheckOuts/checkouts.migrateme && su -l koha -c "bulkCheckoutImport.pl -v --bnConversionTable log/borrowernumberConversionTable -inConversionTable log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/CheckOuts/checkouts.migrateme &> log/bulkCheckoutImport-$(date +%Y%m%d_%H%M).log";)
     exit 0
   args:
     executable: /bin/bash
@@ -389,7 +389,7 @@
     - ('checkouts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (CheckOuts): .. are we finished yet?
-- name: koha+mmt - Is 'Checkouts' still migrating ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still migrating 'Checkouts' ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migratecheckouts.ansible_job_id }}
   register: cmd_migratecheckouts_result
@@ -414,10 +414,10 @@
 - name: koha+mmt - Migrate 'Holds' ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
   become: yes
   shell: |
-    [[ -d Holds ]] && ls -1shl Holds && echo "== ansible-kohalxc: Migrating 'Holds' on $(date +%Y%m%d_%H%M).."
-    [[ -f ~koha/log/biblionumberConversionTable && -f ~koha/log/serialnumbers_ConversionTable ]] && su -l koha -c "cat log/biblionumberConversionTable log/serialnumbers_ConversionTable > log/biblionumbers_ConversionTable"
-    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable"
-    [[ -f Holds/holds.migrateme ]] && head -3 Holds/holds.migrateme && su -l koha -c "bulkHoldsImport.pl -v -o log/borrowernumberConversionTable -b log/biblionumbers_ConversionTable -i log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Holds/holds.migrateme &> log/bulkHoldsImport-$(date +%Y%m%d_%H%M).log"
+    [[ -d Holds ]] && ls -1shl Holds && echo "== ansible-kohalxc: Migrating 'Holds' on $(date +%Y%m%d_%H%M).." && [[ -f Holds/holds.migrateme ]] && (
+    [[ -f ~koha/log/biblionumberConversionTable && -f ~koha/log/serialnumbers_ConversionTable ]] && su -l koha -c "cat log/biblionumberConversionTable log/serialnumbers_ConversionTable > log/biblionumbers_ConversionTable";
+    [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable";
+    [[ -f ~koha/log/borrowernumberConversionTable ]] && head -3 Holds/holds.migrateme && su -l koha -c "bulkHoldsImport.pl -v -o log/borrowernumberConversionTable -b log/biblionumbers_ConversionTable -i log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Holds/holds.migrateme &> log/bulkHoldsImport-$(date +%Y%m%d_%H%M).log"; )
     exit 0
   args:
     executable: /bin/bash
@@ -431,7 +431,7 @@
     - ('holds' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Holds): .. are we finished yet?
-- name: koha+mmt - Is 'Holds' still migrating ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still migrating 'Holds' ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateholds.ansible_job_id }}
   register: cmd_migrateholds_result
@@ -443,6 +443,44 @@
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('holds' in kohalxcs_mmtenv_migrateme|lower)
+
+## Migrate (Fines): borrower billing and fines data migration to Koha
+# - needs patrons and items (normal + serials) conversionTables for mapping
+# - uses: '~koha/log/borrowernumberConversionTable'  = (Patrons)
+# - uses: '~koha/log/itemnumberConversionTable       (normal Items)
+#         '~koha/log/serialitemnumberConversionTable + (serials+mothers/Items)
+#      => '~koha/log/itemnumbers_ConversionTable     = (all Items)
+- name: koha+mmt - Migrate 'Fines' ({{ kohalxcs_ppmmtenv_timeout // 60 }} mins)
+  become: yes
+  shell: |
+    [[ -d Fines ]] && ls -1shl Fines && echo "== ansible-kohalxc: Migrating 'Fines' on $(date +%Y%m%d_%H%M).." && [[ -f Fines/fines.migrateme ]] && (
+    [[ ! -f ~koha/log/itemnumbers_ConversionTable ]] && [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable";
+    [[ -f ~koha/log/borrowernumberConversionTable ]] && head -3 Fines/fines.migrateme && su -l koha -c "bulkFinesImport.pl -v -b log/borrowernumberConversionTable -i log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Fines/fines.migrateme &> log/bulkFinesImport-$(date +%Y%m%d_%H%M).log"; )
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+  async: "{{ kohalxcs_ppmmtenv_timeout }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  register: job_migratefines
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('fines' in kohalxcs_mmtenv_migrateme|lower)
+
+## Migrate (Fines): .. are we finished yet?
+- name: koha+mmt - Still migrating 'Fines' ({{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay | d(60) }} mins) ?
+  become: yes
+  async_status: jid={{ job_migratefines.ansible_job_id }}
+  register: cmd_migratefines_result
+  until: cmd_migratefines_result.finished
+  retries: "{{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  when:
+    - job_migratefines is defined
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('fines' in kohalxcs_mmtenv_migrateme|lower)
 
 #- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
