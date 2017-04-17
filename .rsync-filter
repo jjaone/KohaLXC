@@ -10,6 +10,8 @@
 - .includepath
 - .project
 - *.komodoproject
+- MMTs
+- MMTs/
 - *backup*
 - backup*/
 - .backup*/
