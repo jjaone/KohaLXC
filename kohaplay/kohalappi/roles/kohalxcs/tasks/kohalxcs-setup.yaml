@@ -164,14 +164,14 @@
 
 ## Migrate
 # TODO: SQL for preserving db tables data before migrating:
-# USE kohadata.system_preferences: system settings
+# USE kohadata.system_preferences: (system settings)
 # - SELECT * FROM kohadata.system_preferences;
-# USE kohadata.branches: libraries
+# USE kohadata.branches: (libraries/branches)
 # - SELECT * FROM kohadata.branches;
-# USE kohadata.letters: notifications and message templates
+# USE kohadata.letters: (notifications and messaging templates)
 # - SELECT * FROM kohadata.letters;
 #
-# TODO: Empty/clean these dbtables (Patrons and other) data before migrating:
+# TODO: Empty/clean these database tables data before migrating:
 # USE kohadata.issues: all
 # - DELETE FROM issues WHERE issue_id <> 0;
 # USE kohadata.borrowers: non-staff Patrons
@@ -189,10 +189,10 @@
 - name: koha+mmt - Migrate (newly) converted Patrons and/or Staff accounts ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
-    [[ -d Patrons ]] && ls -1shl Patrons && echo "== ansible-kohalxc: Started migrating 'Patrons' on $(date +%Y%m%d_%H%M).."
-    [[ -f Patrons/patrons.migrateme ]] && head -9 Patrons/patrons.migrateme && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Patrons/patrons.migrateme --deduplicate &> log/bulkPatronImport-$(date +%Y%m%d_%H%M).log"
-    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo "== ansible-kohalxc: Not migrating 'Staffaccounts' (for now)"
-    #[[ -f Staffaccounts/staffaccounts.migrateme ]] && head -9 Staffaccounts/staffaccounts.migrateme && su -l koha -c "bulkPatronImport    head -3 Patrons/patrons.migrateme && head -3 Patrons/staffaccounts.migrateme.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Staffaccounts/staffaccounts.migrateme &> log/bulkPatronImport-staffaccounts_${date +%Y%m%d_%H%M).log"
+    [[ -d Patrons ]] && ls -1shl Patrons && echo "== ansible-kohalxc: Migrating 'Patrons' on $(date +%Y%m%d_%H%M).." && [[ -f Patrons/patrons.migrateme ]] && (
+    head -9 Patrons/patrons.migrateme && su -l koha -c "bulkPatronImport.pl --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Patrons/patrons.migrateme --deduplicate &> log/bulkPatronImport-$(date +%Y%m%d_%H%M).log";)
+    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && [[ -f Staffaccounts/staffaccounts.migrateme ]] && (echo "== ansible-kohalxc: Not migrating 'Staffaccounts' (since 2017-03)";)
+    #head -9 Staffaccounts/staffaccounts.migrateme && su -l koha -c "bulkPatronImport --file /home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target/Staffaccounts/staffaccounts.migrateme &> log/bulkPatronImport-staffaccounts_${date +%Y%m%d_%H%M).log";
     exit 0
   args:
     executable: /bin/bash
@@ -226,8 +226,8 @@
 - name: koha+mmt - Migrate converted Biblios ({{ 5 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
-    [[ -d Biblios ]] && ls -1shl Biblios && echo "== ansible-kohalxc: Started migrating 'Biblios' on $(date +%Y%m%d_%H%M).."
-    [[ -f Biblios/biblios.migrateme ]] && head -3 Biblios/biblios.migrateme && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Biblios/biblios.migrateme -l log/biblionumberConversionTable &> log/bulkmarcimport_biblios-$(date +%Y%m%d_%H%M).log"
+    [[ -d Biblios ]] && ls -1shl Biblios && echo "== ansible-kohalxc: Started migrating 'Biblios' on $(date +%Y%m%d_%H%M).." && [[ -f Biblios/biblios.migrateme ]] && (
+    head -3 Biblios/biblios.migrateme && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Biblios/biblios.migrateme -l log/biblionumberConversionTable &> log/bulkmarcimport_biblios-$(date +%Y%m%d_%H%M).log"; )
     exit 0
   args:
     executable: /bin/bash
@@ -263,11 +263,12 @@
 - name: koha+mmt - Migrate converted Serials ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
-    [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials' on $(date +%Y%m%d_%H%M).."
-    [[ -f Serials/serialmothers.marc ]] && head -3 Serials/serialmothers.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serialmothers.marc -l log/serialmothersnumberConversionTable &> log/bulkmarcimport_serialmothers-$(date +%Y%m%d_%H%M).log"
-    [[ -f Serials/serials.marc ]] && head -3 Serials/serials.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serials.marc -l log/serialsnumberConversionTable &> log/bulkmarcimport_serials-$(date +%Y%m%d_%H%M).log"
-    [[ -f ~koha/log/serialmothersnumberConversionTable ]] && su -l koha -c "cp -p log/serialmothersnumberConversionTable log/serialnumbers_ConversionTable"
-    [[ -f ~koha/log/serialsnumberConversionTable ]] && su -l koha -c "cat log/serialsnumberConversionTable >> log/serialnumbers_ConversionTable"
+    [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials (mothers)' on $(date +%Y%m%d_%H%M).." && [[ -f Serials/serialmothers.marc ]] && (
+    head -3 Serials/serialmothers.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serialmothers.marc -l log/serialmothersnumberConversionTable &> log/bulkmarcimport_serialmothers-$(date +%Y%m%d_%H%M).log"; )
+    [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials' on $(date +%Y%m%d_%H%M).." && [[ -f Serials/serials.marc ]] && (
+    head -3 Serials/serials.marc && su -l koha -c "bulkmarcimport.pl -v -b -commit 1000 -m MARCXML --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Serials/serials.marc -l log/serialsnumberConversionTable &> log/bulkmarcimport_serials-$(date +%Y%m%d_%H%M).log"; )
+    ( [[ -f ~koha/log/serialmothersnumberConversionTable ]] && su -l koha -c "cp -p log/serialmothersnumberConversionTable log/serialnumbers_ConversionTable";
+    [[ -f ~koha/log/serialsnumberConversionTable ]] && su -l koha -c "cat log/serialsnumberConversionTable >> log/serialnumbers_ConversionTable"; )
     exit 0
   args:
     executable: /bin/bash
@@ -300,8 +301,8 @@
 - name: koha+mmt - Migrate converted Items ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
-    [[ -d Items ]] && ls -1shl Items && echo "== ansible-kohalxc: Started migrating 'Items' on $(date +%Y%m%d_%H%M).."
-    [[ -f Items/items.migrateme ]] && head -3 Items/items.migrateme && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/biblionumberConversionTable --inConversionTable log/itemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Items/items.migrateme &> log/bulkItemImport_items-$(date +%Y%m%d_%H%M).log"
+    [[ -d Items ]] && ls -1shl Items && echo "== ansible-kohalxc: Started migrating 'Items' on $(date +%Y%m%d_%H%M).." && [[ -f Items/items.migrateme ]] && (
+    [[ -f ~koha/log/biblionumberConversionTable ]] && head -3 Items/items.migrateme && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/biblionumberConversionTable --inConversionTable log/itemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/Items/items.migrateme &> log/bulkItemImport_items-$(date +%Y%m%d_%H%M).log"; )
     exit 0
   args:
     executable: /bin/bash
@@ -334,8 +335,8 @@
 - name: koha+mmt - Migrate converted SerialItems ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
-    [[ -d SerialItems ]] && ls -1shl SerialItems && echo "== ansible-kohalxc: Started migrating 'SerialItems' on $(date +%Y%m%d_%H%M).."
-    [[ -f SerialItems/serials.item ]] && head -3 SerialItems/serials.item && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/serialnumbers_ConversionTable --inConversionTable log/serialitemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/SerialItems/serials.item &> log/bulkItemImport_serialitems-$(date +%Y%m%d_%H%M).log"
+    [[ -d SerialItems ]] && ls -1shl SerialItems && echo "== ansible-kohalxc: Started migrating 'SerialItems' on $(date +%Y%m%d_%H%M).." && [[ -f SerialItems/serials.item ]] && (
+    [[ -f ~koha/log/serialnumbers_ConversionTable ]] && head -3 SerialItems/serials.item && su -l koha -c "bulkItemImport.pl -v --bnConversionTable log/serialnumbers_ConversionTable --inConversionTable log/serialitemnumberConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/SerialItems/serials.item &> log/bulkItemImport_serialitems-$(date +%Y%m%d_%H%M).log"; )
     exit 0
   args:
     executable: /bin/bash
@@ -369,13 +370,12 @@
 #   => for (all itemnumbers) '~koha/log/itemnumbers_ConversionTable'
 # - uses '~kohal/log/borrowernumberConversionTable '
 #        '~kohal/log/itemnumbers_ConversionTable '
-
 - name: koha+mmt - Migrate 'Checkouts' ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
   become: yes
   shell: |
     [[ -d CheckOuts ]] && ls -1shl CheckOuts && echo "== ansible-kohalxc: Migrating 'Checkouts' on $(date +%Y%m%d_%H%M).." && [[ -f CheckOuts/checkouts.migrateme ]] && ( 
     [[ -f ~koha/log/itemnumberConversionTable && -f ~koha/log/serialitemnumberConversionTable ]] && su -l koha -c "cat log/itemnumberConversionTable log/serialitemnumberConversionTable > log/itemnumbers_ConversionTable";
-    [[ -f ~koha/log/borrowernumberConversionTable ]] && head -3 CheckOuts/checkouts.migrateme && su -l koha -c "bulkCheckoutImport.pl -v --bnConversionTable log/borrowernumberConversionTable -inConversionTable log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/CheckOuts/checkouts.migrateme &> log/bulkCheckoutImport-$(date +%Y%m%d_%H%M).log";)
+    [[ -f ~koha/log/borrowernumberConversionTable ]] && head -3 CheckOuts/checkouts.migrateme && su -l koha -c "bulkCheckoutImport.pl -v --bnConversionTable log/borrowernumberConversionTable -inConversionTable log/itemnumbers_ConversionTable --file={{ kohalxcs_dataenv_datadir }}/source.0/target/CheckOuts/checkouts.migrateme &> log/bulkCheckoutImport-$(date +%Y%m%d_%H%M).log"; )
     exit 0
   args:
     executable: /bin/bash
