@@ -16,9 +16,7 @@ for Koha/ILS-development, deployment & database conversion/migration._
 
 #### Origo migration tools using Perl scripts
 
-=======================
 INSTALL INSTRUCTIONS :)
-=======================
 
 If you are using the default configuration, create required directories:
 ```
@@ -29,9 +27,7 @@ mkdir logs
 ```
 Copy the DB dump from "Axiell Jätte Bra" to the root of OrigoSource.
 
-================
 RUN INSTRUCTIONS
-================
 
 ``` 
 bash -x runAll.sh
