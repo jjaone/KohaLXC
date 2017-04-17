@@ -130,7 +130,7 @@
 #- set_fact: kohalxc_date_yyyymmdd="{{lookup('pipe','date +%Y%m%d')}}"
 ## Get current date: day-of-week:
 - set_fact: kohalxc_date_dow="{{lookup('pipe','date +%u')}}"
-- debug: var=kohalxc_date_yyyymmdd,kohalxc_date_dow
+#- debug: var=kohalxc_date_yyyymmdd,kohalxc_date_dow
 
 #- debug: var=hostnode_backup_enabled,hostnode_backupsrv,hostnode_kohaenv_srvname,hostnode_lxcenv_networking,hostnode_lxcenv_domain
 ## Backup all managed LXCs now that they are stopped according to backup-schedule
