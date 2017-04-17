@@ -19,6 +19,8 @@ callback_plugins/
 *vault*
 
 ## koha/mmt
+MMTs
+*MMToriginal
 *.komodoproject
 *.metadata/
 .includepath
