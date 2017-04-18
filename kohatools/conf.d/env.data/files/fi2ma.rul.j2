@@ -2110,7 +2110,9 @@ M30             | 830             | If (RegFind('\\.\$') < 0) Then S + '.' Else 
 
 // *** SIJOITUSPAIKKATIEDOT 950-969, 971, 991-992 ***
 
-950$a           | 852(new)$a      | KirjastotunnusISILiksi
+// 950-Kohalappi-conversion fixes, -2017-04-18
+950$a           | 852(new)$a      | FI-Rm
+//950$a           | 852(new)$a      | KirjastotunnusISILiksi
 950$b           | 852(newest)$b   | S
 950$c           | 852(newest)$c   | S
 950$h           | 852(newest)$i   | S
@@ -2124,46 +2126,50 @@ M30             | 830             | If (RegFind('\\.\$') < 0) Then S + '.' Else 
 
 // 952-Kohalappi-conversion fixes from Kääntötaulut/FI2ma.rul_säännöt
 // - added a/b/c rules for this
-952$a           | 852(new)$a      | KirjastotunnusISILiksi
+// - 2017-04-18: correcting 'KirjastotunnusISILiksi.'
+// - for: 952,953,954,955,956,957,958,959,960,961,962,963,964,965,966,967
+//952$a           | 852(new)$a      | KirjastotunnusISILiksi
+
+952$a           | 852(new)$a      | FI-Inari
 952$b           | 852(newest)$b   | S
 952$c           | 852(newest)$c   | S
 //952           | 952      | S
 
-953$a           | 852(new)$a      | KirjastotunnusISILiksi
+953$a           | 852(new)$a      | FI-Kolku
 953$b           | 852(newest)$b   | S
 953$c           | 852(newest)$c   | S
 
-954$a           | 852(new)$a      | KirjastotunnusISILiksi
+954$a           | 852(new)$a      | FI-Somso
 954$b           | 852(newest)$b   | S
 954$c           | 852(newest)$c   | S
 
-955$a           | 852(new)$a      | KirjastotunnusISILiksi
+955$a           | 852(new)$a      | FI-Salla
 955$b           | 852(newest)$b   | S
 955$c           | 852(newest)$c   | S
 955$d(1)        | 852(newest)$t   | S
 
-956$a           | 852(new)$a      | KirjastotunnusISILiksi
+956$a           | 852(new)$a      | FI-Sompe
 956$b           | 852(newest)$b   | S
 956$c           | 852(newest)$c   | S
 956$d(1)        | 852(newest)$t   | S
 
-957$a           | 852(new)$a      | KirjastotunnusISILiksi
+957$a           | 852(new)$a      | FI-Somsa
 957$b           | 852(newest)$b   | S
 957$c           | 852(newest)$c   | S
 
-958$a           | 852(new)$a      | KirjastotunnusISILiksi
+958$a           | 852(new)$a      | FI-Pello
 958$b           | 852(newest)$b   | S
 958$c           | 852(newest)$c   | S
 
-959$a           | 852(new)$a      | KirjastotunnusISILiksi
+959$a           | 852(new)$a      | FI-Ylito
 959$b           | 852(newest)$b   | S
 959$c           | 852(newest)$c   | S
 
-960$a           | 852(new)$a      | KirjastotunnusISILiksi
+960$a           | 852(new)$a      | FI-Utsjo
 960$b           | 852(newest)$b   | S
 960$c           | 852(newest)$c   | S
 
-961$a           | 852(new)$a      | KirjastotunnusISILiksi
+961$a           | 852(new)$a      | FI-Kemja
 961$b           | 852(newest)$b   | S
 961$c           | 852(newest)$c   | S
 
@@ -2173,11 +2179,11 @@ M30             | 830             | If (RegFind('\\.\$') < 0) Then S + '.' Else 
 //962$b           | 852(newest)$b   | S
 //962$c           | 852(newest)$c   | S
 
-963$a           | 852(new)$a      | KirjastotunnusISILiksi
+963$a           | 852(new)$a      | FI-Kitti
 963$b           | 852(newest)$b   | S
 963$c           | 852(newest)$c   | S
 
-964$a           | 852(new)$a      | KirjastotunnusISILiksi
+964$a           | 852(new)$a      | FI-Torni
 964$b           | 852(newest)$b   | S
 964$c           | 852(newest)$c   | S
 
@@ -2187,11 +2193,11 @@ M30             | 830             | If (RegFind('\\.\$') < 0) Then S + '.' Else 
 //965$b           | 852(newest)$b   | S
 //965$c           | 852(newest)$c   | S
 
-966$a           | 852(new)$a      | KirjastotunnusISILiksi
+966$a           | 852(new)$a      | FI-Enote
 966$b           | 852(newest)$b   | S
 966$c           | 852(newest)$c   | S
 
-967$a           | 852(new)$a      | KirjastotunnusISILiksi
+967$a           | 852(new)$a      | FI-Muoni
 967$b           | 852(newest)$b   | S
 967$c           | 852(newest)$c   | S
 
