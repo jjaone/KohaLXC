@@ -33,7 +33,7 @@
     - false
     - hostnode_backup_enabled
 
-## Database/setup: all db schema changesa and system preference alterations/tweaks
+## Database/setup: all db schema changes and system prefs alterations/tweaks
 - name: mdb - Library database schema changes and system configuration tweaks
   shell: |
     whoami && pwd && ls -la {{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs;
