@@ -475,6 +475,9 @@ sub get_dateenrolled {
 #Presuming that 2007 is the year when most cards are given. Cards are given up until now().
 #Easing the expiration date gently for the year following migration, by having 2007 migrate in 2 months, and 2013 expire in 12 months.
 #This is done cleverly using randomly generating expiration dates.
+
+# TODO: KohaLappi; added new rules for expiration date calculation,
+# -fix: -2017-04-19
 my $yearLength = 31556926;
 my $cardActiveDuration = 3 * $yearLength;
 my $now = time() + ($yearLength / 4); #Shift card expirations to start 3 months from now.
@@ -486,7 +489,9 @@ sub set_dateexpiry {
     
     #These patrons have no card creation date.
     if (! $cucarddate) {
-        $self->{dateexpiry} = CommonRoutines::iso_standardize_date( $now + 2629743); #2629743 is seconds in a month
+	# TODO/FIX:KohaLappi; we want now + 12 months (1 year) here
+        $self->{dateexpiry} = CommonRoutines::iso_standardize_date( $now + $yearlength);
+	# - 2629743 is seconds in a month, 31556926 seconds is a year
     }
     #These patrons would expire their priviledges normally anyway
     elsif($cucarddate > $earliestTimeCardCanBeActive ) {
@@ -496,7 +501,8 @@ sub set_dateexpiry {
     #Now we get to the randomization part.
     else {
         #Get a random time within 1 year from now.
-        my $expirationDate = $now + int(  rand() * $yearLength  );
+	# TODO/FIX:KohaLappi; need to add extra year from which add (random) year
+        my $expirationDate = $now + $yearLenghth * int(  rand() * $yearLength  );
         
         $self->{dateexpiry} = CommonRoutines::iso_standardize_date( $expirationDate );
     }
