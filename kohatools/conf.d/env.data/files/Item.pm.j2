@@ -564,7 +564,7 @@ sub set_status {
             case 'Bindery' { $item->{damaged} = 1; }
 	    case 'NOHOLD' { $item->{damaged} = 5; } # We'll put some of the items non-holdable in KohaLappi/2017-04-04
 	    case 'Lost' { $item->{itemlost} = 1; }
-            case 'Billed' { $item->{notforloan} = 6; }
+            case 'Billed' { $item->{notforloan} = 4; }
             case 'Claims returned' { $item->{itemnotes} .= ($item->{itemnotes}) ? ', Väittää palauttaneensa' : 'Väittää palauttaneensa'; }
             case 'NOLOAN' { $item->{notforloan} = '1'; }
             case 'EmplOnly' { $item->{notforloan} = '2'; }
@@ -584,8 +584,8 @@ sub set_status {
     }
 
     #Setting up "Billed"-status
-    if ($status2 == -80) {
-        $item->{notforloan} = 6;
+    if ($status2 == -80 || $status2 == -96 || $status2 == 30) {
+        $item->{notforloan} = 4;
     }
 
     ##If itemtype is CA (Celia audiobook), then set the notforloan => 1.
