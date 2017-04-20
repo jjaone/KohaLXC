@@ -33,6 +33,8 @@
     - false
     - hostnode_backup_enabled
 
+- stat: path={{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{ inventory_hostname }}/sql/mdbenv_setup-kohadata_items-ksissue_1957.sql
+  register: mdbenv_setup_script
 ## Database/setup: all db schema changes and system prefs alterations/tweaks
 - name: mdb - Library database schema changes and system configuration tweaks
   shell: |
@@ -40,8 +42,12 @@
     mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} < {{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{ inventory_hostname }}/sql/mdbenv_setup-kohadata_items-ksissue_1957.sql
 #    mysql -s -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -s 'DESCRIBE items;'
   register: sql_describe_items
-#- debug: msg="{{ sql_describe_items.stdout_lines }}"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - mdbenv_setup_script.stat is defined
+    - mdbenv_setup_script.stat.exists
 
+#- debug: msg="{{ sql_describe_items.stdout_lines }}"
 ## Database/status: 'patrons' and 'staffaccounts'
 # - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
 - name: koha+mdb - Show converted/migrated Patrons and/or Staffaccounts

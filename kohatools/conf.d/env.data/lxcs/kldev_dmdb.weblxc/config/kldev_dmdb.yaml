@@ -22,7 +22,7 @@ net:
   domain: weblxc
   srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
   user: "{{ kohalxc_operuser }}"
-## lxc: MariaDb (mdbenv), data (dataenv), Apache2/KS316 (webaenv)
+## lxc: MariaDb - mdbenv, data - dataenv, (Apache2/KS316 - webenv)
 # - for MMT/conversion & Koha-deployment (development, dhcp/weblxc)
 lxc:
   name: kldev_dmdb

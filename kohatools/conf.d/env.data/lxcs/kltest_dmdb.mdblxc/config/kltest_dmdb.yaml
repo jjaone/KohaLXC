@@ -11,15 +11,16 @@
 # - kltest: KohaLappi/testing, Ubuntu/Trusty, dir, lxcbr0/NAT
 # - dmdb: data/MMT-conversion + MariaDB
 # - mdblxc: deploy to host serving '*mdblxc'-domains
-# - network: (web)app[OPAC]-port=8*, (web)int[STAFF]-port=808*
+# - network: (web)app[OPAC]-port=84, (web)int[STAFF]-port=8084
 # #############################################################################
 
 ## network port LXC/host port mappings + domain:
-# - (web/mdb)lxc => host: 8*/808* => 80/8080
+# - (web/mdb)lxc => host: 84/8084 => 80/8080
 net:
   domain: mdblxc
   user: "{{ kohalxc_operuser }}"
-##  lxc: MariaDb (mdbenv), data/MMT (dataenv)
+  srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
+##  lxc: MariaDb - mdbenv, data/MMT - dataenv
 # - for MMT/conversion etc. (testing, dhcp/mdblxc)
 lxc:
   name: kltest_dmdb
@@ -35,11 +36,13 @@ lxc:
     #- lxc.group = {{ hostnode_environment | d('local') }}
     - lxc.group = testing
     - lxc.group = dev
-    - lxc.group = mdb
+    #- lxc.group = mdb
+    - lxc.group = data
     - lxc.group = ppmmt
     # lxc/start
     - lxc.start.auto = 1
     - lxc.start.delay = 0
+    - lxc.start.order = 0
     # lxc/network
     - lxc.network.veth.pair = Vkltest_dmdb
     - lxc.network.type = veth

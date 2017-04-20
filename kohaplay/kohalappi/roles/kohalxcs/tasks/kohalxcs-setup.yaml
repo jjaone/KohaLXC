@@ -34,7 +34,7 @@
   when:
     - kohalxcs_ppmmtenv_enabled
 
-- debug: var=kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling,kohalxcs_origommtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
+- debug: var=kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling,kohalxcs_origommtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
 # - runs several hours, async by default, poll and timeout in seconds
 - name: data+ppmmt - PP/MMT converting ({{kohalxcs_ppmmtenv_importchains}}) as 'lxc_config.xml' timeout in {{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins
@@ -142,7 +142,7 @@
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Push/copy KohaLXC/kohalxcs migration environment (mmtenv) customization scripts
-- name: koha+mmt - Templatize some bulkImport scripts/settings for migration
+- name: koha+mmt - Templatize some bulkImports and other scripts for migration
   become: yes
   template: >
     src="files/kohaenv/{{ item.name }}.j2"
@@ -150,12 +150,13 @@
     owner="koha"
     group="{{ kohalxc_kohagrp_name }}"
     mode="u=rwx,g=rx,o=rx"
-    backup="yes"
+    backup="no"
   with_items:
     - { name: bulkPatronImport.pl, dir: migration_tools }
     - { name: OplibMatcher.pm, dir: migration_tools }
     - { name: bulkItemImport.pl, dir: migration_tools }
     - { name: bulkHoldsImport.pl, dir: migration_tools }
+    - { name: generate_sortholds_sql.sh, dir: migration_tools }
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
@@ -444,6 +445,33 @@
     - kohalxcs_mmtenv_enabled
     - ('holds' in kohalxcs_mmtenv_migrateme|lower)
 
+## Migrate (Holds): post-migration fixes/tweaks to database data
+- name: data+mdb+koha+mmt - Post-migration steps of 'Holds' (data/database)
+  environment:
+    KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
+    KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
+    KOHALXC_MDBENV_KOHAPASS: "{{ kohalxcs_mdbenv_kohapass }}"
+    TARGET_SQLDIR: "{{ kohalxcs_dataenv_datadir }}/source.0/target/sql"
+    TARGET_SQLSCRIPT: "sortholds.sql"
+  shell: |
+    [[ -d Holds ]] && ( [[ -d sql ]] || mkdir -p sql ) && ls -1sh Holds && (
+    echo "== ansible-kohalxc: Generate SQL to sort 'Holds'..";
+    {{ kohalxcs_kohaenv_bindir }}/migration_tools/generate_sortholds_sql.sh;
+    [[ -f sql/sortholds.sql ]] && echo "== ansible-kohalxc: Run generated SQL in database to sort all Holds per biblio.." &&
+    mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} < {{ kohalxcs_dataenv_datadir }}/source.0/target/sql/$TARGET_SQLSCRIPT || echo "== ansible-kohalxc: Failed to run generated SQL against the database:'{{ kohalxcs_mdbenv_kohadb }}'"; )
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
+  register: sql_reserves_sortholds
+  when:
+    - cmd_migrate_holds_result is defined
+    - cmd_migrate_holds_result.finished
+    - kohalxcs_mdbenv_enabled
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_mmtenv_enabled
+    - ('holds' in kohalxcs_mmtenv_migrateme|lower)
+
 ## Migrate (Fines): borrower billing and fines data migration to Koha
 # - needs patrons and items (normal + serials) conversionTables for mapping
 # - uses: '~koha/log/borrowernumberConversionTable'  = (Patrons)
@@ -482,7 +510,7 @@
     - kohalxcs_mmtenv_enabled
     - ('fines' in kohalxcs_mmtenv_migrateme|lower)
 
-#- debug: var=kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
+- debug: var=kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
 - name: koha+mmt - Rebuild Zebra index for Koha ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
   become: yes

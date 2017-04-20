@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# File: {{kohalxcs_kohaenv_bindir}}/migration_tools/generate_sortholds_sql.sh
+{{ ansible_managed | comment }}
+
+# Re-sort holds-queues for each biblio according to reservedates
+# Written by Pasi Korkalo / OUTI Libraries
+# Modified by Jukka Aaltonen / Lappi Libraries, 2017-04-19
+
+## Script name
+PROGNAME="generate_sortholds"
+## Current date/now
+now=$(date +%Y%m%d_%H%M)
+
+## KOHALXC environment
+# - Check that KOHALXC_TOOLDIR is set and directory exists..
+[[ -z "$KOHALXC_TOOLDIR" ]] || [[ ! -e "$KOHALXC_TOOLDIR" ]] &&
+    echo "== No KOHALXC_TOOLDIR set or dir does not exist ..exiting" && exit 1
+# - Check that KOHALXC_DATADIR is set and directory exists..
+[[ -z "$KOHALXC_DATADIR" ]] || [[ ! -e "$KOHALXC_DATADIR" ]] &&
+    echo "== No KOHALXC_DATADIR set or dir does not exist ..exiting" && exit 1
+
+## Database connection/schema settings:
+dbhost="{{kohalxcs_mdbenv_dbhost}}"
+#dbhost="127.0.0.1"
+dbport="{{kohalxcs_mdbenv_dbport}}"
+#dbport="3316"
+dbuser="{{kohalxcs_mdbenv_kohauser}}"
+#dbuser="koha"
+dbpass="${KOHALXC_MDBENV_KOHAPASS}"
+#dbpass=""
+dbname="{{kohalxcs_mdbenv_kohadb}}"
+#dbname="kohadata"
+dbtable="reserves"
+
+## Directories/files:
+TARGET_SQLSCRIPT="${TARGET_SQLSCRIPT:=sortholds_$now.sql}"
+TARGET_SQLDIR="${TARGET_SQLDIR:=$KOHALXC_DATADIR/source.0/target/sql}"
+mkdir -p $TARGET_SQLDIR &&
+    (cd $TARGET_SQLDIR && rm -f $TARGET_SQLSCRIPT &&
+	    echo "USE $dbname;" > $TARGET_SQLSCRIPT)
+
+function ask_pass() {
+    echo -n "Database password for $db: "
+    stty -echo ; read password ; stty echo
+    test "$dbpass" == "" && exit 1
+}
+
+#echo "== kohalxc_ansible: Starting to generate SQL for reservations sorting '$now'.."
+
+IFS='
+'
+echo >> ${TARGET_SQLDIR}/${TARGET_SQLSCRIPT}
+for biblio in $(mysql -B -h ${dbhost:=localhost} -P ${dbport:=3306} -u ${dbuser:=koha} --password=$dbpass ${dbname:=kohadata} -e "SELECT DISTINCT biblionumber FROM ${dbtable:=reserves};"); do
+
+    priority=0
+    #biblio=1260071
+
+    for hold in $(mysql -B -N -h ${dbhost:=localhost} -P ${dbport:=3306} -u ${dbuser:=koha} --password=$dbpass ${dbname:=kohadata} -e "SELECT reserve_id FROM ${dbtable:=reserves} WHERE itemnumber IS NULL AND biblionumber='$biblio' ORDER BY reservedate"); do
+	#if test "$hold" != "reserve_id"; then
+	#echo "hold:$hold,priority:$priority"
+	priority=$((priority + 1))
+	echo "UPDATE ${dbtable:=reserves} SET priority='$priority' WHERE reserve_id='$hold';" >> ${TARGET_SQLDIR}/${TARGET_SQLSCRIPT}
+	#fi
+    done
+
+done
+unset IFS
+
+[[ -f $TARGET_SQLDIR/$TARGET_SQLSCRIPT ]] &&
+    n=$(cat ${TARGET_SQLDIR}/${TARGET_SQLSCRIPT} | wc -l) || n=2
+
+## ALl done
+now=$(date +%Y%m%d_%H%M)
+echo "== ansible-kohalxc: Generated SQL ('UPDATE reserves..' [$((n-2))]) to sort Holds on '$now'." && exit 0
