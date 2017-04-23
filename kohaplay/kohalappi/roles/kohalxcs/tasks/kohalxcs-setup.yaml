@@ -37,13 +37,13 @@
 - debug: var=kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling,kohalxcs_origommtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
 # - runs several hours, async by default, poll and timeout in seconds
-- name: data+ppmmt - PP/MMT conversion ({{kohalxcs_ppmmtenv_importchains}}) as 'lxc_config.xml' timeout in {{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins
+- name: data+ppmmt - Start PP/MMT conversion of '{{kohalxcs_ppmmtenv_importchains}}' as 'lxc_config.xml' ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
   shell: |
     ls -l ~/bin/run_conversion;
-    echo && echo "== START OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date +%Y%m%d_%H%M)" && echo;
+    echo && echo "== START PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date +%Y%m%d_%H%M)" && echo;
     $HOME/bin/run_conversion lxc_config.xml {{ kohalxcs_ppmmtenv_importchains }} > /dev/null;
     [[ "0" == "$?" ]] && (head -35 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log; echo && echo "== ..CONVERTING.." && echo;)
   args:
@@ -60,7 +60,7 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
-- name: data+ppmmt - Still PP/MMT converting ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
+- name: data+ppmmt - Still PP/MMT conversion of '{{kohalxcs_ppmmtenv_importchains}}' ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
@@ -73,8 +73,8 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 #- debug: var=job_runconversion,cmd_runconversion_results
-## Run conversion: finish the run (tweaks and split/show log by ImportChain)
-- name: data+ppmmt - Post PP/MMT conversion tasks for ({{kohalxcs_ppmmtenv_importchains}}) 
+## Post conversion: finish conv. + tweaks and split/show log by ImportChain
+- name: data+ppmmt - Start post-PP/MMT conversion for '{{kohalxcs_ppmmtenv_importchains}}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
@@ -97,7 +97,23 @@
   args:
     executable: /bin/bash
     chdir: "{{ kohalxcs_dataenv_datadir }}/source.0"
+  async: "{{ kohalxcs_ppmmtenv_timeout // 2 }}"
+  poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
+  register: job_postconversion
   when:
+    - kohalxcs_dataenv_enabled
+    - kohalxcs_ppmmtenv_enabled
+    - kohalxcs_ppmmtenv_importchains != ''
+
+## Post conversion: check whether we are finished
+- name: data+ppmmt - Still post-PP/MMT conversion for '{{ kohalxcs_ppmmtenv_importchains }}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins) ?
+  async_status: jid={{ job_postconversion.ansible_job_id }}
+  register: cmd_postconversion_result
+  until: cmd_postconversion_result.finished
+  retries: "{{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }}"
+  delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
+  when:
+    - job_postconversion is defined
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
