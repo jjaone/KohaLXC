@@ -37,7 +37,7 @@
 - debug: var=kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_ppmmtenv_importchains,kohalxcs_ppmmtenv_polling,kohalxcs_origommtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Run conversion: main script
 # - runs several hours, async by default, poll and timeout in seconds
-- name: data+ppmmt - PP/MMT converting ({{kohalxcs_ppmmtenv_importchains}}) as 'lxc_config.xml' timeout in {{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins
+- name: data+ppmmt - PP/MMT conversion ({{kohalxcs_ppmmtenv_importchains}}) as 'lxc_config.xml' timeout in {{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
@@ -54,33 +54,49 @@
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_runconversion
   when:
+    - false
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
-- name: data+ppmmt - Is PP/MMT still converting ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: data+ppmmt - Still PP/MMT converting ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished
   retries: "{{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
+    - false
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
-#- debug: var=job_runconversion_result,kohalxcs_kohalxc_tooldir
-## Run conversion: finish the run (split/show log per ImportChains
-- name: data+ppmmt - PP/MMT conversion finished (split/show log by import-chains)
+#- debug: var=job_runconversion,cmd_runconversion_results
+## Run conversion: finish the run (tweaks and split/show log by ImportChain)
+- name: data+ppmmt - Post PP/MMT conversion tasks for ({{kohalxcs_ppmmtenv_importchains}}) 
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
   shell: |
-    tail -30 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log
+    for d in {{kohalxcs_ppmmtenv_importchains|replace(',',' ')|d()}}; do
+      case "${d,,}" in
+        patrons)
+          (cd target/Patrons &&
+            for f in 01_patrons*; do
+              $KOHALXC_TOOLDIR/ppmmtws/ConversionTools/addothernames.sh $f > tmp.$f && mv tmp.$f $f
+            done) ;;
+        *) ;;
+      esac
+    done
+    [[ -f $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log ]] &&
+    tail -30 $KOHALXC_TOOLDIR/ppmmtws/PerlMMT/logs/import_all.log;
     echo && echo "== END OF PP/MMT CONVERSION '{{ kohalxcs_ppmmtenv_importchains | d() }}': $(date +%Y%m%d_%H%M)." && echo
-    (cd $KOHALXC_DATADIR/source.0/logs && pwd && ls -l | grep '\-last\|\-previous' && echo)
-    (cd $KOHALXC_DATADIR/source.0/target && pwd && ls -Csh && echo)
+    (cd logs && pwd && ls -l | grep '\-last\|\-previous' && echo || exit)
+    (cd target && pwd && ls -Csh && echo)
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0"
   when:
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
@@ -107,14 +123,14 @@
 
 ## Build *.migrateme files: (skip Serial(s)Items for they have *.marc files)
 # - Staffaccounts,Patrons,Biblios,Items,(Serials,)Holds,Checkouts,Fines
-- name: data+ppmmt - Build '*.migrateme' from conv targets to insert them to Koha
+- name: data+ppmmt - Build '*.migrateme' from conv targets to be inserted to Koha
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
   shell: |
     pwd && ls -1sh
     for d in {{kohalxcs_ppmmtenv_importchains|replace(',',' ')|d()}}; do
-      ([[ -d $d ]] && cd $d && echo "== $d in: $(pwd)" && [[ "Serials" != "$d" || "SerialItems" != "$d" ]] && rm -f ${d,,}.migrateme && ( [[ "Biblios" != "$d" ]] && cat 01_${d,,}* > ${d,,}.migrateme || cat 03_${d,,}* > ${d,,}.migrateme ) && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo;)
+      ([[ -d $d ]] && cd $d && echo "== $d in: $(pwd)" && [[ "Serials" != "$d" ]] && [[ "SerialItems" != "$d" ]] && rm -f ${d,,}.migrateme && ( [[ "Biblios" != "$d" ]] && cat 01_${d,,}* > ${d,,}.migrateme || cat 03_${d,,}* > ${d,,}.migrateme ) && ls -Csh --format=horizontal | grep -v "total" && echo -n "== $d lines: " && wc -l ${d,,}.migrateme || echo; )
     done
   args:
     executable: /bin/bash
@@ -126,7 +142,7 @@
 
 ## Database/status: 'patrons' and staffaccounts
 # - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
-- name: koha+mdb - Show converted Patrons and Staff accounts that are in the db
+- name: koha+mdb - Show Patrons and Staff accounts that are in the db
   become: yes
   shell: |
     [[ -d Patrons ]] && ls -1shl Patrons && echo
@@ -208,7 +224,7 @@
     - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Patrons+Staffaccounts): .. are we finished yet?
-- name: koha+mmt - Is 'Patrons' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still migrating 'Patrons' ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migratepatrons.ansible_job_id }}
   register: cmd_migratepatrons_result
@@ -224,7 +240,7 @@
 
 ## Migrate (Biblios): bibliographic MarcXML data migration to Koha
 # - generates '~koha/log/biblionumberConversionTable' (used in later migration stages)
-- name: koha+mmt - Migrate converted Biblios ({{ 5 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+- name: koha+mmt - Migrate 'Biblios' ({{ 5 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
     [[ -d Biblios ]] && ls -1shl Biblios && echo "== ansible-kohalxc: Started migrating 'Biblios' on $(date +%Y%m%d_%H%M).." && [[ -f Biblios/biblios.migrateme ]] && (
@@ -242,7 +258,7 @@
     - ('biblios' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Biblios): .. are we finished yet?
-- name: koha+mmt - Is 'Biblios' still migrating ({{ 5 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still migrating 'Biblios' ({{ 5 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migratebiblios.ansible_job_id }}
   register: cmd_migratebiblios_result
@@ -261,7 +277,7 @@
 #   - (for serialmothers): '~koha/log/serialmothersnumberConversionTable'
 #   - (for serials): '~koha/log/serialsnumberConversionTable'
 # - '~koha/log/serialnumbers_ConversionTable'
-- name: koha+mmt - Migrate converted Serials ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+- name: koha+mmt - Migrate 'Serials' ({{ (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
     [[ -d Serials ]] && ls -1shl Serials && echo "== ansible-kohalxc: Started migrating 'Serials (mothers)' on $(date +%Y%m%d_%H%M).." && [[ -f Serials/serialmothers.marc ]] && (
@@ -283,7 +299,7 @@
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Serials): .. are we finished yet?
-- name: koha+mmt - Is 'Serials' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still migrating 'Serials' ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateserials.ansible_job_id }}
   register: cmd_migrateserials_result
@@ -299,7 +315,7 @@
 ## Migrate (Items): bulk import library Items linked to 'Biblios' MarcXML to db
 # - uses '~koha/log/biblionumberConversionTable'
 # - generates '~koha/log/itemnumberConversionTable'
-- name: koha+mmt - Migrate converted Items ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
+- name: koha+mmt - Migrate 'Items' ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // 60 }} mins)
   become: yes
   shell: |
     [[ -d Items ]] && ls -1shl Items && echo "== ansible-kohalxc: Started migrating 'Items' on $(date +%Y%m%d_%H%M).." && [[ -f Items/items.migrateme ]] && (
@@ -317,7 +333,7 @@
     - ('items' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (Items): .. are we finished yet?
-- name: koha+mmt - Is 'Items' still migrating ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still migarating 'Items' ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateitems.ansible_job_id }}
   register: cmd_migrateitems_result
@@ -351,7 +367,7 @@
     - ('serials' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate (SerialItems): .. are we finished yet?
-- name: koha+mmt - Is 'SerialItems' still migrating ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still migrating 'SerialItems' ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateserialitems.ansible_job_id }}
   register: cmd_migrateserialitems_result
@@ -458,7 +474,7 @@
     echo "== ansible-kohalxc: Generate SQL to sort 'Holds'..";
     {{ kohalxcs_kohaenv_bindir }}/migration_tools/generate_sortholds_sql.sh;
     [[ -f sql/sortholds.sql ]] && echo "== ansible-kohalxc: Run generated SQL in database to sort all Holds per biblio.." &&
-    mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} < {{ kohalxcs_dataenv_datadir }}/source.0/target/sql/$TARGET_SQLSCRIPT || echo "== ansible-kohalxc: Failed to run generated SQL against the database:'{{ kohalxcs_mdbenv_kohadb }}'"; )
+    mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} < $TARGET_SQLDIR/$TARGET_SQLSCRIPT || echo "== ansible-kohalxc: Failed to run generated SQL against the database:'{{ kohalxcs_mdbenv_kohadb }}'"; )
     exit 0
   args:
     executable: /bin/bash
@@ -537,7 +553,7 @@
 
 #- debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
 ## Zebra rebuild: check whether we are finished
-- name: koha+mmt - Is Biblios/Zebra index still building ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins)
+- name: koha+mmt - Still building Biblios/Zebra index ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_rebuildidx.ansible_job_id }}
   register: cmd_rebuildidx_result

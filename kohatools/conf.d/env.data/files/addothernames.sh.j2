@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# file: $KOHALXC_TOOLDIR/ppmmtws/ConversionTools/addothernames.sh
+# KohaLXC/kohatools (data+mmtenv): PP/MMT-configuration/tweaks
+#{{ ansible_managed | comment }}
+
+[[ -n "$*" ]] && PATRON_TARGETS=$(cat $*) || exit
+#echo "PATRON_TARGETS=" && echo "$PATRON_TARGETS"
+#PATRON_CHUNKS=$(cat 01_patrons*)
+PATRONS=$PATRON_TARGETS
+
+othernames=0; lastothernames=0
+IFS='
+'
+for p in $PATRONS; do
+  while test $lastothernames -eq $othernames; do
+    othernames="$(date +%s%N | cut -c 1-12)"
+  done
+  otherdashed="$(echo $othernames | cut -c 1-4)-$(echo $othernames | cut -c 5-8)-$(echo $othernames | cut -c 9-12)"
+  echo $p | grep -vqs "'othernames' =>" && echo $p | sed "s/}, 'Item' );/, 'othernames' => '$otherdashed'}, 'Item' );/g" || echo $p
+  lastothernames=$othernames
+done
+unset IFS
+
+## All done
+exit 0

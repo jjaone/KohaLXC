@@ -340,7 +340,7 @@
     - hostnode_dataenv_datadir is defined
     - cmd_dump4mmt_pp.stat.exists
 
-## Push/copy KohaLXC/ppmmt import.pl+TranslationTables to target
+## Push/copy KohaLXC/ppmmt ConversionTools+TranslationTables to conversion hosts
 - name: data+ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
   template: >
     src="files/dataenv/{{ item.name }}.j2"
@@ -349,6 +349,7 @@
     mode="g+w"
     backup="no"
   with_items:
+    - { name: addothernames.sh, dir: ConversionTools }
     - { name: makeStaffAccounts.sh, dir: ConversionTools }
     - { name: cutype_to_borrower_categorycode.pm, dir: PerlMMT/TranslationTables }
     - { name: isil_translation.pm, dir: PerlMMT/TranslationTables }
@@ -359,7 +360,7 @@
     - hostnode_dataenv_datadir is defined
     - cmd_dump4mmt_pp.stat.exists
   
-## Push/copy KohaLXC/ppmmt lib and BibliosImportChain scripts/configs to target
+## Push/copy KohaLXC/ppmmt lib+Patrons/BibliosImport scripts/configs to conv hosts
 - name: data+ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
     src="files/dataenv/{{ item.name }}.j2"
