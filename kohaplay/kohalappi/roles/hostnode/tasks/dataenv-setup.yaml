@@ -340,8 +340,8 @@
     - hostnode_dataenv_datadir is defined
     - cmd_dump4mmt_pp.stat.exists
 
-## Push/copy KohaLXC/ppmmt ConversionTools+TranslationTables to conversion hosts
-- name: data+ppmmt - Push/copy 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
+## Push KohaLXC/ppmmt ConversionTools+TranslationTables to conversion hosts
+- name: data+ppmmt - Push 'ConversionTools' and 'TranslationTables' to data/ppmmt-enabled hosts
   template: >
     src="files/dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/{{ item.dir }}/{{ item.name }}"
@@ -351,7 +351,8 @@
   with_items:
     - { name: addothernames.sh, dir: ConversionTools }
     - { name: makeStaffAccounts.sh, dir: ConversionTools }
-    - { name: cutype_to_borrower_categorycode.pm, dir: PerlMMT/TranslationTables }
+    - { name: cutype_to_borrower_categorycode.pm,
+        dir: PerlMMT/TranslationTables }
     - { name: isil_translation.pm, dir: PerlMMT/TranslationTables }
     - { name: liqlocde_translation.pm, dir: PerlMMT/TranslationTables }
     - { name: material_code_to_itype.pm, dir: PerlMMT/TranslationTables }
@@ -360,8 +361,8 @@
     - hostnode_dataenv_datadir is defined
     - cmd_dump4mmt_pp.stat.exists
   
-## Push/copy KohaLXC/ppmmt lib+Patrons/BibliosImport scripts/configs to conv hosts
-- name: data+ppmmt - Push/copy Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
+## Push KohaLXC/ppmmt lib+Patrons/BibliosImport scripts/configs to conv hosts
+- name: data+ppmmt - Push Perl 'import.pl', 'lib' and '{Biblios,Patrons}ImportChain' scripts to data/ppmmt-enabled envs
   template: >
     src="files/dataenv/{{ item.name }}.j2"
     dest="{{ hostnode_kohalxc_tooldir }}/ppmmtws/PerlMMT/{{ item.dir }}/{{ item.name }}"
@@ -375,7 +376,8 @@
     - { name: Patron.pm, dir: lib }
     - { name: MarcRepair.pm, dir: BibliosImportChain }
     - { name: BuildMARC.pm, dir: BibliosImportChain/FinMARC_Builder }
-    - { name: SharedDocidRecordsHandler.pm, dir: BibliosImportChain/FinMARC_Builder }
+    - { name: SharedDocidRecordsHandler.pm,
+        dir: BibliosImportChain/FinMARC_Builder }
     - { name: fi2ma.rul, dir: BibliosImportChain/Usemarcon/fi2ma }
     - { name: Instructions.pm, dir: PatronsImportChain }
   when:

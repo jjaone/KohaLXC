@@ -154,12 +154,27 @@ kohalxcs_mdbenv_kohadb: "{{ kohalxc_mdbenv_kohadb | d('kohadata') }}"
 kohalxcs_kohaenv_enabled: false
 # Packages needed for setup/config/tools
 kohalxcs_kohaenv_pckgs:
+  - gettext
+  - ca-certificates
   - openssl
   - apache2
   - dnsutils
   - mailutils
   - postfix
   - libsasl2-modules
+
+# Koha/webapp: koha-sources APT list path/file
+kohalxcs_kohaenv_aptlist: /etc/apt/sources.list.d/koha.list
+# Koha/webapp: koha-community packages repository and release
+kohalxcs_kohaenv_repo: "http://debian.koha-community.org/koha"
+kohalxcs_kohaenv_release: "oldstable main"
+#kohalxcs_kohaenv_release: "stable main"
+#kohalxcs_kohaenv_release: "unstable main"
+# Koha/webapp: Git sourcecode for (KohaSuomi-based) dev/standard installs
+kohalxcs_kohaenv_gitrepo: "https://github.com/KohaSuomi/kohasuomi.git"
+# Koha/weball: Koha/Git (clone/fork) working directory
+kohalxcs_kohaenv_kohaclone: "/home/{{ ansible_user }}/kohaclone"
+
 # Koha/webapp: server name (DNS)
 kohalxcs_kohaenv_srvname: "{{ hostnode_kohaenv_srvname }}"
 # Koha/webapp: server title/org

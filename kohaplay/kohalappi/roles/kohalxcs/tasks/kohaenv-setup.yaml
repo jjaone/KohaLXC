@@ -1,0 +1,30 @@
+---
+# File: roles/kohalxcs/tasks/kohaenv-setup.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+# 
+# Description: setup tasks of Koha/webapp-related LXCs
+# - setup Koha-related LXCs environments in all playbook inventories
+# - ensure availability of all required distro packages and Perl-modules
+# - etc. etc.
+# ##############################################################################
+
+#- debug: var=kohalxcs_devenv_enabled,kohalxcs_dataenv_enabled,kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname
+
+## Koha-community repo, release and APT-keys
+- name: koha - Add Koha-community APT packages repository and keys
+  become: yes
+  shell: |
+    echo "deb {{ kohalxcs_kohaenv_repo }} {{ kohalxcs_kohaenv_release }}" > {{ kohalxcs_kohaenv_aptlist }}
+    # Retrieve repo signing key (if OS has not already)
+    [[ $(apt-key list | grep -s 'koha-community') ]] || wget -O- {{ kohalxcs_kohaenv_repo }}/gpg.asc | apt-key add -
+    # Show what we got
+    cat {{ kohalxcs_kohaenv_aptlist }}
+    apt-key list | grep -B1 -A2 'koha-community'
+  args:
+    executable: /bin/bash
+  when:
+    - kohalxcs_kohaenv_enabled

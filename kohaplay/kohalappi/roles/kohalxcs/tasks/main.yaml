@@ -12,14 +12,14 @@
 
 ## kohalxcs/common: read ansible_facts from target ansible localized folder:
 # - /etc/ansible/facts.d
-- name: setup - Read LXC env facts (ansible_local/{{inventory_hostname}}).lxc_group
+- name: all - Read LXC env facts (ansible_local/{{inventory_hostname}}).lxc_group
   setup: >
     fact_path="{{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{inventory_hostname}}/config"
     filter="ansible_local"
   tags: kohalxcs,kohalxcs:status,kohalxcs:setup
 
 ## kohlxcs/common: set this LXC-environment enablements based on above facts
-- name: setup - Set the LXC-environments based on local facts (if any)
+- name: all - Set the LXC-environments based on local facts (if any)
   vars:
     lxcg: "{{ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_group}}"
     lxcn: "{{ansible_local[inventory_hostname.split('.')[0] | d('default')].lxc_net|d()}}"
@@ -54,7 +54,7 @@
   tags: kohalxcs:setup
 
 ## Ensure {dev,data,mdb,koha}env.* pckgs are installed (if env is enabled)
-- name: dev+data+mdb+koha - Ensure needed packages are installed
+- name: all(dev+data+mdb+koha) - Ensure needed packages are installed
   become: yes
   apt: >
     name="{{ item }}"
@@ -86,7 +86,7 @@
   tags: kohalxcs,kohalxcs:status,kohalxcs:setup
 
 ## Ensure kohaoper (i.e. 'ansible_user') belongs to koha-group and has ssh-keys
-- name: setup - Ensure LXC-user (ansible_user) has ssh-keys and belongs to koha-group
+- name: all - Ensure Koha/LXC-user has ssh-keys and belongs to koha-group
   become: yes
   user: >
     name="{{ ansible_user }}"
@@ -101,16 +101,17 @@
   tags: kohalxcs,kohalxcs:status,kohalxcs:setup
 
 ## Ensure kohalxc_operuser(kohaoper/HOME) has required dirs
-- name: setup - Ensure LXC-user (ansible_user) has dirs for scripts and logs
+- name: all - Ensure Koha/LXC-user has dirs for scripts, sources and logs
   file: >
     path="/home/{{ ansible_user }}/{{ item }}"
     state="directory"
   with_items:
     - bin
+    - kohaclone
     - log
   tags: kohalxcs,kohalxcs:status,kohalxcs:setup
 
-## Status/Setup of 'mdbenv' for LXCs
+## mdbenv-{status,setup} for LXCs
 #- include: mdbenv-status.yaml
 #  tags: kohalxcs,kohalxcs:status
 - include: mdbenv-setup.yaml
@@ -118,7 +119,15 @@
     - kohalxcs_mdbenv_enabled
   tags: kohalxcs:setup
 
-## lxc-{status,setup}
+## kohaenv-{status,setup} for LXCs
+#- include: kohaenv_status.yaml
+#  tags: kohalxcs,kohalxcs:status
+- include: kohaenv-setup.yaml
+  when:
+    - kohalxcs_kohaenv_enabled
+  tags: kohalxcs:setup
+
+## kohalxcs-{status,setup}
 # - TODO: conditions for tags should be read from each LXCs group configs
 - include: kohalxcs-status.yaml
   tags: kohalxcs,kohalxcs:status

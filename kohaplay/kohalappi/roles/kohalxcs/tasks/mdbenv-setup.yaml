@@ -20,7 +20,7 @@
 #    mysqldump --user={{ kohalxcs_mdbenv_rootuser }} --password={{ kohalxcs_mdbenv_rootpass }} --all-databases --result-file=/tmp/all-dbs.sql
 
 ## Database/dump: full dump of library db
-- name: mdb - Full dump of Koha library database
+- name: backup+mdb - Full dump of Koha library database
   mysql_db:
     state: dump
     name: "{{ kohalxcs_mdbenv_kohadb }}"
@@ -36,7 +36,7 @@
 - stat: path={{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{ inventory_hostname }}/sql/mdbenv_setup-kohadata_items-ksissue_1957.sql
   register: mdbenv_setup_script
 ## Database/setup: all db schema changes and system prefs alterations/tweaks
-- name: mdb - Library database schema changes and system configuration tweaks
+- name: koha+mdb - Library database schema changes and system configuration tweaks
   shell: |
     whoami && pwd && ls -la {{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs;
     mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} < {{ kohalxcs_kohalxc_tooldir }}/conf.d/env.data/lxcs/{{ inventory_hostname }}/sql/mdbenv_setup-kohadata_items-ksissue_1957.sql
@@ -46,8 +46,8 @@
     - kohalxcs_kohaenv_enabled
     - mdbenv_setup_script.stat is defined
     - mdbenv_setup_script.stat.exists
-
 #- debug: msg="{{ sql_describe_items.stdout_lines }}"
+
 ## Database/status: 'patrons' and 'staffaccounts'
 # - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
 - name: koha+mdb - Show converted/migrated Patrons and/or Staffaccounts
@@ -59,7 +59,8 @@
     [[ -f Staffaccounts/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'; exit 0
   args:
     executable: /bin/bash
-    chdir: "/home/{{ansible_user}}/{{kohalxc_organization}}/kohadata/source.0/target"
+    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
+  no_log: true
   when:
     - false
     - kohalxcs_kohaenv_enabled

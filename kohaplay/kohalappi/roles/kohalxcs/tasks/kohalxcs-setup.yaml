@@ -54,7 +54,6 @@
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_runconversion
   when:
-    - false
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
@@ -67,14 +66,14 @@
   retries: "{{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
-    - false
+    - job_runconversion is defined
     - kohalxcs_dataenv_enabled
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
 #- debug: var=job_runconversion,cmd_runconversion_results
 ## Post conversion: finish conv. + tweaks and split/show log by ImportChain
-- name: data+ppmmt - Start post-PP/MMT conversion for '{{kohalxcs_ppmmtenv_importchains}}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins)
+- name: data+ppmmt - Start post-PP/MMT tasks for '{{kohalxcs_ppmmtenv_importchains}}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
@@ -106,7 +105,7 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Post conversion: check whether we are finished
-- name: data+ppmmt - Still post-PP/MMT conversion for '{{ kohalxcs_ppmmtenv_importchains }}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins) ?
+- name: data+ppmmt - Still in post-PP/MMT tasks for '{{ kohalxcs_ppmmtenv_importchains }}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins) ?
   async_status: jid={{ job_postconversion.ansible_job_id }}
   register: cmd_postconversion_result
   until: cmd_postconversion_result.finished
@@ -120,7 +119,7 @@
 
 ## Make 'Staffaccounts' in addition to PP/MMT-Patrons
 # - only if converting 'Patrons' & "kohlxcs_mmtenv_migrateme" has 'staffaccounts'
-- name: data+ppmmt+(migrate) - Make Staff accounts for Koha (in addition to normal PatronsImportChain-conversion)
+- name: data+ppmmt - Make Staff accounts for Koha (in addition to normal PatronsImportChain-conversion)
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
@@ -156,22 +155,11 @@
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
-## Database/status: 'patrons' and staffaccounts
-# - could have "USE {{ kohalxcs_mdbenv_kohadb }}" in the sql, too
-- name: koha+mdb - Show Patrons and Staff accounts that are in the db
-  become: yes
-  shell: |
-    [[ -d Patrons ]] && ls -1shl Patrons && echo
-    [[ -f Patrons/patrons.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode <> "S" LIMIT 15;'
-    [[ -d Staffaccounts ]] && ls -1shl Staffaccounts && echo
-    [[ -f Staffaccounts/staffaccounts.migrateme ]] && mysql -h {{ kohalxcs_mdbenv_dbhost }} -u {{ kohalxcs_mdbenv_kohauser }} --password={{ kohalxcs_mdbenv_kohapass }} {{ kohalxcs_mdbenv_kohadb }} -e 'SELECT userid,borrowernumber,cardnumber,branchcode,categorycode FROM borrowers WHERE categorycode = "S" LIMIT 10;'; exit 0
-  args:
-    executable: /bin/bash
-    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
-  when:
-    - kohalxcs_kohaenv_enabled
-    - kohalxcs_mdbenv_enabled
-    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower)
+
+### ################################################
+### HERE STARTS THE MIGRATION PHASE:
+### requires Koha (kohaenv+mmtenv) to be installed
+### ###############################################
 
 ## Push/copy KohaLXC/kohalxcs migration environment (mmtenv) customization scripts
 - name: koha+mmt - Templatize some bulkImports and other scripts for migration
@@ -542,7 +530,7 @@
     - kohalxcs_mmtenv_enabled
     - ('fines' in kohalxcs_mmtenv_migrateme|lower)
 
-- debug: var=kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
+#- debug: var=kohalxcs_mdbenv_enabled,kohalxcs_kohaenv_enabled,kohalxcs_ppmmtenv_enabled,kohalxcs_mmtenv_enabled,kohalxcs_mmtenv_migrateme
 ## Zebra: rebuild index
 - name: koha+mmt - Rebuild Zebra index for Koha ({{ kohalxcs_ppmmtenv_timeout|int // 60 }} mins)
   become: yes
