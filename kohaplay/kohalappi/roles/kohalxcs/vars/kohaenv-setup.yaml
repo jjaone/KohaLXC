@@ -1,0 +1,21 @@
+---
+# File: roles/kohalxcs/vars/kohaenv-setup_fix.yaml
+# #############################################################################
+# Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
+# for Koha/ILS-development, deployment & database conversion/migration tasks.
+# Author: Jukka Aaltonen, Koha-Lappi, Rovaniemi City Library, Lapland/Finland.
+# License: GNU General Public License version 3.
+#
+# [TODO]: Description: define variables used in this role
+# - vars should be named like 'kohalxcs_kohaenv_xyz' etc..
+# - vars used in templates for config files should be at target OS defaults
+# #############################################################################
+
+## List Git-based patches and fixes to Koha-source/config/installation files
+kohalxcs_kohaenv_gitpatches:
+  - { desc: "Anonymize-borrowers-holds-identifiers",
+      name: "KD-1425",
+      comment: "Use this only for PP/KohaLappi installation/configs/tweaks",
+      dir: "{{ kohalxcs_kohaenv_kohaclone }}-oldstable",
+      patch: "git format-patch -1 3be179382df9716bf2b974c6b9efc35ee7eeb42f",
+      apply: "patch --verbose -p1 -b < 0001-KD-1452-Anonymize-borrowers-holds-identifiers.patch" }

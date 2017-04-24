@@ -125,7 +125,7 @@
 - include: kohaenv-setup.yaml
   when:
     - kohalxcs_kohaenv_enabled
-  tags: kohalxcs:setup
+  tags: kohalxcs:setup,kohalxcs:kohaenv-setup
 
 ## kohalxcs-{status,setup}
 # - TODO: conditions for tags should be read from each LXCs group configs

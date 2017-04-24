@@ -59,7 +59,7 @@
     - kohalxcs_ppmmtenv_importchains != ''
 
 ## Run conversion: check whether we are finished
-- name: data+ppmmt - Still PP/MMT conversion of '{{kohalxcs_ppmmtenv_importchains}}' ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
+- name: data+ppmmt - Still in PP/MMT conversion of '{{kohalxcs_ppmmtenv_importchains}}' ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   async_status: jid={{ job_runconversion.ansible_job_id }}
   register: cmd_runconversion_result
   until: cmd_runconversion_result.finished

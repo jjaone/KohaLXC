@@ -28,3 +28,54 @@
     executable: /bin/bash
   when:
     - kohalxcs_kohaenv_enabled
+
+## Clone/checkout Koha source Git repository (standard/dev KS-3.16)
+- name: koha - Clone/checkout clean Koha source Git repo (dev/KS-3.16)
+  git:
+    repo: "{{ kohalxcs_kohaenv_gitrepo }}"
+    dest: "{{ kohalxcs_kohaenv_kohaclone }}"
+    clone: yes
+    update: yes
+    force: yes
+  when:
+    - kohalxcs_kohaenv_enabled
+
+##
+## TODO/FIX: Rest of Koha-installation steps
+##
+
+## Checkout one specified patch/commit/branch from Koha source Git repository
+- name: koha - Checkout specified version (commit/patch) from Git..
+  git:
+    repo: "{{ kohalxcs_kohaenv_gitrepo }}"
+    dest: "{{ kohalxcs_kohaenv_kohaclone }}"
+    # KD#1452 - Anonymize borrrowers holds identifiers
+    # - version: 3be179382df9716bf2b974c6b9efc35ee7eeb42f
+    version: "{{ kohalxcs_kohaenv_gitpatch }}"
+    clone: no
+    update: no
+  register: cmd_gitcheckout_patchcommit
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_gitpatch is defined
+- debug: var=cmd_gitcheckout_patchcommit
+
+- include_vars: kohaenv-setup.yaml
+- debug: var=kohalxcs_kohaenv_gitpatches
+## Format and apply Git-based patches to Koha-source/code
+- name: koha - Apply Git-based patches to Koha source and installation
+  environment:
+    KOHALXC_PATCH_FORMATCMD: "{{ item.patch | d('echo') }}"
+    KOHALXC_PATCH_APPLYCMD: "patch --verbose -p1 -b < 0001-{{ item.name }}-{{ item.desc }}.patch"
+  shell: |
+    pwd && [[ -d "{{ item.dir }}" ]] && (cd {{ item.dir }} &&
+    $KOHALXC_PATCH_FORMATCMD && $KOHALXC_PATCH_APPLYCMD )
+    exit 0
+  args:
+    executable: /bin/bash
+    chdir: "{{item.dir}}"
+  with_items: "{{ kohalxcs_kohaenv_gitpatches | d() }}"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_gitpatches is defined
+    - kohalxcs_kohaenv_gitpatch is not defined
