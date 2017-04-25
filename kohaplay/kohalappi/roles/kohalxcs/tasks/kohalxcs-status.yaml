@@ -50,8 +50,11 @@
 - name: status/koha - Info about kohalxcs/kohaenvs..
   shell: |
     [[ -f {{ kohalxcs_kohaenv_aptlist }} ]] && cat {{ kohalxcs_kohaenv_aptlist }}
-    echo "{{ kohalxcs_kohaenv_repo }} {{ kohalxcs_kohaenv_release }}"
-    echo "{{ kohalxcs_kohaenv_gitrepo }}"
+    echo "Pckgs: {{ kohalxcs_kohaenv_repo }} {{ kohalxcs_kohaenv_release }}"
+    echo "Gito: {{ kohalxcs_kohaenv_gitrepo }}"
+    echo "Koha-clone: {{ kohalxcs_kohaenv_kohaclone }}"
+    echo "Git-version: {{ kohalxcs_kohaenv_gitpatch | d() }}"
+    echo "Git-patches: {{ kohalxcs_kohaenv_gitpatches | d() }}"
   args:
     executable: /bin/bash
   when:

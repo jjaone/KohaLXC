@@ -11,10 +11,15 @@
 # - vars used in templates for config files should be at target OS defaults
 # #############################################################################
 
-## List Git-based patches and fixes to Koha-source/config/installation files
+## Patch whole Git-dev/source tree to a version (do not define here, if not)
+# KD#1452 - Anonymize borrrowers holds identifiers
+# - version: 3be179382df9716bf2b974c6b9efc35ee7eeb42f
+#kohalxcs_kohaenv_gitpatch:
+
+## List of Git-based patches/fixes to Koha-source/config/installation files
 kohalxcs_kohaenv_gitpatches:
   - { desc: "Anonymize-borrowers-holds-identifiers",
-      name: "KD-1425",
+      name: "KD-1452",
       comment: "Use this only for PP/KohaLappi installation/configs/tweaks",
       dir: "{{ kohalxcs_kohaenv_kohaclone }}-oldstable",
       patch: "git format-patch -1 3be179382df9716bf2b974c6b9efc35ee7eeb42f",

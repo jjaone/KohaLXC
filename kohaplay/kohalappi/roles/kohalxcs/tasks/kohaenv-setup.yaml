@@ -49,8 +49,6 @@
   git:
     repo: "{{ kohalxcs_kohaenv_gitrepo }}"
     dest: "{{ kohalxcs_kohaenv_kohaclone }}"
-    # KD#1452 - Anonymize borrrowers holds identifiers
-    # - version: 3be179382df9716bf2b974c6b9efc35ee7eeb42f
     version: "{{ kohalxcs_kohaenv_gitpatch }}"
     clone: no
     update: no
@@ -66,16 +64,47 @@
 - name: koha - Apply Git-based patches to Koha source and installation
   environment:
     KOHALXC_PATCH_FORMATCMD: "{{ item.patch | d('echo') }}"
-    KOHALXC_PATCH_APPLYCMD: "patch --verbose -p1 -b < 0001-{{ item.name }}-{{ item.desc }}.patch"
+    KOHALXC_PATCH_APPLYCMD: "patch --verbose -p1 -b -i 0001-{{ item.name }}-{{ item.desc }}.patch"
   shell: |
-    pwd && [[ -d "{{ item.dir }}" ]] && (cd {{ item.dir }} &&
-    $KOHALXC_PATCH_FORMATCMD && $KOHALXC_PATCH_APPLYCMD )
-    exit 0
+    pwd && [[ -d "{{ item.dir }}" ]] && (
+    cd {{ item.dir }} && $KOHALXC_PATCH_FORMATCMD && $KOHALXC_PATCH_APPLYCMD )
   args:
     executable: /bin/bash
     chdir: "{{item.dir}}"
+    creates: "0001-{{item.name}}-{{item.desc}}.patch"
   with_items: "{{ kohalxcs_kohaenv_gitpatches | d() }}"
+  register: cmd_gitpatch
   when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_gitpatches is defined
+    - kohalxcs_kohaenv_gitpatch is not defined
+
+- debug: var=cmd_gitpatch
+## Copy Git-dev/source tree patches/tweaks to Koha-installation dir(s):
+# - patch KD#1452 (only for english UI)
+- name: koha - Modify Koha-install by the above Git-dev/source patches
+  become: yes
+  shell: |
+    pwd &&
+    [[ -f $(echo 0001-{{item.name}}-*.patch) && ! -f $(echo 0001-{{item.name}}-*.patch.done) ]] || echo "== kohalxc_ansible: Patch '0001-${{item.name}}-...patch' does not exist or already applied." && (
+    cp -vpb {{item.srcdir}}/{{item.file}} {{item.destdir}}/{{item.file}} &&
+    for f in 0001-{{item.name}}-*.patch; do cp -vp $f ${f/patch/patch.done}; done &&
+    chown {{ kohalxc_kohagrp_name }}:{{kohalxc_kohagrp_name}} {{item.destdir}}/{{item.file}} )
+  args:
+    executable: /bin/bash
+    chdir: "{{ kohalxcs_kohaenv_kohaclone }}-oldstable"
+  with_items:
+    - { name: "KD-1452",
+        srcdir: "koha-tmpl", destdir: "{{kohalxcs_kohaenv_staff_docroot}}",
+        file: "intranet-tmpl/prog/en/modules/admin/preferences/patrons.pref" }
+    - { name: "KD-1452",
+        srcdir: "koha-tmpl", destdir: "{{kohalxcs_kohaenv_staff_docroot}}",
+        file: "intranet-tmpl/prog/en/modules/members/memberentrygen.tt" }
+    - { name: "KD-1452",
+        srcdir: ".", destdir: "{{kohalxcs_kohaenv_staff_cgikoha}}",
+        file: "members/memberentry.pl" }
+  when:
+    - not cmd_gitpatch|skipped and cmd_gitpatch|changed
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_gitpatches is defined
     - kohalxcs_kohaenv_gitpatch is not defined
