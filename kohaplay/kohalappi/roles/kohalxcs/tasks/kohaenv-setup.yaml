@@ -82,13 +82,13 @@
 - debug: var=cmd_gitpatch
 ## Copy Git-dev/source tree patches/tweaks to Koha-installation dir(s):
 # - patch KD#1452 (only for english UI)
+# TODO: for f in 0001-{{item.name}}-*.patch; do cp -vp $f ${f/patch/patch.done}; donee
 - name: koha - Modify Koha-install by the above Git-dev/source patches
   become: yes
   shell: |
     pwd &&
     [[ -f $(echo 0001-{{item.name}}-*.patch) && ! -f $(echo 0001-{{item.name}}-*.patch.done) ]] || echo "== kohalxc_ansible: Patch '0001-${{item.name}}-...patch' does not exist or already applied." && (
     cp -vpb {{item.srcdir}}/{{item.file}} {{item.destdir}}/{{item.file}} &&
-    for f in 0001-{{item.name}}-*.patch; do cp -vp $f ${f/patch/patch.done}; done &&
     chown {{ kohalxc_kohagrp_name }}:{{kohalxc_kohagrp_name}} {{item.destdir}}/{{item.file}} )
   args:
     executable: /bin/bash
