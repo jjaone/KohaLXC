@@ -175,6 +175,25 @@ kohalxcs_kohaenv_gitrepo: "https://github.com/KohaSuomi/kohasuomi.git"
 # Koha/weball: Koha/Git (clone/fork) working directory
 kohalxcs_kohaenv_kohaclone: "/home/{{ ansible_user }}/kohaclone"
 
+# Koha/webapp: SIP-service enabled
+kohalxcs_kohaenv_sipenabled: true
+# - SIP-server config dir:
+kohalxcs_kohaenv_sipconfdir: "{{ kohalxcs_kohaenv_confdir }}/SIPconfig"
+# - SIP-server instance: kohalappi_1sip
+kohalxcs_kohaenv_sipname: kohalappi_1sip
+# - SIP-server params: min_servers (3), (# of SIP devices in SIPsrv)
+kohalxcs_kohaenv_sipminservers: 8
+# - SIP-server ip retrieved dynamically in the play, e.g $(hostname -I)
+#kohalxcs_kohaenv_sipserver: (127.0.0.1)
+# - SIP-server port: (6001), just one SIP & port for now
+kohalxcs_kohaenv_sipport: 6001
+# - SIP-server system log filename, overriden in SIPconfig-<xyz>.xml
+kohalxcs_kohaenv_siplogfile: "{{ kohalxc_organization|lower }}_sip.log"
+# - SIP-server transport: (RAW)/Telnet
+kohalxcs_kohaenv_siptrans: "RAW"
+# - SIP-server protocol: (SIP/2.00),SIP/2.10
+kohalxcs_kohaenv_sipproto: "SIP/2.10"
+
 # Koha/webapp: server name (DNS)
 kohalxcs_kohaenv_srvname: "{{ hostnode_kohaenv_srvname }}"
 # Koha/webapp: server title/org

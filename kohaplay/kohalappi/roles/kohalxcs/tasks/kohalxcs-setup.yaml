@@ -699,6 +699,7 @@
 ## Cronjobs for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
 #  - "cronjobs/process_message_queue.pl -v"
 #  - "migration_tools/rebuild_zebra.pl -a -b -x -z -v"
+#  - "cronjobs/cleanup_database.pl --sessions --zebraqueue --mail --logs
 - name: koha - Add cronjob(s) for Koha
   become: yes
   cron:
@@ -715,6 +716,75 @@
     - { name: "cleanup_database", job: "cronjobs/cleanup_database.pl -v --sessions --sessdays 7 --zebraqueue 7 --mail 7 --logs 7", hour: "3" }
   when:
     - kohalxcs_kohaenv_enabled
+
+##
+## Koha/webapp: SIP-service config => TODO: move to kohaenv-setup.yaml
+##
+
+## Retrieve Koha/LXC ip address
+- name: koha+sip - The IP of LXC/Koha
+  shell: /bin/hostname -I
+  register: cmd_hostip
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_sipenabled
+
+#- debug: var=cmd_hostip,cmd_hostip.stdout
+## Set Koha/LXC ip-address as SIP-server ip
+- name: koha+sip - Set SIP-server ip-address
+  set_fact:
+    kohalxcs_kohaenv_sipserver="{{ cmd_hostip.stdout | d('127.0.0.1') }}"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_sipenabled
+    - cmd_hostip|changed and cmd_hostip.stdout != ""
+
+## Copy some templetized SIP-service configs to Koha/LXC
+# - TODO: how to handle multiple SIP-servers/devices config?
+- name: koha+sip - Copy SIP-configuration(s) to Koha-LXCs
+  become: yes
+  vars:
+    sipname: "{{kohalxc_organization|lower}}_1sip"
+  template: >
+    src="files/kohaenv/{{ item.name }}.j2"
+    dest="{{ item.dir }}/{{ item.name }}"
+    mode="{{ item.mode | d('u=rw,g=r,o=r') }}"
+    owner="{{ item.owner | d('koha') }}"
+    group="{{ item.group | d('koha') }}"
+    backup="yes"
+  with_items:
+    - { name: 50-default.conf, dir: "/etc/rsyslog.d",
+        owner: root, group: root }
+    - { name: rsyslog-koha.conf, dir: "/etc/rsyslog.d",
+        owner: root, group: root }
+    - { name: "SIPconfig-{{sipname}}.xml",
+        dir: "{{ kohalxcs_kohaenv_sipconfdir }}" }
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_sipenabled
+
+## SIP-service script install/setup and starting of SIP-servers
+- name: koha+sip - Setup and (re)start Koha/SIP-server(s)
+  shell: |
+    echo "== ansible-kohalxc: Setup and (re)start SIP-service(s)..";
+    {{ kohalxcs_kohaenv_bindir }}/sip_shutdown.sh && ps aux | grep SIPServer | grep -v grep || echo "== ansible-kohalxc: Ensure no SIP-server(s) are running..";
+    {{ kohalxcs_kohaenv_bindir }}/sip_run.sh {{ kohalxcs_kohaenv_sipconfdir }}/SIPconfig-{{ kohalxcs_kohaenv_sipname }}.xml ~/log/{{ kohalxcs_kohaenv_sipname }}-out.log ~/log/{{ kohalxcs_kohaenv_sipname }}-err.log
+    echo && ps aux | grep SIPServer | grep -v grep &&
+    echo "== ansible-kohalxc: Koha/SIP-service(s) setup/running." ||
+    echo "== ansible-kohalxc: Koha/SIP-service(s) failed to start/run." ||
+    exit 0
+  args:
+    executable: /bin/bash
+  register: job_service_sipstart
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_sipenabled
+
+#ln -s -f /usr/share/koha/bin/koha-zebra-ctl.sh /etc/init.d/koha-zebra-daemon
+#update-rc.d koha-zebra-daemon defaults
+#su -l koha -c "ps aux | grep 'koha-zebra-ctl' | grep -v grep && service koha-zebra-daemon restart || service koha-zebra-daemon start"
+#chown koha -R /var/lib/koha
+#su -l koha -c "/usr/share/koha/bin/migration_tools/rebuild_zebra.pl -a -b -r -v -x &> log/zebra_rebuild-$(date +%Y%m%d_%H%M).log"
 
 ## !! For debug/dev FAIL here on purpose..!! ##
 #- fail:

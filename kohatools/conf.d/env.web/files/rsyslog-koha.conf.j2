@@ -1,0 +1,5 @@
+
+# File: /etc/rsyslog.d/rsyslog-koha.conf
+{{ ansible_managed | comment }}
+
+local6.*        /var/log/koha/{{sipname|d(kohalxcs_kohaenv_sipname)}}.log
