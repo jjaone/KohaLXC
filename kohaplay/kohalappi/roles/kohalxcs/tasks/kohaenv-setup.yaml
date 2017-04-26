@@ -63,25 +63,26 @@
 ## Format and apply Git-based patches to Koha-source/code
 - name: koha - Apply Git-based patches to Koha source and installation
   environment:
-    KOHALXC_PATCH_FORMATCMD: "{{ item.patch | d('echo') }}"
-    KOHALXC_PATCH_APPLYCMD: "patch --verbose -p1 -b -i 0001-{{ item.name }}-{{ item.desc }}.patch"
+    KOHALXC_PATCH_FORMATCMD: "{{ item.patch | d('echo') }} > .p{{ item.name }}"
+    KOHALXC_PATCH_APPLYCMD: "patch --verbose -p1 -b -i $(cat .p{{ item.name }})"
   shell: |
     pwd && [[ -d "{{ item.dir }}" ]] && (
     cd {{ item.dir }} && $KOHALXC_PATCH_FORMATCMD && $KOHALXC_PATCH_APPLYCMD )
   args:
     executable: /bin/bash
-    chdir: "{{item.dir}}"
-    creates: "0001-{{item.name}}-{{item.desc}}.patch"
+    chdir: "{{ item.dir }}"
+    creates: ".p{{ item.name }}"
   with_items: "{{ kohalxcs_kohaenv_gitpatches | d() }}"
   register: cmd_gitpatch
   when:
+    - false
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_gitpatches is defined
     - kohalxcs_kohaenv_gitpatch is not defined
 
 - debug: var=cmd_gitpatch
 ## Copy Git-dev/source tree patches/tweaks to Koha-installation dir(s):
-# - patch KD#1452 (only for english UI)
+# - patch-KD#1452 (only for english UI)
 # TODO: for f in 0001-{{item.name}}-*.patch; do cp -vp $f ${f/patch/patch.done}; donee
 - name: koha - Modify Koha-install by the above Git-dev/source patches
   become: yes
@@ -104,6 +105,7 @@
         srcdir: ".", destdir: "{{kohalxcs_kohaenv_staff_cgikoha}}",
         file: "members/memberentry.pl" }
   when:
+    - false
     - not cmd_gitpatch|skipped and cmd_gitpatch|changed
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_gitpatches is defined
