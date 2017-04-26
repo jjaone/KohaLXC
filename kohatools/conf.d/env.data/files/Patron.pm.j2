@@ -490,7 +490,7 @@ sub set_dateexpiry {
     #These patrons have no card creation date.
     if (! $cucarddate) {
 	# TODO/FIX:KohaLappi; we want now + 12 months (1 year) here
-        $self->{dateexpiry} = CommonRoutines::iso_standardize_date( $now + $yearlength);
+        $self->{dateexpiry} = CommonRoutines::iso_standardize_date( $now + $yearLength);
 	# - 2629743 is seconds in a month, 31556926 seconds is a year
     }
     #These patrons would expire their priviledges normally anyway
@@ -502,7 +502,7 @@ sub set_dateexpiry {
     else {
         #Get a random time within 1 year from now.
 	# TODO/FIX:KohaLappi; need to add extra year from which add (random) year
-        my $expirationDate = $now + $yearLenghth * int(  rand() * $yearLength  );
+        my $expirationDate = $now + $yearLength * int(  rand() * $yearLength  );
         
         $self->{dateexpiry} = CommonRoutines::iso_standardize_date( $expirationDate );
     }
