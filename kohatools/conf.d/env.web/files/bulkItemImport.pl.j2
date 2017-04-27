@@ -285,6 +285,7 @@ sub createCheckoutStatistics {
     | 2013-10-04 11:29:48 | IPT    | NULL     | 0.0000 | issue    |       | NULL     |          2 | BK       |             52 |               NULL | NULL  |
 =cut
 
+    ## TODO/FIX: kohalappi, fixed conversion lib name (KONVERSIO => KONKIR), -2017-04-27
     my ( $item, $lastrun ) = @_;
     if ($item) {
         my $issuesCount = $item->{issues};
@@ -294,13 +295,13 @@ sub createCheckoutStatistics {
                 push @$issues,
                     '("'
                   . $item->{homebranch}
-                  . '", "issue",  "KONVERSIO", "'
+                  . '", "issue",  "KONKIR", "'
                   . $item->{itemnumber} . '", "'
                   . $item->{itype} . '")';
                 push @$returns,
                     '("'
                   . $item->{homebranch}
-                  . '", "return", "KONVERSIO", "'
+                  . '", "return", "KONKIR", "'
                   . $item->{itemnumber} . '", "'
                   . $item->{itype} . '")';
             }
@@ -342,14 +343,14 @@ sub getRotatingCollectionFromHomebranch {
         return $rotatingCollections->{ $homebranch };
     }
 
-    my ($colId, $colTitle, $colDesc, $colBranchcode) = C4::RotatingCollections::GetCollectionByTitle('KONVERSIO'.$homebranch);
+    my ($colId, $colTitle, $colDesc, $colBranchcode) = C4::RotatingCollections::GetCollectionByTitle('KONKIR'.$homebranch);
     if (not($colId)) {
-        my ( $success, $errorcode, $errormessage ) = CreateCollection( 'KONVERSIO'.$homebranch, "Konversiossa $homebranch:ssa olleet siirtolainat", $homebranch );
+        my ( $success, $errorcode, $errormessage ) = CreateCollection( 'KONKIR'.$homebranch, "Konversiossa $homebranch:ssa olleet siirtolainat", $homebranch );
         if ($errormessage) {
             print $errormessage;
             return undef;
         }
-        ($colId, $colTitle, $colDesc, $colBranchcode) = C4::RotatingCollections::GetCollectionByTitle('KONVERSIO'.$homebranch);
+        ($colId, $colTitle, $colDesc, $colBranchcode) = C4::RotatingCollections::GetCollectionByTitle('KONKIR'.$homebranch);
     }
 
     $rotatingCollections->{ $homebranch } = $colId;

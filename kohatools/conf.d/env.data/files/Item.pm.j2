@@ -498,7 +498,8 @@ sub set_itype {
         $_[0]->{itype} = $itype->[0];
     }
     else {
-        $_[0]->{itype} = 'KONVERSIOVIRHE';
+	## DEGUG/TODO: kohalappi: corrected converion material type from 'KONVERSIOAINEISTOLAJI" to 'XX'
+        $_[0]->{itype} = 'XX';
         $_[0]->separateItemAsVolatile("Item barcode:".$_[0]->get_barcode()." has a bad material type:$matCode");
     }
 }
@@ -707,9 +708,9 @@ sub set_rotatingcollection {
         my $newOldRotationHomebranch = $licloqde->[1];
 
         if (!$newOldRotationHomebranch) {
-            $_[0]->separateItemAsVolatile("set_rotatingcollection(): Copyid '".$_[0]->{itemnumber}."': has a undefined rotatingcollection library, using KONVERSIO\n".
+            $_[0]->separateItemAsVolatile("set_rotatingcollection(): Copyid '".$_[0]->{itemnumber}."': has a undefined rotatingcollection library, using KONKIR\n".
                                           "locid => '".($locidold ? $locidold : '')."', depid => '".($depidold ? $depidold : '')."'");
-            $_[0]->{branchcode} = 'KONVERSIO';
+            $_[0]->{branchcode} = 'KONKIR';
         }
 
         $oldLocation->{date} =~ /(\d{4})(\d\d)(\d\d)/; #Turn ymd to d.m.y
@@ -832,7 +833,8 @@ sub separateItemAsVolatile {
     $log->warning( $errorStr . $_[0]->toString()."\n" );
 
     $_[0]->{volatile} = '1';
-    $_[0]->{home_ou} = 'KONVERSIO';
+    #$_[0]->{home_ou} = 'KONVERSIO';
+    $_[0]->{home_ou} = 'KONKIR';
 }
 
 1;

@@ -733,7 +733,7 @@
 ## Set Koha/LXC ip-address as SIP-server ip
 - name: koha+sip - Set SIP-server ip-address
   set_fact:
-    kohalxcs_kohaenv_sipserver="{{ cmd_hostip.stdout | d('127.0.0.1') }}"
+    kohalxcs_kohaenv_sipserver="{{ cmd_hostip.stdout|replace(' ','')|d('127.0.0.1') }}"
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_sipenabled
@@ -763,16 +763,18 @@
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_sipenabled
 
+- debug: var=kohalxcs_kohaenv_bindir,kohalxcs_kohaenv_sipconfdir,kohalxcs_kohaenv_sipname
 ## SIP-service script install/setup and starting of SIP-servers
 - name: koha+sip - Setup and (re)start Koha/SIP-server(s)
   shell: |
+    pwd && whoami &&
     echo "== ansible-kohalxc: Setup and (re)start SIP-service(s)..";
     {{ kohalxcs_kohaenv_bindir }}/sip_shutdown.sh && ps aux | grep SIPServer | grep -v grep || echo "== ansible-kohalxc: Ensure no SIP-server(s) are running..";
-    {{ kohalxcs_kohaenv_bindir }}/sip_run.sh {{ kohalxcs_kohaenv_sipconfdir }}/SIPconfig-{{ kohalxcs_kohaenv_sipname }}.xml ~/log/{{ kohalxcs_kohaenv_sipname }}-out.log ~/log/{{ kohalxcs_kohaenv_sipname }}-err.log
+    {{ kohalxcs_kohaenv_bindir }}/sip_run.sh {{ kohalxcs_kohaenv_sipconfdir }}/SIPconfig-{{ kohalxcs_kohaenv_sipname }}.xml ~/log/{{ kohalxcs_kohaenv_sipname }}-out.log ~/log/{{ kohalxcs_kohaenv_sipname }}-err.log;
+    echo && ls -la ~/log && ps aux | grep SIPServer
     echo && ps aux | grep SIPServer | grep -v grep &&
     echo "== ansible-kohalxc: Koha/SIP-service(s) setup/running." ||
-    echo "== ansible-kohalxc: Koha/SIP-service(s) failed to start/run." ||
-    exit 0
+    echo "== ansible-kohalxc: Koha/SIP-service(s) failed to start/run."
   args:
     executable: /bin/bash
   register: job_service_sipstart
