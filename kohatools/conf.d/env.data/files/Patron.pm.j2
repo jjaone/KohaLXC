@@ -502,7 +502,7 @@ sub set_dateexpiry {
     else {
         #Get a random time within 1 year from now.
 	# TODO/FIX:KohaLappi; need to add extra year from which add (random) year
-        my $expirationDate = $now + $yearLength * int(  rand() * $yearLength  );
+        my $expirationDate = $now + $yearLength + int(  rand() * $yearLength  );
         
         $self->{dateexpiry} = CommonRoutines::iso_standardize_date( $expirationDate );
     }
