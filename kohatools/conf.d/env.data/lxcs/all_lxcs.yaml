@@ -1,6 +1,7 @@
 ---
 lxcs_names:
   - kldev_dmdb.weblxc
-  - kldev_mdbks.weblxc
+  - klpre_mdbks.weblxc
   - kltest_dmdb.mdblxc
   - kltest_mdbks.mdblxc
+#  - kldev_mdbks.weblxc
