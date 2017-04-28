@@ -447,7 +447,12 @@ sub set_barcode {
     elsif ($CFG::CFG->{organization} eq 'kohalappi') {
 	# TODO/FIX: kohalappi; no checksum when len of identifyingNumber == 7
 	# - for the  dump 2 and/or production dump conversion(s)
-	if ($countyNumber eq '851')  { # Only for 'Tornio' (851) do the checksum checking
+	if ($countyNumber eq '851')  { # 'Tornio' (851) does  add checksum
+	    if (length($identifyingNumber) == 7)  {
+		$nochecknumber = 1;
+	    }
+        }
+	if ($countyNumber eq '732')  { # 'Salla' (732) does not add checksum
 	    if (length($identifyingNumber) == 7)  {
 		$nochecknumber = 1;
 	    }
