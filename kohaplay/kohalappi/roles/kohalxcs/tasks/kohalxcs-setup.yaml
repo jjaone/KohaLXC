@@ -263,7 +263,6 @@
   register: cmd_migrate_patrons_post
   when:
     - cmd_migrate_patrons_result is defined
-    - cmd_migrate_patrons_result.finished
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('patrons' in kohalxcs_mmtenv_migrateme|lower)
