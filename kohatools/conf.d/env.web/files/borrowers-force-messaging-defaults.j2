@@ -55,11 +55,11 @@ sub force_borrower_messaging_defaults {
     my $dbh = C4::Context->dbh;
 
     # Seems the script will handle this transaction by itself
-    # - but it always timeouts so try here wihh autocommit enabled
+    # - but it always timeouts, so using this w/ autocommit enabled
     $dbh->{AutoCommit} = 1;
     # When disabling autocommit, maybe make sure 'innodb_lock_wait_timeout' 
     # is long enough (but 600s was not enoung, needs 3600 or more even..):
-    # - 'SET GLOBAL innodb_lock_wait_timeout = 600' (in /etc/mysql/my.cnf, too)
+    # - 'SET GLOBAL innodb_lock_wait_timeout = 600' (in /etc/mysql/my.cnf,too)
     #$dbh->{AutoCommit} = 0;
 
     # Here, truncate does not work because of foreign key constraints

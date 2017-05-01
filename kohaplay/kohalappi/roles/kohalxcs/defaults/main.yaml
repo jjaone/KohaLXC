@@ -246,6 +246,9 @@ kohalxcs_kohaenv_staff_errorlog: "{{ kohalxcs_kohaenv_logdir }}/koha-error_log"
 kohalxcs_kohaenv_staff_accesslog: "{{ kohalxcs_kohaenv_logdir }}/koha-access_log"
 
 ## Koha/webapp: messaging (message_queue: emails and SMS etc,)
+# - SMS/GW-command path:
+kohalxcs_kohaenv_messaging_gwcmdurl: https://gw.labyrintti.com:28443/sendsms
+# - user/pass (vaulted)
 #kohalxcs_kohaenv_messaging_smsuser:
 #kohalxcs_kohaenv_messaging_smspass:
 kohalxcs_kohaenv_messaging_smsreporturl: "https://{{ kohalxcs_kohaenv_srvname}}/api/v1/{messagenumber}/report/{{ kohalxcs_kohaenv_messaging_smsprovider | d('smsprovider') }}"

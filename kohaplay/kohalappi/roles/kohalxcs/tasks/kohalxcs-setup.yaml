@@ -61,8 +61,8 @@
 ## Run conversion: check whether we are finished
 - name: data+ppmmt - Still in PP/MMT conversion of '{{kohalxcs_ppmmtenv_importchains}}' ({{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   async_status: jid={{ job_runconversion.ansible_job_id }}
-  register: cmd_runconversion_result
-  until: cmd_runconversion_result.finished
+  register: cmd_runconversion
+  until: cmd_runconversion.finished
   retries: "{{ 2* (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -71,7 +71,7 @@
     - kohalxcs_ppmmtenv_enabled
     - kohalxcs_ppmmtenv_importchains != ''
 
-#- debug: var=job_runconversion,cmd_runconversion_results
+#- debug: var=job_runconversion,cmd_runconversion
 ## Post conversion: finish conv. + tweaks and split/show log by ImportChain
 - name: data+ppmmt - Start post-PP/MMT tasks for '{{kohalxcs_ppmmtenv_importchains}}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins)
   environment:
@@ -107,8 +107,8 @@
 ## Post conversion: check whether we are finished
 - name: data+ppmmt - Still in post-PP/MMT tasks for '{{ kohalxcs_ppmmtenv_importchains }}' ({{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }} mins) ?
   async_status: jid={{ job_postconversion.ansible_job_id }}
-  register: cmd_postconversion_result
-  until: cmd_postconversion_result.finished
+  register: cmd_postconversion
+  until: cmd_postconversion.finished
   retries: "{{ kohalxcs_ppmmtenv_timeout|int // (2 * kohalxcs_ppmmtenv_checkdelay|d(60)) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -232,8 +232,8 @@
 - name: koha+mmt - Still migrating 'Patrons' ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrate_patrons.ansible_job_id }}
-  register: cmd_migrate_patrons_result
-  until: cmd_migrate_patrons_result.finished
+  register: cmd_migrate_patrons
+  until: cmd_migrate_patrons.finished
   retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -260,13 +260,13 @@
   args:
     executable: /bin/bash
     chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
-  register: cmd_migrate_patrons_post
+  register: cmd_migrate_patronspost
   when:
-    - cmd_migrate_patrons_result is defined
+    - cmd_migrate_patrons is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('patrons' in kohalxcs_mmtenv_migrateme|lower)
-#- debug: var=cmd_migrate_patrons_post
+#- debug: var=cmd_migrate_patronspost
 
 ## Migrate (Biblios): bibliographic MarcXML data migration to Koha
 # - generates '~koha/log/biblionumberConversionTable' (used in later migration stages)
@@ -291,8 +291,8 @@
 - name: koha+mmt - Still migrating 'Biblios' ({{ 5 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migratebiblios.ansible_job_id }}
-  register: cmd_migratebiblios_result
-  until: cmd_migratebiblios_result.finished
+  register: cmd_migrate_biblios
+  until: cmd_migrate_biblios.finished
   retries: "{{ 5 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ 2 * (kohalxcs_ppmmtenv_checkdelay|int) | d(120) }}"
   when:
@@ -332,8 +332,8 @@
 - name: koha+mmt - Still migrating 'SerialsBiblio' ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateserials.ansible_job_id }}
-  register: cmd_migrateserials_result
-  until: cmd_migrateserials_result.finished
+  register: cmd_migrate_serials
+  until: cmd_migrate_serials.finished
   retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -367,8 +367,8 @@
 - name: koha+mmt - Still migarating 'Items' ({{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateitems.ansible_job_id }}
-  register: cmd_migrateitems_result
-  until: cmd_migrateitems_result.finished
+  register: cmd_migrate_items
+  until: cmd_migrate_items.finished
   retries: "{{ 2 * (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -401,8 +401,8 @@
 - name: koha+mmt - Still migrating 'SerialItem(s)' ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateserialitems.ansible_job_id }}
-  register: cmd_migrateserialitems_result
-  until: cmd_migrateserialitems_result.finished
+  register: cmd_migrate_serialitems
+  until: cmd_migrate_serialitems.finished
   retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -440,8 +440,8 @@
 - name: koha+mmt - Still migrating 'Checkouts' ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migratecheckouts.ansible_job_id }}
-  register: cmd_migratecheckouts_result
-  until: cmd_migratecheckouts_result.finished
+  register: cmd_migrate_checkouts
+  until: cmd_migrate_checkouts.finished
   retries: "{{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -482,8 +482,8 @@
 - name: koha+mmt - Still migrating 'Holds' ({{ kohalxcs_ppmmtenv_timeout|int // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migrateholds.ansible_job_id }}
-  register: cmd_migrateholds_result
-  until: cmd_migrateholds_result.finished
+  register: cmd_migrate_holds
+  until: cmd_migrate_holds.finished
   retries: "{{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -512,12 +512,12 @@
     chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
   register: sql_reserves_sortholds
   when:
-    - cmd_migrate_holds_result is defined
-    - cmd_migrate_holds_result.finished
+    - cmd_migrate_holds is defined
     - kohalxcs_mdbenv_enabled
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - ('holds' in kohalxcs_mmtenv_migrateme|lower)
+- debug: var=sql_reservers_sortholds
 
 ## Migrate (Fines): borrower billing and fines data migration to Koha
 # - needs patrons and items (normal + serials) conversionTables for mapping
@@ -547,8 +547,8 @@
 - name: koha+mmt - Still migrating 'Fines' ({{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay | d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_migratefines.ansible_job_id }}
-  register: cmd_migratefines_result
-  until: cmd_migratefines_result.finished
+  register: cmd_migrate_fines
+  until: cmd_migrate_fines.finished
   retries: "{{ kohalxcs_ppmmtenv_timeout // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay | d(60) }}"
   when:
@@ -587,8 +587,8 @@
 - name: koha+mmt - Still building Biblios/Zebra index ({{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }} mins) ?
   become: yes
   async_status: jid={{ job_rebuildidx.ansible_job_id }}
-  register: cmd_rebuildidx_result
-  until: cmd_rebuildidx_result.finished
+  register: cmd_rebuildidx
+  until: cmd_rebuildidx.finished
   retries: "{{ (kohalxcs_ppmmtenv_timeout|int) // kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   delay: "{{ kohalxcs_ppmmtenv_checkdelay|d(60) }}"
   when:
@@ -649,6 +649,23 @@
   when:
     - kohalxcs_kohaenv_enabled
   notify: Restart smtp
+
+## Misc fixes/tweaks to Koha-install
+# - Messaging/Labyrintti Driver fixes correcting scandic letter in SMS
+- name: koha - Copy misc local tweaks/fixes to Koha-install
+  become: yes
+  template: >
+    src="files/kohaenv/{{ item.name }}.j2"
+    dest="{{ kohalxcs_kohaenv_perl5lib }}/{{ item.dir }}/{{ item.name }}"
+    mode="u=rw,g=r,o=r"
+    owner="koha"
+    group="{{ kohalxc_kohagrp_name }}"
+    backup="yes"
+  with_items:
+    - { name: Hdiacritic.pm, dir: Koha }
+    - { name: Driver.pm, dir: SMS/Send/Labyrintti }
+  when:
+    - kohalxcs_kohaenv_enabled
 
 ## Use templatized koha-conf.xml to configure this Koha-instance
 - name: koha - Templatized main Koha configuration
