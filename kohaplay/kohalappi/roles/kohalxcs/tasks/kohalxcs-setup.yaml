@@ -655,15 +655,19 @@
 - name: koha - Copy misc local tweaks/fixes to Koha-install
   become: yes
   template: >
-    src="files/kohaenv/{{ item.name }}.j2"
-    dest="{{ kohalxcs_kohaenv_perl5lib }}/{{ item.dir }}/{{ item.name }}"
-    mode="u=rw,g=r,o=r"
+    src="files/kohaenv/{{item.name}}.j2"
+    dest="{{item.destroot|d('/usr/share/koha')}}/{{item.dir}}/{{item.name}}"
+    mode="{{item.mode|d('u=rw,g=r,o=r')}}"
     owner="koha"
     group="{{ kohalxc_kohagrp_name }}"
     backup="yes"
   with_items:
-    - { name: Hdiacritic.pm, dir: Koha }
-    - { name: Driver.pm, dir: SMS/Send/Labyrintti }
+    - { name: Hdiacritic.pm, dir: Koha,
+        destroot: "{{ kohalxcs_kohaenv_perl5lib }}" }
+    - { name: Driver.pm, dir: SMS/Send/Labyrintti,
+        destroot: "{{ kohalxcs_kohaenv_perl5lib }}" }
+    - { name: pendingreserves.pl, dir: circ, mode: "u=rwx,g=rx,o=rx",
+        destroot: "{{ kohalxcs_kohaenv_staff_cgikoha }}" }
   when:
     - kohalxcs_kohaenv_enabled
 
