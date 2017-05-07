@@ -1,0 +1,58 @@
+
+# File: /etc/koha/koha-ssslle.conf
+{{ ansible_managed | comment }}
+
+# ##
+# Cerbot/letsenrypt configuration for SSL-certs for Lappi/production Koha
+# for domain: "koha.lapinkirjasto.fi" (and "virkailija.lapinkirjasto.fi")
+#
+# ##
+# To install:
+# 1. Eensure /opt/letsencrypt exist)
+# 2. Run 'certbot-auto' as: 
+# $ sudo /opt/letsencrypt/certbot-auto certonly -c /etc/koha/koha-sslle.conf
+# 3. Symlink certs for Apache2 (as root):
+# $ cd /etc/apache2/ssl
+#  a) SSLCertificateKeyFile
+# $ ln -s /etc/letsencrypt/live/koha.lapinkirjasto.fi/privkey.pem sslle_privkey.pem
+#  b) SSLCertificateFile
+# $ ln -s ../../letsencrypt/live/koha.lapinkirjasto.fi/cert.pem sslle_cert.pem
+#  c) SSLCertificateChainFile
+# $ ln -s ../../letsencrypt/live/koha.lapinkirjasto.fi/chain.pem sslle_chain.pem
+#  d) not used in Apache <= 2.4.7
+# $ ln -s ../../letsencrypt/live/koha.lapinkirjasto.fi/fullchain.pem sslle_fullchain.pem
+# 4. Copy above to OPAC/Intranet sections in /etc/apache/kohalappi-https.conf
+#
+
+# ## Below the kind of things you can do in a configuration file.
+# All flags used by the client can be configured here.
+# Run Certbot with "--help" to learn more about the available options.
+
+## Use a 4096 bit RSA key instead of 2048
+rsa-key-size = 4096
+
+## Register with the specified e-mail address
+# email = foo@example.com
+email = {{ kohalxcs_kohaenv_srvadmin }}
+
+## Generate certificates for the specified domains.
+# domains = example.com, www.example.com
+domains = {{ kohalxcs_kohaenv_srvname }}, virkailija.lapinkirjasto.fi
+
+## Use a text interface instead of ncurses
+# text = True
+
+## No prompts
+non-interactive
+#¤ Supress the TOS-agreement
+agree-tos = True
+
+## Use the standalone authenticator on port 443
+authenticator = standalone
+# standalone-supported-challenges = tls-sni-01
+#standalone-supported-challenges = tls-sni-01
+
+# Uncomment to use the webroot authenticator. Replace webroot-path with the
+# path to the public_html / webroot folder being served by your web server.
+# authenticator = webroot
+# webroot-path = /usr/share/nginx/html

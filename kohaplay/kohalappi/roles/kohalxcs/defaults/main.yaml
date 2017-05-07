@@ -180,13 +180,13 @@ kohalxcs_kohaenv_sipenabled: true
 # - SIP-server config dir:
 kohalxcs_kohaenv_sipconfdir: "{{ kohalxcs_kohaenv_confdir }}/SIPconfig"
 # - SIP-server instance: kohalappi_1sip
-kohalxcs_kohaenv_sipname: kohalappi_1sip
+kohalxcs_kohaenv_sipname: kohalappi_sip
 # - SIP-server params: min_servers (3), (# of SIP devices in SIPsrv)
-kohalxcs_kohaenv_sipminservers: 8
+kohalxcs_kohaenv_sipminservers: 3
 # - SIP-server ip retrieved dynamically in the play, e.g $(hostname -I)
 #kohalxcs_kohaenv_sipserver: (127.0.0.1)
-# - SIP-server port: (6001), just one SIP & port for now
-kohalxcs_kohaenv_sipport: 6001
+# - SIP-server port: (8020-8023, note: 6000-6003 d not work in Lappi)
+kohalxcs_kohaenv_sipport: 8020
 # - SIP-server system log filename, overriden in SIPconfig-<xyz>.xml
 kohalxcs_kohaenv_siplogfile: "{{ kohalxc_organization|lower }}_sip.log"
 # - SIP-server transport: (RAW)/Telnet
@@ -209,10 +209,12 @@ kohalxcs_kohaenv_perl5lib: /usr/share/koha/lib
 kohalxcs_kohaenv_bindir: /usr/share/koha/bin
 # Koha/webapp: log directory
 kohalxcs_kohaenv_logdir: /var/log/koha
-# Koha/webapp: Have support for https?
+# Koha/webapp: Support for https?
 kohalxcs_kohaenv_https: true
-# Koha/webapp: Have support for LetsEncrypt-verified SSL-certificates?
-kohalxcs_kohaenv_sslle: false
+# Koha/webapp: Support for Self-signed SSL-certificates? (either this or..)
+kohalxcs_kohaenv_sslss: false
+# Koha/webapp: Support for LetsEncrypt-verified SSL-certificates? (..this)
+kohalxcs_kohaenv_sslle: true
 
 # Koha/webapp (OPAC): vhost port
 kohalxcs_kohaenv_opac_vhostport: 443

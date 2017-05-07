@@ -19,6 +19,11 @@
 - name: Restart ssh
   service: name=ssh state=restarted
 
+## Stop httpd/ www-server (Apache2)
+- name: Stop webserver
+  become: yes
+  service: name=apache2 state=stopped
+
 ## Restart httpd/ www-server (Apache2)
 - name: Restart webserver
   become: yes

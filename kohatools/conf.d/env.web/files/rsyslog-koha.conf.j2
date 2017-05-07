@@ -1,5 +1,7 @@
 
 # File: /etc/rsyslog.d/rsyslog-koha.conf
+# - use same rsyslog facility+file (but diffrent name) for each SIP-server
 {{ ansible_managed | comment }}
 
-local6.*        /var/log/koha/{{sipname|d(kohalxcs_kohaenv_sipname)}}.log
+local6.*        /var/log/koha/{{kohalxc_organization|lower}}_sip.log
+#local6.*        /var/log/koha/{{sipname|d(kohalxcs_kohaenv_sipname)}}.log

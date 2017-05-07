@@ -580,7 +580,7 @@
   when:
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ( 'zebra' in kohalxcs_mmtenv_migrateme|lower ) or ( ('biblios' in kohalxcs_ppmmtenv_importchains|lower) and ('biblios' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('items' in kohalxcs_ppmmtenv_importchains|lower) and ('items' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('serials' in kohalxcs_ppmmtenv_importchains|lower) and ('serials' in kohalxcs_mmtenv_migrateme|lower) )
+    - ( 'zebrasrv' in kohalxcs_mmtenv_migrateme|lower ) or ( ('biblios' in kohalxcs_ppmmtenv_importchains|lower) and ('biblios' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('items' in kohalxcs_ppmmtenv_importchains|lower) and ('items' in kohalxcs_mmtenv_migrateme|lower) ) or ( ('serials' in kohalxcs_ppmmtenv_importchains|lower) and ('serials' in kohalxcs_mmtenv_migrateme|lower) )
 
 #- debug: var=kohalxcs_ppmmtenv_timeout,kohalxcs_ppmmtenv_checkdelay,kohalxcs_ppmmtenv_checkfinished
 ## Zebra rebuild: check whether we are finished
@@ -596,7 +596,7 @@
     - job_rebuildidx.ansible_job_id is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ( 'zebra' in kohalxcs_mmtenv_migrateme|lower ) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme)
+    - ( 'zebrasrv' in kohalxcs_mmtenv_migrateme|lower ) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme)
 
 ##
 ## Koha/webapp-setup after this point => TODO: move to kohaenv-setup.yaml
@@ -671,8 +671,8 @@
   when:
     - kohalxcs_kohaenv_enabled
 
-## Use templatized koha-conf.xml to configure this Koha-instance
-- name: koha - Templatized main Koha configuration
+## Use templatized koha-conf.xml to configure Koha
+- name: koha - Generate Koha main configuration
   become: yes
   template: >
     src="files/kohaenv/koha-conf.xml.j2"
@@ -680,50 +680,14 @@
     mode="u=rw,g=r,o=r"
     owner="koha"
     group="{{ kohalxc_kohagrp_name }}"
-    backup="yes"
+    backup="no"
   when:
     - kohalxcs_kohaenv_enabled
-  notify: Restart webserver
+  notify: Stop webserver
 
 - debug: var=hostnode_kohaenv_srvname,kohalxcs_kohaenv_enabled,kohalxcs_kohaenv_srvname,kohalxcs_kohaenv_https,kohalxcs_kohaenv_sslle,kohalxc_organization
-## Install LetsEncrypt/certbot client for SSL-certificates
-- name: koha+ssl - Install LetsEncrypt from Git for SSL-certificate generation
-  become: yes
-  shell: mkdir -p /opt/letsencrypt && git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt &% cd /etc/letsencrypt && ./letsencrypt-auto certonly --email {{ kohalxcs_kohaenv_srvadmin | d() }} --apache -d {{ kohalxcs_kohaenv_srvname }}
-  args:
-    chdir: /opt
-    executable: /bin/bash
-  when:
-    - kohalxcs_kohaenv_enabled
-    - kohalxcs_kohaenv_https
-    - kohalxcs_kohaenv_sslle
 
-## Configure Koha(Apache2) OPAC and Intranet for https
-- name: koha+ssl - Generate Koha/Apache2 https config (only if 'kohaenv_srvname' is set)
-  become: yes
-  #become_user: koha
-  template: >
-    src="files/kohaenv/{{ kohalxc_organization|lower }}-https.conf.j2"
-    dest="{{ kohalxcs_kohaenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf"
-    mode="u=rw,g=r,o=r"
-    owner="koha"
-    group="koha"
-    backup="yes"
-  when:
-    - kohalxcs_kohaenv_enabled
-    - kohalxc_organization is defined
-    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
-
-- name: koha+ssl - Make available our SSL-site configuration in Koha/Apache2
-  become: yes
-  shell: ln -s -f {{ kohalxcs_kohaenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
-  #shell: service apache stop && a2enmod ssl && a2dissite koha.conf && ln -s -f /etc/koha/{{ kohalxc_organization | lower }}-https.conf /etc/apache2/sites-enabled/koha-ssl.conf && service apache2 restart
-  when:
-    - kohalxcs_kohaenv_enabled
-    - kohalxc_organization is defined
-    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
-
-## Generate SSL-certificate (self-signed)
+## Generate self-signed SSL-certificate for Koha
 - name: koha+ssl - Generate server.key and self-signed SSL-certificate for Koha/Apache2
   become: yes
   shell: mkdir -p /etc/apache2/ssl && openssl genrsa -des3 -passout pass:x -out /tmp/server.pass.key 2048 && openssl rsa -passin pass:x -in /tmp/server.pass.key -out /tmp/server.key && rm -f /tmp/server.pass.key && openssl req -new -subj "/C=FI/ST={{ hostnode_environment | d('local') }}/L={{ kohalxc_organization }}/O={{ kohalxcs_kohaenv_srvtitle | d('Koha Library') }}/OU={{ kohalxc_organization }} ({{ hostnode_environment | d('local') }})/CN={{ kohalxcs_kohaenv_srvname | d('localhost') }}" -key /tmp/server.key -out /tmp/server.csr && openssl x509 -req -sha256 -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /etc/apache2/ssl/server.crt && cp -vpf /tmp/server.key /etc/apache2/ssl/. && rm -f /tmp/server.*
@@ -737,6 +701,67 @@
     - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
     - (kohalxcs_kohaenv_sslle is not defined) or (not kohalxcs_kohaenv_sslle)
 
+## Copy LetsEncrypt/Cerbot configuration (cli.ini) to Koha-config dir
+- name: koha+ssl(le) - Generate LetsEncrypt/SSL configuration file (cli.ini)
+  become: yes
+  template: >
+    src="files/kohaenv/koha-sslle.conf.j2"
+    dest="{{ kohalxcs_kohaenv_confdir }}/koha-sslle.conf"
+    mode="u=rw,g=r,o=r"
+    owner="koha"
+    group="{{ kohalxc_kohagrp_name }}"
+    backup="no"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_https
+    - kohalxcs_kohaenv_sslle
+
+## Install LetsEncrypt/certbot client and SSL-certificates for Koha
+- name: koha+ssl(le) - Use LetsEncrypt/cerbot-auto to make SSL-certificates
+  become: yes
+  shell: |
+    mkdir -p /opt/letsencrypt && git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt || ( [[ "$?" == "128" && -e /opt/letsencrypt/certbot-auto ]] && echo ) && [[ -f /etc/koha/koha-sslle.conf ]] && service apache2 stop &&
+    /opt/letsencrypt/certbot-auto certonly --expand -c /etc/koha/koha-sslle.conf
+    (cd /etc/apache2/ssl &&
+    ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/privkey.pem sslle_key.pem
+    ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/cert.pem sslle_cert.pem
+    ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/chain.pem sslle_chain.pem
+    ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/fullchain.pem sslle_fullchain.pem
+    )
+  args:
+    chdir: /etc/koha
+    executable: /bin/bash
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxcs_kohaenv_https
+    - kohalxcs_kohaenv_sslle
+
+## Configure Koha(Apache2) OPAC and Intranet for https
+# - TODO: need to separate self-signed and letsencrypt SSLs by Jinja2
+- name: koha+ssl - Generate Koha/Apache2 https config (only if 'kohaenv_srvname' is set)
+  become: yes
+  template: >
+    src="files/kohaenv/{{ kohalxc_organization|lower }}-https.conf.j2"
+    dest="{{ kohalxcs_kohaenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf"
+    mode="u=rw,g=r,o=r"
+    owner="koha"
+    group="koha"
+    backup="yes"
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxc_organization is defined
+    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
+
+## Symlink https-configuration from Koha-config to Apache2 sites
+- name: koha+ssl - Make available our SSL-site configuration in Koha/Apache2
+  become: yes
+  shell: ln -s -f {{ kohalxcs_kohaenv_confdir }}/{{ kohalxc_organization|lower }}-https.conf /etc/apache2/sites-available/koha-ssl.conf
+  when:
+    - kohalxcs_kohaenv_enabled
+    - kohalxc_organization is defined
+    - kohalxcs_kohaenv_https and kohalxcs_kohaenv_srvname
+
+## Enable SSL in Apache2 (disable http sites) an restart
 - name: koha+ssl - Enable SSL (switch to https) restart Koha/Apache2
   become: yes
   shell: service apache2 stop && a2dissite koha.conf && a2enmod ssl && a2ensite koha-ssl.conf
@@ -746,9 +771,11 @@
   notify: Restart webserver
 
 ## Cronjobs for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
-#  - "cronjobs/process_message_queue.pl -v"
-#  - "migration_tools/rebuild_zebra.pl -a -b -x -z -v"
-#  - "cronjobs/cleanup_database.pl --sessions --zebraqueue --mail --logs
+# - "cronjobs/cart_to_shelf.pl --hours 12"
+# - "cronjobs/holds/cancel_expired_holds -v"
+# - "cronjobs/process_message_queue.pl -v"
+# - "migration_tools/rebuild_zebra.pl -a -b -x -z -v"
+# - "cronjobs/cleanup_database.pl --sessions --zebraqueue --mail --logs
 - name: koha - Add cronjob(s) for Koha
   become: yes
   cron:
@@ -760,12 +787,19 @@
     minute: "{{ item.minute | d('*') }}"
     state: present
   with_items:
-    - { name: "process_message_queue", job: "cronjobs/process_message_queue.pl -v" }
-    - { name: "rebuild_zebra", job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v", minute: "*/1" }
-    - { name: "cleanup_database", job: "cronjobs/cleanup_database.pl -v --sessions --sessdays 7 --zebraqueue 7 --mail 7 --logs 7", hour: "3" }
+    - { name: "cart_to_shelf", hour: "9,21", minute: "1",
+        job: "cronjobs/cart_to_shelf.pl --hours 12" }
+    - { name: "cancel_expired_holds", hour: "4", minute: "1",
+        job: "cronjobs/holds/cancel_expired_holds.pl -v" }
+    - { name: "process_message_queue",
+        job: "cronjobs/process_message_queue.pl -v" }
+    - { name: "rebuild_zebra",
+        job: "migration_tools/rebuild_zebra.pl -a -b -x -z -v" }
+    - { name: "cleanup_database", hour: "3",
+        job: "cronjobs/cleanup_database.pl -v --sessions --sessdays 7 --zebraqueue 7 --mail 7 --logs 7" }
   when:
     - kohalxcs_kohaenv_enabled
-    - ( 'zebra' in kohalxcs_mmtenv_migrateme|lower )
+    - ( 'cronsrv' in kohalxcs_mmtenv_migrateme|lower )
 
 ##
 ## Koha/webapp: SIP-service config => TODO: move to kohaenv-setup.yaml
@@ -788,32 +822,35 @@
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_sipenabled
     - cmd_hostip|changed and cmd_hostip.stdout != ""
+    - ( 'sipsrv' in kohalxcs_mmtenv_migrateme|lower )
 
-## Copy some templetized SIP-service configs to Koha/LXC
-# - TODO: how to handle multiple SIP-servers/devices config?
-- name: koha+sip - Copy SIP-configuration(s) to Koha-LXCs
+## Copy templetized SIP-service configs to Koha/LXC
+# - TODO: how to handle multiple SIP-servers start/stop/restart?
+- name: koha+sip - Copy SIP-configuration(s) and rsyslog to Koha-LXCs
   become: yes
-  vars:
-    sipname: "{{kohalxc_organization|lower}}_1sip"
   template: >
     src="files/kohaenv/{{ item.name }}.j2"
     dest="{{ item.dir }}/{{ item.name }}"
     mode="{{ item.mode | d('u=rw,g=r,o=r') }}"
     owner="{{ item.owner | d('koha') }}"
     group="{{ item.group | d('koha') }}"
-    backup="yes"
+    backup="no"
   with_items:
-    - { name: 50-default.conf, dir: "/etc/rsyslog.d",
-        owner: root, group: root }
-    - { name: rsyslog-koha.conf, dir: "/etc/rsyslog.d",
-        owner: root, group: root }
-    - { name: "SIPconfig-{{sipname}}.xml",
-        dir: "{{ kohalxcs_kohaenv_sipconfdir }}" }
+    - { name: 50-default.conf, dir: "/etc/rsyslog.d", owner: root, group: root }
+    - { name: rsyslog-koha.conf, dir: "/etc/rsyslog.d", owner: root, group: root }
+    - { name: "SIPconfig-{{kohalxc_organization|lower}}_1sip.xml",
+        dir: "{{ kohalxcs_kohaenv_sipconfdir }}",
+        sip: "1sip", minsrv: 8, port: 8021 }
+    - { name: "SIPconfig-{{kohalxc_organization|lower}}_2sip.xml",
+        dir: "{{ kohalxcs_kohaenv_sipconfdir }}",
+        sip: "2sip", minsrv: 5, port: 8022 }
+    - { name: "SIPconfig-{{kohalxc_organization|lower}}_3sip.xml",
+        dir: "{{ kohalxcs_kohaenv_sipconfdir }}",
+        sip: "3sip", minsrv: 10, port: 8023 }
   when:
-    - false
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_sipenabled
-    -  ( 'zebra' in kohalxcs_mmtenv_migrateme|lower )
+    -  ( 'sipsrv' in kohalxcs_mmtenv_migrateme|lower )
 
 #- debug: var=kohalxcs_kohaenv_bindir,kohalxcs_kohaenv_sipconfdir,kohalxcs_kohaenv_sipname
 ## SIP-service script install/setup and starting of SIP-servers
@@ -821,20 +858,23 @@
   shell: |
     pwd && whoami &&
     echo "== ansible-kohalxc: Setup and (re)start SIP-service(s)..";
-    {{ kohalxcs_kohaenv_bindir }}/sip_shutdown.sh && ps aux | grep SIPServer | grep -v grep || echo "== ansible-kohalxc: Ensure no SIP-server(s) are running..";
-    nohup {{ kohalxcs_kohaenv_bindir }}/sip_run.sh {{ kohalxcs_kohaenv_sipconfdir }}/SIPconfig-{{ kohalxcs_kohaenv_sipname }}.xml ~/log/{{ kohalxcs_kohaenv_sipname }}-out.log ~/log/{{ kohalxcs_kohaenv_sipname }}-err.log;
-    echo && ls -la ~/log && ps aux | grep SIPServer
-    echo && ps aux | grep SIPServer | grep -v grep &&
-    echo "== ansible-kohalxc: Koha/SIP-service(s) setup/running." ||
-    echo "== ansible-kohalxc: Koha/SIP-service(s) failed to start/run."
+    {{kohalxcs_kohaenv_bindir}}/sip_shutdown.sh {{item|d('sip')}} && ps aux | grep SIPServer | grep -v grep || echo "== ansible-kohalxc: Ensure SIP '{{item}}' is stopped.";
+    [[ -f {{kohalxcs_kohaenv_sipconfdir}}/SIPconfig-{{kohalxc_organization|lower}}_{{item|d('sip')}}.xml ]] && nohup {{kohalxcs_kohaenv_bindir}}/sip_run.sh {{kohalxcs_kohaenv_sipconfdir}}/SIPconfig-{{kohalxc_organization|lower}}_{{item|d('sip')}}.xml ~/log/{{kohalxc_organization|lower}}_{{item|d('sip')}}-out.log ~/log/{{kohalxc_organization|lower}}_{{item|d('sip')}}-err.log;
+    echo && ls -la ~/log && ps aux | grep "SIPServer.*{{item}}"
+    echo && ps aux | grep "SIPServer.*{{item}}" | grep -v grep &&
+    echo "== ansible-kohalxc: Koha/SIP '{{item}}' setup/running." ||
+    echo "== ansible-kohalxc: Koha/SIP-'{{item}}' failed to start/run."
   args:
     executable: /bin/bash
+  with_items:
+    - 1sip
+    - 2sip
+    - 3sip
   register: job_service_sipstart
   when:
-    - false
     - kohalxcs_kohaenv_enabled
     - kohalxcs_kohaenv_sipenabled
-    -  ( 'zebra' in kohalxcs_mmtenv_migrateme|lower )
+    -  ( 'sipsrv' in kohalxcs_mmtenv_migrateme|lower )
 
 #ln -s -f /usr/share/koha/bin/koha-zebra-ctl.sh /etc/init.d/koha-zebra-daemon
 #update-rc.d koha-zebra-daemon defaults
