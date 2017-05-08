@@ -721,7 +721,7 @@
   become: yes
   shell: |
     mkdir -p /opt/letsencrypt && git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt || ( [[ "$?" == "128" && -e /opt/letsencrypt/certbot-auto ]] && echo ) && [[ -f /etc/koha/koha-sslle.conf ]] && service apache2 stop &&
-    /opt/letsencrypt/certbot-auto certonly --expand -c /etc/koha/koha-sslle.conf
+    /opt/letsencrypt/certbot-auto certonly -n --expand -c /etc/koha/koha-sslle.conf
     (cd /etc/apache2/ssl &&
     ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/privkey.pem sslle_key.pem
     ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/cert.pem sslle_cert.pem
