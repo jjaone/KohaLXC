@@ -72,11 +72,12 @@
 - name: lxc - Combine all read LXC definitions
   set_fact:
     hostnode_lxcs:
-      - "{{ kldev_dmdb   | d() }}"
+#      - "{{ kldev_dmdb   | d() }}"
 #      - "{{ kldev_mdbks  | d() }}"
-      - "{{ klpre_mdbks  | d() }}"
-      - "{{ kltest_dmdb  | d() }}"
-      - "{{ kltest_mdbks | d() }}"
+#      - "{{ klpre_mdbks  | d() }}"
+#      - "{{ kltest_dmdb  | d() }}"
+     - "{{ klpre_mdbks0  | d() }}"
+     - "{{ kltest_mdbks | d() }}"
 - debug: msg="{{ hostnode_lxcs|map(attribute='net')|list }}"
 
 ## Get LXC environment from lxc.group's in container_config

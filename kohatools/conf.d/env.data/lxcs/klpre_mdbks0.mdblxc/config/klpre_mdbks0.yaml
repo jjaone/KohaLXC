@@ -1,5 +1,5 @@
 ---
-# File: lxcs/kltest_mdbks.mdblxc/config/kltest_mdbks.yaml
+# File: lxcs/klpre_mdbks0.mdblxc/config/klpre_mdbks0.yaml
 # #############################################################################
 # Code is part of the KohaLXC/kohatools Ansible/Bash tooling environment
 # for Koha/ILS-development, deployment & database conversion/migration tasks.
@@ -7,26 +7,26 @@
 # License: GNU General Public License version 3.
 #
 # Description:
-# - LXC-name: 'kltest_mdbks.mdblxc'
+# - LXC-name: 'klpre_mdbks0.mdblxc'
 # - kltest: KohaLappi/testing, Ubuntu/Trusty, dir, lxcbr0/NAT
 # - mdbks: MariaDB + Koha-dev (KohaSuomi_3.16)
-# - mdblxc: deploy to host serving '*mdblxc'-domains
-# - network: (web)app[OPAC]-port=85, (web)int[staff]-port=8085
+# - weblxc: deploy to host serving '*weblxc'-domains
+# - network: (web)app[OPAC]-port=86, (web)int[staff]-port=8086
 # #############################################################################
 
 ## network LXC/host port mappings + domain:
-# - (web/mdb)lxc => host: 85/8085 => 80/8080
+# - (web/mdb)lxc => host: 443/88/8086 => 443/80/8080
 net:
-  app_port: 85
-  int_port: 8085
+  app_port: 86
+  int_port: 8086
   domain: mdblxc
-  srvname: "testikoha.lapinkirjasto.fi"
+  srvname: "srv.lapinkirjasto.fi"
   #srvname: "{{ hostnode_kohaenv_srvname | d('localhost') }}"
   user: kohaoper
 ##  lxc: MariaDb (mdbenv), MMT/migration (mmtenv), Apache2+KS316 (kohaenv)
-# - for MMT/migration and Koha-testing etc. (testing, dhcp/mdblxc)
+# - for MMT/migration and Koha-production etc. (testing, dhcp/mdblxc)
 lxc:
-  name: kltest_mdbks
+  name: klpre_mdbks0
   state: started
   backing_store: "{{ lxc_default.backing_store }}"
   container_log: "{{ lxc_default.container_log }}"
@@ -39,7 +39,7 @@ lxc:
     #- "lxc.mount.entry = /home/koha/dumpdefault/target home/kohaoper/{{kohalxc_organization}}/kohadata/target {{ hostnode_lxc_mount_post }}"
     # lxc/group
     #- lxc.group = {{ hostnode_environment | d('local') }}
-    - lxc.group = testing
+    - lxc.group = production
     - lxc.group = dev
     - lxc.group = mdb
     - lxc.group = mmt
@@ -49,7 +49,7 @@ lxc:
     - lxc.start.delay = 0
     - lxc.start.order = 0
     # lxc/network
-    - lxc.network.veth.pair = Vkltest_mdbks
+    - lxc.network.veth.pair = Vklpre_mdbks0
     - lxc.network.type = veth
     - lxc.network.link = lxcbr0
     - lxc.network.flags = up
