@@ -47,6 +47,8 @@ sub force_borrower_messaging_defaults {
 
     # List the categorycodes to which only messaging preferences should apply
     my @categoryCodes = qw(HENKILO LAPSI HUOLLETTAV YHTEISO);
+    my $sms;
+    my $email;
 
     $since = '0000-00-00' if (!$since);
 
@@ -70,9 +72,10 @@ sub force_borrower_messaging_defaults {
         $sth->execute();
     }
     
-    my $sth = $dbh->prepare("SELECT borrowernumber, categorycode, smsalertnumber FROM borrowers WHERE dateenrolled >= ?");
+    my $sth = $dbh->prepare("SELECT borrowernumber, categorycode, email, smsalertnumber FROM borrowers WHERE dateenrolled >= ?");
     $sth->execute($since);
-    while ( my ($borrowernumber, $categorycode, $sms) = $sth->fetchrow ) {
+    while ( my ($borrowernumber, $categorycode, $email, $sms) = $sth->fetchrow ) {
+        $email = "" unless defined $email;
         $sms = "" unless defined $sms;
         next unless $doit;
 
@@ -84,7 +87,7 @@ sub force_borrower_messaging_defaults {
         #if ($categorycode ~~ @categoryCodes && $sms ne '') {
 
         if ($categorycode ~~ @categoryCodes) {
-          print "Set messaging preferences/categorycode:$categorycode for $borrowernumber (sms:$sms)\n"; 
+          print "Set messaging preferences/categorycode:$categorycode for $borrowernumber (sms:$sms, email:$email)\n";
           C4::Members::Messaging::SetMessagingPreferencesFromDefaults( {
               borrowernumber => $borrowernumber,
               categorycode   => $categorycode,

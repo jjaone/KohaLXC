@@ -182,7 +182,7 @@
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
     - kohalxc_kohagrp_name is defined
-    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme|lower) or ('holds' in kohalxcs_mmtenv_migrateme|lower)
+    - ('patrons' in kohalxcs_ppmmtenv_importchains|lower) or ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('patronpost' in kohalxcs_mmtenv_migrateme|lower) or ('staffaccounts' in kohalxcs_mmtenv_migrateme|lower) or ('biblios' in kohalxcs_mmtenv_migrateme|lower) or ('items' in kohalxcs_mmtenv_migrateme|lower) or ('serials' in kohalxcs_mmtenv_migrateme|lower) or ('holds' in kohalxcs_mmtenv_migrateme|lower)
 
 ## Migrate
 # TODO: SQL for preserving db tables data before migrating:
@@ -244,16 +244,16 @@
     - ('patrons' in kohalxcs_ppmmtenv_importchains|lower)
 
 ## Migrate (Patrons): post-migration fixes/tweaks to database data
-# - TODO/FIX: this takes a long time (abt 1 hour), need to
+# - TODO/FIX: this takes quite a long time (abt 1.5 hours), need to
 #             have async task handling here, too (see above)..
-#
 - name: koha+mmt - Post-migration steps for 'Patrons'..
   become: yes
   environment:
     KOHALXC_TOOLDIR: "{{ kohalxcs_kohalxc_tooldir }}"
     KOHALXC_DATADIR: "{{ kohalxcs_dataenv_datadir }}"
   shell: |
-    [[ -d Patrons ]] && echo "== ansible-kohalxc: Set messaging defaults per categorycode for borrowers w/ smsalertnumber on $(date +%Y%m%d_%H%M).." && (
+    [[ -d Patrons ]] &&
+    echo "== ansible-kohalxc: Set messaging defaults per category for borrowers on $(date +%Y%m%d_%H%M).." && (
     [[ -x {{kohalxcs_kohaenv_bindir}}/maintenance/borrowers-force-messaging-defaults ]] && 
     su -l koha -c "borrowers-force-messaging-defaults --doit &> ~koha/log/borrowers_force_messaging_defaults-$(date +%Y%m%d_%H%M);" )
     exit 0
@@ -262,10 +262,10 @@
     chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
   register: cmd_migrate_patronspost
   when:
-    - cmd_migrate_patrons is defined
+#    - cmd_migrate_patrons is defined
     - kohalxcs_kohaenv_enabled
     - kohalxcs_mmtenv_enabled
-    - ('patrons' in kohalxcs_mmtenv_migrateme|lower)
+    - ('patrons' in kohalxcs_mmtenv_migrateme|lower) or ('patronpost' in kohalxcs_mmtenv_migrateme|lower)
 #- debug: var=cmd_migrate_patronspost
 
 ## Migrate (Biblios): bibliographic MarcXML data migration to Koha
@@ -278,7 +278,7 @@
     exit 0
   args:
     executable: /bin/bash
-    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
   async: "{{ 5 * (kohalxcs_ppmmtenv_timeout|int) }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migratebiblios
@@ -319,7 +319,7 @@
     exit 0
   args:
     executable: /bin/bash
-    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
   async: "{{ kohalxcs_ppmmtenv_timeout }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migrateserials
@@ -354,7 +354,7 @@
     exit 0
   args:
     executable: /bin/bash
-    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
   async: "{{ 2 * (kohalxcs_ppmmtenv_timeout|int) }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migrateitems
@@ -388,7 +388,7 @@
     exit 0
   args:
     executable: /bin/bash
-    chdir: "{{ kohalxcs_dataenv_datadir }}//source.0/target"
+    chdir: "{{ kohalxcs_dataenv_datadir }}/source.0/target"
   async: "{{ kohalxcs_ppmmtenv_timeout }}"
   poll: "{{ kohalxcs_ppmmtenv_polling | d(0) }}"
   register: job_migrateserialitems
