@@ -217,7 +217,8 @@ kohalxcs_kohaenv_sslss: false
 kohalxcs_kohaenv_sslle: true
 
 # Koha/webapp (OPAC): vhost port
-kohalxcs_kohaenv_opac_vhostport: 443
+kohalxcs_kohaenv_opac_vhostport: 80
+#kohalxcs_kohaenv_opac_vhostport: 443
 # Koha/webapp (OPAC): server admin (email)
 kohalxcs_kohaenv_opac_srvadmin: "{{ kohalxcs_kohaenv_srvadmin }}"
 # Koha/webapp (OPAC): document root
@@ -231,7 +232,8 @@ kohalxcs_kohaenv_opac_errorlog: "{{ kohalxcs_kohaenv_logdir }}/koha-opac-error_l
 kohalxcs_kohaenv_opac_accesslog: "{{ kohalxcs_kohaenv_logdir }}/koha-opac-access_log"
 
 # Koha/webapp (Staff): vhost port
-kohalxcs_kohaenv_staff_vhostport: 8080
+kohalxcs_kohaenv_staff_vhostport: 443
+#kohalxcs_kohaenv_staff_vhostport: 8080
 # Koha/webapp (Staff): server admin (email)
 kohalxcs_kohaenv_staff_srvadmin: "{{ kohalxcs_kohaenv_srvadmin }}"
 # Koha/webapp (Staff): document root

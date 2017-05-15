@@ -680,7 +680,7 @@
     mode="u=rw,g=r,o=r"
     owner="koha"
     group="{{ kohalxc_kohagrp_name }}"
-    backup="no"
+    backup="yes"
   when:
     - kohalxcs_kohaenv_enabled
   notify: Stop webserver
@@ -721,7 +721,7 @@
   become: yes
   shell: |
     mkdir -p /opt/letsencrypt && git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt || ( [[ "$?" == "128" && -e /opt/letsencrypt/certbot-auto ]] && echo ) && [[ -f /etc/koha/koha-sslle.conf ]] && service apache2 stop &&
-    /opt/letsencrypt/certbot-auto certonly -n --expand -c /etc/koha/koha-sslle.conf
+    /opt/letsencrypt/certbot-auto certonly -n --expand --force-renewal -c /etc/koha/koha-sslle.conf
     (cd /etc/apache2/ssl &&
     ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/privkey.pem sslle_key.pem
     ln -sf /etc/letsencrypt/live/{{kohalxcs_kohaenv_srvname}}/cert.pem sslle_cert.pem
@@ -771,6 +771,7 @@
   notify: Restart webserver
 
 ## Cronjobs for cheduled tasks: user 'koha' w/ $KOHA_CRONJOB_TRIGGER wrapper:
+# - "cronjobs/advance_notices.pl -m 7 -c"
 # - "cronjobs/cart_to_shelf.pl --hours 12"
 # - "cronjobs/holds/cancel_expired_holds -v"
 # - "cronjobs/process_message_queue.pl -v"
@@ -787,7 +788,9 @@
     minute: "{{ item.minute | d('*') }}"
     state: present
   with_items:
-    - { name: "cart_to_shelf", hour: "9,21", minute: "1",
+    - { name: "advance_notices.pl", hour: "6", minute: "3",
+        job: "cronjobs/advance_notices.pl -m 7 -c" }
+    - { name: "cart_to_shelf", hour: "9,21", minute: "2",
         job: "cronjobs/cart_to_shelf.pl --hours 12" }
     - { name: "cancel_expired_holds", hour: "4", minute: "1",
         job: "cronjobs/holds/cancel_expired_holds.pl -v" }

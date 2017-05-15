@@ -72,12 +72,16 @@
 - name: lxc - Combine all read LXC definitions
   set_fact:
     hostnode_lxcs:
+# roi1/weblxc
 #      - "{{ kldev_dmdb   | d() }}"
-#      - "{{ kldev_mdbks  | d() }}"
 #      - "{{ klpre_mdbks  | d() }}"
+#      - "{{ klpre_mdbks0  | d() }}"
+#      - "{{ klpre_mdbks1  | d() }}"
+# roi2/mdblxc
 #      - "{{ kltest_dmdb  | d() }}"
-     - "{{ kltest_mdbks | d() }}"
-#     - "{{ klpre_mdbks0  | d() }}"
+      - "{{ klpre_mdbks0  | d() }}"
+      - "{{ kltest_mdbks | d() }}"
+#      - "{{ kltest_mdbks1 | d() }}"
 - debug: msg="{{ hostnode_lxcs|map(attribute='net')|list }}"
 
 ## Get LXC environment from lxc.group's in container_config

@@ -45,7 +45,7 @@ sub usage {
 sub force_borrower_messaging_defaults {
     my ($doit, $truncate, $since) = @_;
 
-    # List the categorycodes to which only messaging preferences apply
+    # List the categorycodes to which only messaging preferences should apply
     my @categoryCodes = qw(HENKILO LAPSI HUOLLETTAV YHTEISO);
 
     $since = '0000-00-00' if (!$since);
@@ -75,13 +75,21 @@ sub force_borrower_messaging_defaults {
     while ( my ($borrowernumber, $categorycode, $sms) = $sth->fetchrow ) {
         $sms = "" unless defined $sms;
         next unless $doit;
-        if ($categorycode ~~ @categoryCodes && $sms ne '') {
+
+	## TODO/FIX:KohaLappi: scheduled for update 2017-05-11
+	# Dont check that sms exists anymore, set prefs for all
+	# per category defaults for patrons in (HENKILO,LAPSI,YHTEISO,HUOLLETTAV)
+	# - DELETE borrowes from borrower_message_preferences (leave category defs)
+	# - TRUNCATE borrower_message_transport_preferences
+        #if ($categorycode ~~ @categoryCodes && $sms ne '') {
+
+        if ($categorycode ~~ @categoryCodes) {
           print "Set messaging preferences/categorycode:$categorycode for $borrowernumber (sms:$sms)\n"; 
           C4::Members::Messaging::SetMessagingPreferencesFromDefaults( {
               borrowernumber => $borrowernumber,
               categorycode   => $categorycode,
           } );
-       }
+	}
     }
     # If/when no auto-commit, do it now
     #$dbh->commit();
